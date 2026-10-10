@@ -1,6 +1,10 @@
 # GrixChat — Secure Social & Real-Time Messaging Platform
 
-GrixChat is a ultra-modern, high-performance messaging, private calling, and short-form video application designed for lightning-fast speeds and low-cost scalability. Delivering a hybrid visual experience—blending **60% unique Dark Cosmic identity**, **20% Telegram performance micro-animations**, and **20% WhatsApp communication mechanics**—it runs perfectly as a PWA and Google Play TWA.
+GrixChat is a high-performance, low-cost messaging and private-calling app, built as a PWA and Google Play TWA. It is deliberately scoped to **five tabs** — Chats, Stories, Search, Calls and Profile — plus an in-app AI assistant (Grix AI), a GitHub repository browser, and an app lock.
+
+The visual language blends **60% unique Dark Cosmic identity**, **20% Telegram performance micro-animations**, and **20% WhatsApp communication mechanics**.
+
+> 👉 **New here?** Start at [`docs/CONTEXT.md`](./docs/CONTEXT.md). It is the shortest path to a working mental model — how to run the app, where things live, and what will bite you.
 
 ---
 
@@ -25,7 +29,7 @@ To support more than 50,000 active users comfortably on Supabase's free tier, da
 
 ## 🛠 Feature Profile
 
-- **Background Video/Voice Calling**: Integrated RTC signalling that lives inside the global React Context. You can back out from a call to write messages, and a beautiful WhatsApp-style pulsing green calling line continues to tick beneath the main navigation bar.
+- **Background Video/Voice Calling**: WebRTC signalling lives inside a global React Context (`providers/CallProvider.tsx`). You can back out of a call to keep messaging, and a WhatsApp-style pulsing green line keeps ticking beneath the navigation bar.
 - **Micro-Animations**: Staggered transition arrays and slide-out logout menus engineered via `motion/react` for smooth, native-like user flows.
 - **Interactive Multi-Tab Setup**: Visited views are retained using a custom keep-alive container pattern to prevent visual reloads.
 - **Secure App Lock**: Secure PIN screen and privacy toggles to protect chats.
@@ -37,11 +41,9 @@ To support more than 50,000 active users comfortably on Supabase's free tier, da
 - `/src/providers`: Application context singletons (Supabase `AuthProvider`, global WebRTC `CallProvider`).
 - `/src/features`: Modular screens broken into focus zones (`chat`, `call`, `profile`, `search`, `reels`).
 - `/src/components`: UI layouts, bottom/top navigation components, and global drop-downs.
-- `/sql`: Hardcoded schema upgrades, PostgreSQL functions, row-level security definitions, and indices:
-  - `grixchat_latest_db_updates.sql`: Incremental delta adjustments.
-  - `supabase_schema.sql`: Core baseline tables (users, messages, conversations, calls).
-  - `supabase_posts_schema.sql`: Reels and posts mechanics.
-  - `supabase_support_tickets_schema.sql`: Support logs.
+- `/sql`: The **only** place for schema — numbered migrations `01_` … `08_`, plus `00_master_instructions.md`. Contains tables, PostgreSQL functions, triggers, row-level security and indices.
+- `/docs`: Developer documentation — orientation, setup, testing, data model, known issues.
+- `/dev`: The mock Supabase (`dev/mock/`) and test setup (`dev/test/`). See [docs/TESTING.md](./docs/TESTING.md).
 
 ---
 
@@ -52,21 +54,27 @@ To support more than 50,000 active users comfortably on Supabase's free tier, da
 npm install
 ```
 
-### 2. Configure Credentials
-Duplicate `.env.example` as `.env` and configure your API details:
-```env
-VITE_SUPABASE_URL=your_supabase_url
-VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
-```
-
-### 3. Start Hot Dev Server
+### 2. Run it — no credentials needed
 ```bash
+npm run dev:mock
+```
+→ <http://localhost:3000> · login `demo@grixchat.app` / `grixchat`
+
+This runs the full app against an in-memory Supabase mock (`dev/mock/`) with a
+seeded social graph. Nothing touches the network.
+
+### 3. …or against real Supabase
+```bash
+cp .env.example .env      # fill in VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY
 npm run dev
 ```
+`.env.example` documents all 22 variables, frontend and server.
 
-### 4. Build Stands
+### 4. Test and build
 ```bash
-npm run build
+npm test                  # 78 tests
+npm run lint              # tsc --noEmit
+npm run build             # vite build + server bundle
 ```
 
 ---

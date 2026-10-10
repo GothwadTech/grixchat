@@ -2,7 +2,7 @@
   "version": 2,
   "builds": [
     {
-      "src": "src/server/server.ts",
+      "src": "server.ts",
       "use": "@vercel/node"
     },
     {
@@ -14,11 +14,19 @@
   "routes": [
     {
       "src": "/api/(.*)",
-      "dest": "src/server/server.ts"
+      "dest": "server.ts"
     },
     {
       "src": "/auth/(.*)",
-      "dest": "src/server/server.ts"
+      "dest": "server.ts"
+    },
+    {
+      "src": "/sitemap.xml",
+      "dest": "server.ts"
+    },
+    {
+      "src": "/.well-known/(.*)",
+      "dest": "server.ts"
     },
     {
       "src": "/manifest.json",
@@ -30,7 +38,7 @@
     },
     {
       "src": "/firebase-messaging-sw.js",
-      "dest": "src/server/server.ts"
+      "dest": "/firebase-messaging-sw.js"
     },
     {
       "src": "/assets/(.*)",
