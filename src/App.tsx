@@ -67,7 +67,6 @@ const CallsTab = React.lazy(() => import('./features/call/CallsTab'));
 const PrivacySettingsScreen = React.lazy(() => import('./features/settings/PrivacySettingsScreen'));
 const AppPreferencesScreen = React.lazy(() => import('./features/settings/AppPreferencesScreen'));
 const ChatSettingsMainScreen = React.lazy(() => import('./features/settings/ChatSettingsMainScreen'));
-// SettingsScreen directly imported above
 const AccountSettingsScreen = React.lazy(() => import('./features/settings/AccountSettingsScreen'));
 const ActiveSessionsScreen = React.lazy(() => import('./features/settings/ActiveSessionsScreen'));
 const NotificationsSettingsScreen = React.lazy(() => import('./features/settings/NotificationsSettingsScreen'));
