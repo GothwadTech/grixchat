@@ -11,20 +11,24 @@ human step (SQL run, secret, or a product decision)
 
 ---
 
-## 🧑 Read this first — the three things code cannot do
+## 🧑 Read this first — what code cannot do
 
-Everything that could be fixed from the repository alone **has been**. These
-tasks need Supabase, GitHub settings or a decision:
+The app is deployed on **Cloudflare Pages** (<https://grixchat.gothwadtech.com>):
+`dist/` is the static PWA, `functions/` is the API. Everything that could be
+fixed from the repository alone **has been**; these tasks need the Cloudflare
+dashboard, Supabase, or a decision.
 
 | # | Task | Where | Why it matters |
 |---|---|---|---|
-| A | Add `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` (+ the `VITE_FIREBASE_*` and `VITE_LIVEKIT_URL` values) as **Actions secrets** | GitHub → Settings → Secrets and variables → Actions | The Pages workflow now passes them to the build. **Without them the Supabase SDK is compiled out and the deployed app cannot sign in** — the build warns loudly in the log. |
-| B | Set the server secrets on whichever host runs `server.ts` (Vercel/Cloudflare): `GEMINI_API_KEY`, `FIREBASE_SERVICE_ACCOUNT`, `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET`, `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`, `SUPABASE_SERVICE_ROLE_KEY`, `APP_URL` | host dashboard | The new auth layer verifies JWTs against `VITE_SUPABASE_URL` + `VITE_SUPABASE_ANON_KEY`, so those two must be set **server-side** as well. |
-| C | Decide the fate of `call_candidates` (issue 7) | Supabase SQL editor | It is defined but unused. Drop it with:<br>`DROP TABLE IF EXISTS public.call_candidates CASCADE;`<br>or keep it and adopt the table-based signalling in `db/3_webrtc_signaling_architecture.md`. |
+| A | Add the **build-time** variables: `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_FIREBASE_*`, `VITE_LIVEKIT_URL`, `NODE_VERSION=20` | Cloudflare → Workers & Pages → grixchat → Settings → Environment variables (Production **and** Preview) | They are inlined into the bundle. **Without `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY` the Supabase SDK is compiled out and the deployed app cannot sign in** — the build prints a loud warning. Changing one requires a redeploy. |
+| B | Add the **runtime secrets** for the API: `GEMINI_API_KEY`, `FIREBASE_SERVICE_ACCOUNT`, `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET`, `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`, `SUPABASE_SERVICE_ROLE_KEY`, `APP_URL=https://grixchat.gothwadtech.com` | same screen as above | The API verifies JWTs against `VITE_SUPABASE_URL` + `VITE_SUPABASE_ANON_KEY`, so those two must be present **server-side as well**. Without any of these the matching feature returns a clear "not configured" error instead of crashing. Step-by-step: [DEV_SETUP.md](./DEV_SETUP.md#deploy--cloudflare-pages). |
+| C | Confirm the Pages build settings: build command `npm run build`, output `dist`, root `/`; production branch = your main branch; custom domain `grixchat.gothwadtech.com` attached | Cloudflare → the project's Settings / Custom domains | `wrangler.toml` pins the output dir and compatibility date, but the dashboard values win. |
+| D | Decide the fate of `call_candidates` (issue 7) | Supabase SQL editor | It is defined but unused. Drop it with:<br>`DROP TABLE IF EXISTS public.call_candidates CASCADE;`<br>or keep it and adopt the table-based signalling in `db/3_webrtc_signaling_architecture.md`. |
+| E | Add a **Cloudflare Rate Limiting Rule** on `/api/*` (optional, but recommended before scaling) | Cloudflare → Security → WAF | The limiter in `server/api.ts` counts in memory, i.e. per isolate — a speed bump, not a hard global quota. |
 
 Optional: set `ALLOWED_ORIGINS=https://your-domain.tld,https://your-other.tld`
-(comma-separated) on the server to extend the CORS/origin allowlist beyond
-same-origin + `APP_URL`.
+(comma-separated) to extend the CORS/origin allowlist beyond same-origin +
+`APP_URL`.
 
 ---
 
@@ -35,7 +39,7 @@ same-origin + `APP_URL`.
 It is no longer a token relay at all:
 
 - **Auth:** requires `Authorization: Bearer <supabase access token>`, verified
-  with `supabase.auth.getUser()` (`server.ts` → `requireAuth`).
+  with `supabase.auth.getUser()` (`server/api.ts` → `authenticate`).
 - **Recipients are derived server-side.** The client now sends only
   `{ conversationId, body }`; the server checks the caller is a participant and
   reads the other participants' `fcm_tokens` itself. Client-supplied token
@@ -52,7 +56,7 @@ go through the new `src/lib/apiClient.ts`, which attaches the session token.
 
 ### 2. `/api/upload-file` was an open 100 MB file host — ✅ FIXED
 
-- Auth required (`requireAuth`).
+- Auth required (`authenticate`).
 - **MIME allowlist** (`ALLOWED_MIME_TYPES`) — no more anonymous `.exe`, and
   `image/svg+xml` is deliberately excluded (script container).
 - **Size caps by media type:** images 15 MB, audio 25 MB, documents 25 MB,
@@ -68,10 +72,10 @@ go through the new `src/lib/apiClient.ts`, which attaches the session token.
 
 | Layer | What |
 |---|---|
-| `helmet()` | nosniff, referrer policy, `X-Powered-By` off, CORP `cross-origin`. CSP/COOP/COEP/frameguard are deliberately relaxed so the Vite dev server, the GitHub OAuth popup and the WebView/TWA wrapper keep working (documented inline). |
-| `cors()` | Reflects an origin only when it is same-origin or allowlisted (`APP_URL` + `ALLOWED_ORIGINS` + localhost). |
+| Security headers | Applied by the API itself (they are part of the `Response`), and by `public/_headers` for static files: nosniff, referrer policy, CORP `cross-origin`. There is deliberately no `X-Frame-Options`/CSP — the Android WebView (TWA) wrapper embeds the app and the popup flow needs `window.opener`. |
+| CORS | An origin is reflected only when it is same-origin with the request or allowlisted (`APP_URL` + `ALLOWED_ORIGINS` + localhost). Unknown origins get no CORS headers at all. |
 | Origin guard | Cross-origin writes to `/api/*` are refused with **403** (CSRF belt-and-braces). Loopback/bind-all hosts are exempt so tunnel/preview deployments keep working. |
-| `express-rate-limit` | global 300/min · API 60/min · notifications 20/min · uploads 8/min · AI 20/min, per IP. `trust proxy` is set so the real client IP is used behind Vercel/preview proxies. |
+| Rate limiting | API 60/min · notifications 20/min · uploads 8/min · AI 20/min, per IP (`server/api.ts`). The counter is in-memory, so on Cloudflare the effective ceiling is per isolate — add a native Cloudflare Rate Limiting Rule on `/api/*` if you need a hard global quota. The client IP is read from `cf-connecting-ip` / `x-forwarded-for`, so it is the real caller behind the proxy. |
 | Body limits | `express.json` is opt-in per route: **256 kB** by default, 32 MB only for the GitHub push routes. The blanket 50 MB parser is gone. |
 | Error handling | Unknown `/api/*` → JSON 404; malformed JSON → 400; oversized body → 413. |
 
@@ -131,29 +135,58 @@ URL. Covered by a new case in `src/__tests__/app.smoke.test.tsx`.
 
 ## 🟡 P2 — Deploy & CI (all fixed)
 
-### 9. GitHub Pages base path — ✅ FIXED
+### 9. Deploy target could not serve the app — ✅ FIXED (now Cloudflare Pages)
 
-`.github/workflows/deploy.yml` builds with `VITE_BASE_URL: /grixchat/`, so
-`dist/assets/…` is emitted under the sub-path Pages serves from.
+The site is served by **Cloudflare Pages** at
+<https://grixchat.gothwadtech.com>: `dist/` is the static PWA and `functions/`
+is the API (Pages Functions). What that changed:
 
-### 10. CI did not typecheck or test — ✅ FIXED
+- `vercel.json` is gone — it described a Node host nothing deploys to any more.
+  The old GitHub Pages workflow is gone too: it could never have worked, because
+  `functions/` (the API) exists only on Cloudflare, so a `github.io` build would
+  have shipped a dead backend. CI (`.github/workflows/ci.yml`) now verifies only;
+  Cloudflare builds from the repository.
+- **No SPA rewrite rule.** Cloudflare serves `index.html` for unknown paths
+  natively. A `/* → /index.html 200` rule is turned into a **308 permanent
+  redirect** (browsers cache it forever), so it is deliberately absent —
+  `public/` ships `_headers` and `_routes.json` instead. Deep links (`/chats`,
+  `/chat/:id`) were verified against workerd to return the shell with a `200`.
+- `public/_routes.json` scopes Functions to `/api/*` and `/auth/*`, so static
+  traffic never spins up a Function.
 
-The workflow now runs `npm run lint` (tsc) and `npm test` before `npm run
-build`. Both pass.
+### 10. The API had to run somewhere Cloudflare can too — ✅ FIXED
 
-### 11. `.env.example` and CI env were not connected — ✅ FIXED
+The old `server.ts` was Express + `axios` + `google-auth-library` + `multer` +
+`livekit-server-sdk`: none of that runs on Workers. Rather than maintain two
+implementations, the routes moved to **`server/api.ts`**, written against the Web
+`Request`/`Response` API, and two thin adapters reach it:
 
-The Pages build receives every `VITE_*` value from Actions secrets (add them —
-task **A**). Two extra safeguards came out of this:
+| Adapter | Used by |
+|---|---|
+| `functions/api/[[path]].ts`, `functions/auth/[[path]].ts` | Cloudflare Pages (production) |
+| `server.ts` | `npm run dev` / `dev:mock`, optional self-hosting |
 
-- `vite.config.ts` prints a loud build-time warning when a production build has
-  no `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY`.
-- That warning exists because of a nastier trap found while fixing this:
-  `src/lib/supabase.ts` returns `null` without those two values, Rollup
-  constant-folds that into `null`, and then **tree-shakes the entire Supabase
-  SDK out of the bundle**. The build "succeeds", the app just can never reach
-  the backend. With the credentials present the SDK is bundled normally
-  (`vendor-supabase`, 207 kB).
+That removed five Node-only dependencies (`axios` server-side,
+`google-auth-library`, `multer`, `form-data`, `livekit-server-sdk`) plus
+`helmet`/`cors`/`express-rate-limit` — FCM signing, LiveKit tokens, multipart
+parsing, security headers, CORS and rate limiting are all Web-platform code now,
+so the behaviour cannot drift between the two runtimes. `npx wrangler pages
+functions build` (run in CI) proves the bundle has **zero Node built-ins**.
+
+The one genuinely Node-only feature — the GitHub Sync Tool reading the source
+tree — is injected as a capability (`REPO_FS`) and answers `501` on the edge
+instead of pretending to work.
+
+### 11. CI did not typecheck or test — ✅ FIXED
+
+`.github/workflows/ci.yml` runs `npm run lint`, `npm test`, a Functions bundle
+check and `npm run build` on every push and PR. No deploy step: Cloudflare Pages
+builds the repository itself, and deploying from two places is how you ship a
+stale bundle.
+
+`npm run build` also stopped emitting `dist/server.cjs`: Pages uploads all of
+`dist/`, so a server bundle (and its sourcemap) would have been publicly
+downloadable. `npm run build:server` / `build:all` do that for self-hosting.
 
 ---
 
@@ -246,15 +279,16 @@ with it:
 | Issue | Resolution |
 |---|---|
 | No way to run the app without credentials | `npm run dev:mock` + `dev/mock/` |
-| No test infrastructure | Vitest + jsdom + Testing Library, **85 tests** |
+| No test infrastructure | Vitest + jsdom + Testing Library, **99 tests** |
 | No agent context docs | `docs/` (7 files) + rewritten `AGENTS.md` |
 | `npm run lint` failed with 11 errors | dead code deleted → **0 errors** |
 | 13,103+ lines of unreachable code | **146 files deleted, 0 remaining** |
 | 7 tables queried but never migrated | their only callers were dead code → **0** |
 | 5 RPCs called but never defined | same → **0** |
-| Two divergent Express servers | `src/server/server.ts` deleted; `vercel.json` → `server.ts` |
-| Vercel missing `/api/grix-ai` + `/api/livekit-token` | fixed by the above |
-| `vite.config.ts` hardcoded `base: '/'` | now `process.env.VITE_BASE_URL \|\| '/'`, wired in CI |
+| Two divergent Express servers | `src/server/server.ts` deleted; deploy config repointed |
+| A deploy target missing `/api/grix-ai` + `/api/livekit-token` | fixed by the above; the API is now one file (`server/api.ts`) shared by Cloudflare and Node |
+| Dead deploy config for hosts nothing ships to | `vercel.json` and the GitHub Pages workflow deleted; **Cloudflare Pages** is the only target |
+| `vite.config.ts` hardcoded `base: '/'` | now `process.env.VITE_BASE_URL \|\| '/'`. Cloudflare serves from the root, so the default is what production uses. |
 | `.env.example` listed 6 of 21 vars | all documented; missing server vars added |
 | 7 unused npm dependencies | removed (103 packages) |
 | 5 stale root `.sql` duplicates | deleted; `sql/` is the only source |

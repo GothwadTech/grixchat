@@ -42,6 +42,8 @@ To support more than 50,000 active users comfortably on Supabase's free tier, da
 - `/src/features`: Modular screens broken into focus zones (`chat`, `call`, `profile`, `search`, `stories`, `github`, `grixai`).
 - `/src/components`: UI layouts, bottom/top navigation components, and global drop-downs.
 - `/sql`: The **only** place for schema — numbered migrations `01_` … `08_`, plus `00_master_instructions.md`. Contains tables, PostgreSQL functions, triggers, row-level security and indices.
+- `/server/api.ts`: **The API.** Runtime-neutral (Web `Request`/`Response`), so the same file serves Cloudflare Pages Functions and the Express dev server.
+- `/functions`: Cloudflare Pages Functions — thin adapters that forward `/api/*` and `/auth/*` to `server/api.ts`.
 - `/docs`: Developer documentation — orientation, setup, testing, data model, known issues.
 - `/dev`: The mock Supabase (`dev/mock/`) and test setup (`dev/test/`). See [docs/TESTING.md](./docs/TESTING.md).
 
@@ -68,17 +70,31 @@ seeded social graph. Nothing touches the network.
 cp .env.example .env      # fill in VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY
 npm run dev
 ```
-`.env.example` documents all 22 variables, frontend and server.
+`.env.example` documents every variable, frontend and server — including the
+ones that live in the Cloudflare Pages dashboard in production.
 
 ### 4. Test and build
 ```bash
-npm test                  # 85 tests
+npm test                  # 99 tests
 npm run lint              # tsc --noEmit
-npm run build             # vite build + server bundle
+npm run build             # vite build → dist/ (what Cloudflare Pages builds)
 ```
 
-CI (`.github/workflows/deploy.yml`) runs all three before deploying to Pages,
-and builds with `VITE_BASE_URL=/grixchat/`.
+### 5. Deploy
+
+Cloudflare Pages builds this repository and serves
+<https://grixchat.gothwadtech.com> — `dist/` as the static site and `functions/`
+as the API. Build command `npm run build`, output directory `dist`, and the
+project's environment variables. Full checklist:
+[`docs/DEV_SETUP.md`](./docs/DEV_SETUP.md#deploy--cloudflare-pages).
+
+```bash
+npx wrangler pages functions build   # check the API bundles for the edge
+npx wrangler pages dev dist          # run it locally in workerd on :8788
+```
+
+CI (`.github/workflows/ci.yml`) typechecks, tests and bundle-checks every push;
+it does not deploy.
 
 ---
 Crafted under high-precision directives for the GrixChat Mobile Ecosystem. 🌌

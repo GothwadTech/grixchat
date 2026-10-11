@@ -12,8 +12,9 @@
 npm install
 npm run dev:mock      # full app, no credentials → http://localhost:3000
                       # login: demo@grixchat.app / grixchat
-npm test              # 85 tests, ~11s
+npm test              # 99 tests, ~14s
 npm run lint          # tsc --noEmit → 0 errors
+npx wrangler pages dev dist   # optional: the API in the real Cloudflare runtime
 ```
 
 `npm run dev:mock` runs the real app against an in-memory Supabase mock
@@ -33,9 +34,17 @@ code path your change exercised.
 - **Firebase is FCM-only.** No Firestore, no Firebase Auth, no Firebase
   Storage. (`firestore.rules` and `firebase-blueprint.json` at the repo root
   are historical leftovers — ignore them.)
-- **The Express server holds no application data.** It exists only to keep
-  secrets server-side: Gemini, FCM service account, LiveKit tokens, GitHub
-  OAuth. See `server.ts`.
+- **Production is Cloudflare Pages.** The static site is `dist/`, the API is
+  `functions/` (Pages Functions), and both deploy from this repo to
+  <https://grixchat.gothwadtech.com>. There is no other deploy target to keep in
+  sync.
+- **The API holds no application data.** It exists only to keep secrets
+  server-side: Gemini, FCM service account, LiveKit tokens, GitHub OAuth. All of
+  it is `server/api.ts`, written against the Web `Request`/`Response` API so the
+  exact same file runs on Cloudflare *and* under Express (`server.ts`, used for
+  `npm run dev`). **Add a route there — never in an adapter.** Nothing in
+  `server/api.ts` may import a Node built-in (`fs`, `path`, `crypto`, `Buffer`);
+  Node-only abilities are injected as capabilities (`REPO_FS`).
 - **Calling:** WebRTC, signalled over Supabase channels, state in
   `providers/CallProvider.tsx` so a call survives navigation.
 - **Platform target:** PWA + an Android WebView (TWA) wrapper with an
@@ -100,8 +109,11 @@ Initial loads are 20–30 rows. `ChatService.getMessages(id, limit = 50)`.
   (`supabase gen types typescript --project-id <id>`) and prefer it over
   hand-written row shapes.
 - Browser → `/api` calls go through `src/lib/apiClient.ts`; it attaches the
-  Supabase access token the server verifies. Never call the API routes with a
-  bare `fetch` — you will get a 401.
+  Supabase access token the API verifies. Never call the API routes with a bare
+  `fetch` — you will get a 401.
+- Adding a server route? Put it in `server/api.ts` and make sure it bundles for
+  the edge: `npx wrangler pages functions build`. The CI workflow does this on
+  every push.
 - Notifications: write through `services/db/notificationService.ts` only, and
   read the `content` column (`sql/01_core_schema.sql` has no `text`).
 
@@ -141,7 +153,7 @@ aliased to `dev/mock/` in `vitest.config.ts` so a test can never reach a real
 project.
 
 ```bash
-npm test             # 85 tests, 6 files
+npm test             # 99 tests, 7 files
 npm run test:watch
 ```
 
@@ -149,6 +161,7 @@ npm run test:watch
 |---|---|---|
 | Mock contract | `dev/mock/__tests__/` | pins PostgREST semantics so the mock cannot silently drift |
 | Real services | `src/__tests__/chatService.test.ts` | the shipped `ChatService` against seeded data |
+| Real API | `src/__tests__/apiRoutes.test.ts` | `handleApiRequest` — auth, CORS/origin guard, body caps, routing |
 | Real UI | `src/__tests__/app.smoke.test.tsx` | renders `<App />`, drives the login form, asserts the chat list |
 
 Rules:
@@ -167,17 +180,17 @@ Rules:
 |---|---|
 | `npm run build` | ✅ passes |
 | `npm run dev` / `dev:mock` | ✅ passes |
-| `npm test` | ✅ 85/85 |
+| `npm test` | ✅ 99/99 |
 | `npm run lint` | ✅ 0 errors |
 | Dead code | ✅ **0 files** — 189/189 reachable. See [`docs/DEAD_CODE.md`](./docs/DEAD_CODE.md) |
 | Tables queried but missing from `sql/` | ✅ 0 |
 | RPCs called but missing from `sql/` | ✅ 0 |
-| Vercel deploy | ✅ fixed — duplicate server deleted, `vercel.json` → `server.ts` |
-| GitHub Pages deploy | ✅ `VITE_BASE_URL=/grixchat/` set in the workflow |
-| `/api/send-notification`, `/api/upload-file` | ✅ **authenticated** + rate limited + allowlisted (see `requireAuth`) |
+| Cloudflare Pages deploy | ✅ `dist/` + `functions/` → <https://grixchat.gothwadtech.com> |
+| Node self-host path | ✅ `npm run build:all && npm run start` |
+| `/api/send-notification`, `/api/upload-file` | ✅ **authenticated** + rate limited + allowlisted (see `authenticate` in `server/api.ts`) |
 | Notifications inbox | ✅ written by `services/db/notificationService.ts`, read from `content` |
-| CI | ✅ typecheck + test + build |
-| Deploy secrets | 🧑 **not wired** — see KNOWN_ISSUES "the three things code cannot do" |
+| CI | ✅ typecheck + test + Functions bundle check + build (no deploy step) |
+| Pages secrets | 🧑 **check they are set in the Cloudflare dashboard** — see KNOWN_ISSUES |
 | Test coverage | ⚠️ only login→chat, the notification writer and the reset route are exercised |
 
 Full prioritised list: **[`docs/KNOWN_ISSUES.md`](./docs/KNOWN_ISSUES.md)**.

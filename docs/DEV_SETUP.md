@@ -50,6 +50,12 @@ Verified: the dev server serves
 and a `npm run build:mock` bundle contains the mock marker and no real
 Supabase client.
 
+The mock lives in the **browser** bundle, so it also mocks `auth.getSession()`.
+That is what lets `npm run dev:mock` exercise the JWT-protected API routes:
+the client attaches its mock session token and the Node API skips verification
+in this mode (see `isCredentialFreeMock` in `server/api.ts`). Cloudflare never
+takes that path — an edge deployment always verifies.
+
 ### What is seeded
 
 8 users · 5 direct chats · 2 groups · ~28 messages (one of them a real reply,
@@ -116,7 +122,7 @@ npm run dev
 | `VITE_FIREBASE_VAPID_KEY` | `NotificationHandler.tsx` |
 | `VITE_FIREBASE_DATABASE_URL` | presence code |
 | `VITE_LIVEKIT_URL` | `src/providers/CallProvider.tsx` |
-| `VITE_BASE_URL` | build-time path prefix (`/grixchat/` on GitHub Pages) |
+| `VITE_BASE_URL` | build-time path prefix. Cloudflare serves from the domain root — leave empty. |
 
 > ⚠️ Any `VITE_`-prefixed variable is inlined into the shipped bundle in
 > plaintext. Only the Supabase anon key and the Firebase web config belong
@@ -138,10 +144,12 @@ npm run dev
 | `GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET` | `/api/github/auth-url` |
 | `SUPABASE_SERVICE_ROLE_KEY` | privileged reads/writes (FCM token cleanup). Falls back to the anon key + the caller's JWT. |
 | `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY` | **required server-side too** — every `/api` route verifies the caller's JWT against the project |
-| `APP_URL` | OAuth redirect base, sitemap origin, first CORS allowlist entry |
+| `APP_URL` | OAuth redirect base and first CORS allowlist entry (`https://grixchat.gothwadtech.com`) |
 | `ALLOWED_ORIGINS` | extra comma-separated browser origins allowed to call `/api/*` |
-| `MOCK_SUPABASE` | `1` skips JWT verification for the credential-free dev loop (never in production) |
-| `NODE_ENV` | `production` disables the Vite middleware, serves `dist/`, hides `/api/github/debug` |
+| `MOCK_SUPABASE` | Node dev server only: `1` skips JWT verification for the credential-free loop. Ignored on Cloudflare, which always verifies. |
+| `NODE_ENV` | Node: `production` serves `dist/`. Also hides the `/api/github/debug` diagnostic route (already hidden on any Pages deployment). |
+| `CF_PAGES` | Set to `1` automatically by Cloudflare. The API treats it as "never skip verification here". |
+| `PORT` | Node dev server port (default `3000`) |
 
 Every missing credential degrades gracefully — the server logs a warning and
 returns a simulated response rather than crashing. That is deliberate, but it
@@ -151,16 +159,114 @@ exception is authentication: without `VITE_SUPABASE_URL` +
 
 ---
 
-## GitHub Actions secrets
+## Deploy — Cloudflare Pages
 
-The Pages workflow builds the client, so it needs the `VITE_*` values from the
-table above. Add them under **Settings → Secrets and variables → Actions**
-(`.github/workflows/deploy.yml` already references them). Undefined secrets
-resolve to empty strings, so the build still succeeds — you just get a client
-with no backend attached, and the build log says so.
+**Production lives on Cloudflare Pages: <https://grixchat.gothwadtech.com>**
 
-**Server secrets are not needed for the Pages deploy** (it is a static build);
-they belong on whichever host runs `server.ts`.
+A deployment is two halves that ship together from this one repository:
+
+| Half | Source | What it serves |
+|---|---|---|
+| Static site | `dist/` (`npm run build`) | The React PWA — `index.html`, hashed assets, `sw.js`, `manifest.json` |
+| API | `functions/` (Pages Functions) | Every `/api/*` route plus `/auth/github/callback` |
+
+There is **one** API implementation: `server/api.ts` is written against the Web
+`Request`/`Response` API, `functions/api/[[path]].ts` hands Cloudflare's request
+straight to it, and `server.ts` does the same for the Node dev server. Nothing
+needs porting between environments, and there is no second server to drift.
+
+### Project settings
+
+Cloudflare dashboard → **Workers & Pages → grixchat → Settings**:
+
+| Setting | Value |
+|---|---|
+| Build command | `npm run build` |
+| Build output directory | `dist` |
+| Root directory | `/` (repo root) |
+| Framework preset | None / Vite |
+| Node version | `NODE_VERSION=20` (environment variable) |
+| Production branch | your main branch |
+
+`wrangler.toml` pins the same output directory and the compatibility date, so
+`npx wrangler pages deploy dist` and `npx wrangler pages dev dist` behave the
+same as the dashboard build. Only a **build** (`npm run build` → `dist/`)
+triggers the Pages build; the Node server bundle is not part of it (see
+"Commands" below).
+
+### Repository files that make the deploy work
+
+| File | Purpose |
+|---|---|
+| `wrangler.toml` | Pages project config (output dir, compatibility date) |
+| `functions/api/[[path]].ts` | Every `/api/*` request → `server/api.ts` |
+| `functions/auth/[[path]].ts` | `/auth/github/callback` → the same router |
+| `public/_routes.json` | Scopes Functions to `/api/*` and `/auth/*` — everything else stays on the CDN and never spins up a Function |
+| `public/_headers` | Security headers + cache policy for static assets |
+| `public/.well-known/assetlinks.json` | Android TWA verification, served straight from the edge |
+| `public/sitemap.xml`, `public/robots.txt` | SEO, pointing at the canonical domain |
+
+> **No SPA redirect rule on purpose.** Cloudflare serves `index.html` for
+> unknown paths natively, and a `/* → /index.html 200` rule is actually turned
+> into a **308 permanent redirect** that browsers cache forever. Deep links
+> (`/chats`, `/chat/:id`) are verified to return the shell with a `200`.
+
+### Environment variables
+
+Pages → **Settings → Environment variables**. Add each one to **Production**
+*and* **Preview**; the `VITE_*` half is inlined at build time (a change needs a
+redeploy), the rest is read per request by the Functions.
+
+| Variable | Needed for |
+|---|---|
+| `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` | The client, **and** the API's JWT verification. Without them the Supabase SDK is tree-shaken out of the bundle — the build prints a loud warning. |
+| `VITE_FIREBASE_*`, `VITE_LIVEKIT_URL` | Push registration and calling |
+| `GEMINI_API_KEY` | `/api/grix-ai` |
+| `FIREBASE_SERVICE_ACCOUNT` | `/api/send-notification` (whole JSON, escaped `\n` is healed) |
+| `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET` | `/api/livekit-token` |
+| `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET` | The GitHub browser's OAuth popup |
+| `SUPABASE_SERVICE_ROLE_KEY` | Push fan-out + FCM token cleanup |
+| `APP_URL` | `https://grixchat.gothwadtech.com` — OAuth redirect base and the CORS allowlist |
+| `ALLOWED_ORIGINS` | Optional extra origins |
+| `NODE_VERSION` | `20` |
+| `NODE_ENV` | Optional; set `production` to hide the diagnostic route (already hidden on Pages) |
+
+Missing credentials degrade gracefully — the API logs a warning and returns a
+simulated or explicit error rather than crashing. The exception is
+authentication: without `VITE_SUPABASE_URL` + `VITE_SUPABASE_ANON_KEY` on the
+server side, `/api/*` answers `503` on purpose.
+
+> **Secrets named `VITE_*` are still public.** They are baked into the browser
+> bundle. The anon key is designed for that; nothing else belongs there.
+
+### Custom domain
+
+Pages → **Custom domains** → add `grixchat.gothwadtech.com`. Cloudflare issues
+the certificate automatically; keep `APP_URL` in sync with whatever you set.
+
+### Testing the edge build locally
+
+```bash
+npm run build                          # produces dist/
+npx wrangler pages functions build     # type/bundle-check the Functions
+npx wrangler pages dev dist            # real workerd runtime on :8788
+```
+
+`wrangler pages dev` runs the **same** `functions/` code Cloudflare runs, on the
+real workerd runtime. A plain `.env` is only read by the Node dev server, so
+edge secrets go in `.dev.vars` (gitignored):
+
+```bash
+cp .dev.vars.example .dev.vars   # MOCK_SUPABASE=1 works with zero credentials
+npx wrangler pages dev dist --binding APP_URL=http://localhost:8788
+```
+
+### GitHub Actions
+
+`.github/workflows/ci.yml` typechecks, tests and builds on every push. It does
+**not** deploy — Cloudflare Pages builds from the repository itself. To deploy
+from Actions instead, add `cloudflare/wrangler-action` with a
+`CLOUDFLARE_API_TOKEN` secret and run `wrangler pages deploy dist`.
 
 ---
 
@@ -168,11 +274,12 @@ they belong on whichever host runs `server.ts`.
 
 | Port | What | Where it is set |
 |---|---|---|
-| **3000** | Express + Vite middleware (the app) | `server.ts:797` — hardcoded |
+| **3000** | Node dev server (Express + Vite middleware) | `server.ts` — `PORT` env |
+| **8788** | `wrangler pages dev` (local Cloudflare runtime) | `--port` flag |
 | 24678 | Vite HMR websocket | Vite default |
 
-The server binds `0.0.0.0`, so it is reachable from other interfaces / preview
-proxies.
+Both servers bind `0.0.0.0`, so they are reachable from other interfaces and
+preview proxies.
 
 ---
 
@@ -180,34 +287,39 @@ proxies.
 
 | Command | What it does |
 |---|---|
-| `npm run dev` | Express + Vite, **real** Supabase |
-| `npm run dev:mock` | Express + Vite, **mock** Supabase |
-| `npm run build` | `vite build` + esbuild bundle of `server.ts` → `dist/server.cjs` |
-| `npm run build:mock` | static bundle wired to the mock (for demoing without a backend) |
-| `npm run start` | serve the built `dist/` via `dist/server.cjs` |
-| `npm run test` | `vitest run` — 85 tests |
+| `npm run dev` | Node dev server, **real** Supabase |
+| `npm run dev:mock` | Node dev server, **mock** Supabase (no credentials) |
+| `npm run build` | `vite build` → `dist/`. **This is what Cloudflare Pages runs.** |
+| `npm run build:server` | esbuild bundle of `server.ts` → `dist/server.cjs` (self-hosting / `npm run start`) |
+| `npm run build:all` | both of the above |
+| `npm run build:mock` | static bundle wired to the mock (demoing without a backend) |
+| `npm run start` | serve `dist/` + the API from `dist/server.cjs` (needs `build:server`) |
+| `npm run test` | `vitest run` — 99 tests |
 | `npm run test:watch` | watch mode |
-| `npm run lint` | `tsc --noEmit` — **currently fails, see KNOWN_ISSUES** |
-| `npm run preview` / `preview:mock` | serve the built bundle |
+| `npm run lint` | `tsc --noEmit` — **0 errors** |
+| `npm run preview` / `preview:mock` | `vite preview` — static files only, **no API** |
+
+> `npm run build` deliberately does **not** emit `dist/server.cjs`. Pages
+> uploads all of `dist/`, so a server bundle (and its sourcemap) would be
+> publicly downloadable. Use `build:all` when you actually self-host.
 
 ---
 
 ## Deploy targets
 
-### Vercel (`vercel.json`)
+### Cloudflare Pages — production
 
-✅ `vercel.json` points at the root `server.ts` (the duplicate
-`src/server/server.ts` was deleted), so `/api/grix-ai` and
-`/api/livekit-token` exist there. Set the server-side variables listed above —
-including `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY`, which the auth layer
-needs — or every `/api` call answers `503`.
+See the section above. This is the only place the site is served from.
 
-### GitHub Pages (`.github/workflows/deploy.yml`)
+### Node host — optional self-hosting
 
-✅ The workflow builds with `VITE_BASE_URL=/grixchat/`, so assets resolve under
-the sub-path Pages serves from. Add the `VITE_*` Actions secrets (above) for the
-deployed client to reach a backend; add a `CNAME` file if you move to a custom
-domain at the domain root, and drop `VITE_BASE_URL` at the same time.
+`npm run build:all && npm run start` serves `dist/` plus the same `/api` routes
+from a single Node process, with the same endpoints and the same security
+chain. Useful for running the API closer to a database, or for local
+end-to-end testing with real Supabase credentials. Set the server-side
+variables from the table above in the host's environment.
+
+### Android (TWA / WebView)
 
 ### Android (TWA / WebView)
 

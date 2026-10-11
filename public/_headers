@@ -1,0 +1,36 @@
+# Cloudflare Pages response headers for static assets.
+#
+# The API sets its own headers in `server/api.ts` (SECURITY_HEADERS) — Pages
+# `_headers` only applies to files served straight from `dist/`, not to Function
+# responses. Keep the two lists in step.
+#
+# No X-Frame-Options / CSP on purpose: the Android WebView (TWA) wrapper embeds
+# the app, and the Vite build output relies on inline styles.
+
+/*
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: no-referrer
+  X-Permitted-Cross-Domain-Policies: none
+  Cross-Origin-Resource-Policy: cross-origin
+  Permissions-Policy: camera=(self), microphone=(self), geolocation=(self)
+
+# Hashed asset filenames — safe to cache forever.
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# The shell and the service workers must always be revalidated, otherwise a
+# deploy can leave clients pinned to a stale bundle.
+/
+  Cache-Control: public, max-age=0, must-revalidate
+
+/index.html
+  Cache-Control: public, max-age=0, must-revalidate
+
+/sw.js
+  Cache-Control: public, max-age=0, must-revalidate
+
+/firebase-messaging-sw.js
+  Cache-Control: public, max-age=0, must-revalidate
+
+/manifest.json
+  Cache-Control: public, max-age=3600

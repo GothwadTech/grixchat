@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.gothwad.grixchat",
+      "sha256_cert_fingerprints": [
+        "F1:A1:DA:3C:A9:74:9C:13:B9:92:EF:CD:AA:E1:92:BB:D4:57:3E:04:9E:FC:D7:E5:A9:DF:11:80:FF:E3:A3:AA"
+      ]
+    }
+  }
+]

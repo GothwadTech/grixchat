@@ -17,7 +17,7 @@ Verification after the deletion:
 | Reachability re-scan | **0 dead files** (189/189 reachable from entry points) |
 | Broken relative imports | **0** |
 | `npm run lint` (`tsc --noEmit`) | **exit 0, 0 errors** — was 11 |
-| `npm test` | **85/85 pass** |
+| `npm test` | **99/99 pass** |
 | `npm run build` | **exit 0** |
 | Dev server module graph | **55 modules walked, 0 failures** |
 | `npm install` | 103 packages removed (7 unused deps) |
@@ -94,12 +94,34 @@ part of the 5-tab app.
 
 ### ⚠️ `src/server/server.ts` — this also fixed a deploy bug
 
-Two Express servers existed. `vercel.json` deployed `src/server/server.ts`,
-which was **missing `/api/grix-ai` and `/api/livekit-token`** — so GrixAI and
-calling would have 404'd on Vercel while working locally.
+Two Express servers existed. The deploy config of the day pointed at
+`src/server/server.ts`, which was **missing `/api/grix-ai` and
+`/api/livekit-token`** — so GrixAI and calling would have 404'd in production
+while working locally.
 
-Deleting it and repointing `vercel.json` at the root `server.ts` removes the
-divergence entirely. `vercel.json` was updated in the same change.
+Deleting it and repointing the deploy config at the root `server.ts` removed the
+divergence.
+
+### ⚠️ `vercel.json` and `.github/workflows/deploy.yml`
+
+Both were deploy targets for hosts that are not used any more, and both were
+broken in ways that only showed up after a deploy:
+
+- `vercel.json` described a Node server that no longer held the only copy of the
+  API. Keeping it meant maintaining a route table for a platform nothing ships
+  to.
+- The GitHub Pages workflow could never serve the app: `functions/` — the API —
+  only exists on Cloudflare, so a `github.io` build would have had a dead
+  backend. Its build step also required `VITE_BASE_URL=/grixchat/` because Pages
+  serves from a sub-path.
+
+Deployment is now **Cloudflare Pages** (static `dist/` + `functions/`), and the
+API itself moved into `server/api.ts` so the edge and the Node dev server run
+the same code. `.github/workflows/ci.yml` replaced the deploy workflow and only
+verifies — Cloudflare builds from the repository.
+
+Removed alongside: `vercel.json` (2 build entries + 9 route rules),
+`.github/workflows/deploy.yml`.
 
 ## Deleted — non-source files
 

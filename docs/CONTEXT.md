@@ -43,7 +43,7 @@ engine) via a Vite alias, so nothing touches the network and no `.env` is
 needed. See **[DEV_SETUP.md](./DEV_SETUP.md)**.
 
 ```bash
-npm test             # 85 tests, 6 files, ~11s — includes a real login→chat-list render
+npm test             # 99 tests, 7 files, ~14s — includes a real login→chat-list render
 npm run lint         # tsc --noEmit → 0 errors
 npm run build        # production bundle
 ```
@@ -57,16 +57,16 @@ All three currently pass.
 | Check | Result |
 |---|---|
 | `npm run lint` | ✅ 0 errors |
-| `npm test` | ✅ 85/85 |
+| `npm test` | ✅ 99/99 |
 | `npm run build` | ✅ exit 0 |
 | Dead code | ✅ **0 files** (189/189 reachable) |
 | Tables queried but missing from `sql/` | ✅ **0** |
 | RPCs called but missing from `sql/` | ✅ **0** |
-| Unauthenticated server endpoints | ✅ **0** — every `/api` route is authenticated (mock mode excepted) |
+| Unauthenticated API routes | ✅ **0** — every `/api` route verifies a Supabase JWT (credential-free local mock excepted) |
 | Notifications inbox | ✅ has a write path (`services/db/notificationService.ts`) |
-| Vercel deploy | ✅ fixed (`vercel.json` → root `server.ts`) |
-| GitHub Pages deploy | ✅ `VITE_BASE_URL=/grixchat/` set in the workflow |
-| CI | ✅ typecheck + test + build |
+| Cloudflare Pages deploy | ✅ `dist/` + `functions/` → <https://grixchat.gothwadtech.com> |
+| Edge compatibility | ✅ the API bundles for workerd with no Node built-ins |
+| CI | ✅ typecheck + test + Functions bundle check + build |
 
 ---
 
@@ -74,23 +74,30 @@ All three currently pass.
 
 ### 1. Deploy secrets are not wired up yet
 
-The server endpoints now verify a Supabase JWT. That means `VITE_SUPABASE_URL`,
-`VITE_SUPABASE_ANON_KEY` (and the rest of `.env.example`) have to exist **on the
-server host**, and the `VITE_*` values must be added as GitHub Actions secrets
-for the Pages build — without them the Supabase SDK is compiled out of the
-bundle and the deployed app cannot sign in (the build prints a warning).
+The `/api` routes verify a Supabase JWT. That means `VITE_SUPABASE_URL`,
+`VITE_SUPABASE_ANON_KEY` (and the rest of `.env.example`) have to exist as
+**environment variables on the Cloudflare Pages project** — without them the
+Supabase SDK is compiled out of the bundle and the deployed app cannot sign in
+(the build prints a warning).
 → **[KNOWN_ISSUES.md → the three things code cannot do](./KNOWN_ISSUES.md#-read-this-first--the-three-things-code-cannot-do)**
 
-### 2. Rate limits and the origin guard are per-process, in-memory
+### 2. Rate limits are per-isolate on the edge
 
-`express-rate-limit` counts per running instance. On a serverless target that
-scales out, treat the limits as a speed bump, not a quota.
+The limiter in `server/api.ts` counts in memory, so on Cloudflare the real quota
+is spread across however many isolates are warm. Treat it as a speed bump; add a
+native Cloudflare Rate Limiting Rule on `/api/*` for the real ceiling.
 
-### 3. Nothing else. Really.
+### 3. The GitHub Sync Tool is Node-only
 
-The notification tables, the reset-password route, the Pages base path, the
-bundle split and the open endpoints were the outstanding items; each is fixed
-and covered in **[KNOWN_ISSUES.md](./KNOWN_ISSUES.md)**.
+`/api/github/list-files` and `/api/github/get-file-content` read the checked-out
+repository, which Cloudflare has no filesystem for. They answer `501` on the
+edge and work under `npm run dev`. Everything else runs identically on both.
+
+### 4. Nothing else. Really.
+
+The notification tables, the reset-password route, the bundle split and the open
+endpoints were the outstanding items; each is fixed and covered in
+**[KNOWN_ISSUES.md](./KNOWN_ISSUES.md)**.
 
 ---
 
@@ -105,6 +112,14 @@ src/
 ├── services/               # global singletons: ChatService, LocalDataCache, IndexedDBService, …
 ├── components/             # cross-feature UI: layout/, chat-ui/, common/
 └── features/               # 13 domains — see below
+
+server/
+├── api.ts                  # THE API — runtime-neutral, Web Request/Response only
+└── (server.ts at the root is its Node/Express adapter)
+
+functions/
+├── api/[[path]].ts         # Cloudflare Pages Function → server/api.ts
+└── auth/[[path]].ts        # GitHub OAuth callback → the same router
 
 dev/
 ├── mock/                   # the mock Supabase (query engine, auth, realtime, rpc, seed)

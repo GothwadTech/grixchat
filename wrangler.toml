@@ -1,0 +1,25 @@
+# Cloudflare Pages project configuration.
+#
+# The site is served by Cloudflare Pages at https://grixchat.gothwadtech.com:
+#   - `dist/` is uploaded as static assets
+#   - `functions/` is compiled into Pages Functions and serves the API
+#
+# Build settings (Cloudflare dashboard → Workers & Pages → grixchat → Settings):
+#   Build command:       npm run build
+#   Build output dir:    dist
+#   Root directory:      /            (repo root)
+#   Node version:        20           (Settings → Environment variables: NODE_VERSION=20)
+#
+# Runtime variables go in Settings → Environment variables (Production +
+# Preview). Every VITE_* value is inlined into the bundle at build time, so
+# changing one requires a redeploy. See docs/DEV_SETUP.md.
+
+name = "grixchat"
+pages_build_output_dir = "./dist"
+compatibility_date = "2025-09-01"
+
+# No `nodejs_compat`: the API is written against the Web platform only
+# (fetch, WebCrypto, FormData, Blob, atob/btoa). Nothing in `functions/` or
+# `server/api.ts` imports a Node built-in — the one capability that needs the
+# filesystem (the GitHub Sync Tool) is injected by the Node adapter and answers
+# 501 here instead of pretending to work.

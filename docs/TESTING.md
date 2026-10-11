@@ -5,7 +5,7 @@ npm test            # one-shot run
 npm run test:watch  # watch mode
 ```
 
-**Current state: 85 tests across 6 files, all passing, ~11 s.**
+**Current state: 99 tests across 7 files, all passing, ~14 s.**
 
 | File | Tests | What it covers |
 |---|---|---|
@@ -14,6 +14,7 @@ npm run test:watch  # watch mode
 | `src/__tests__/chatService.test.ts` | 15 | **Real** `ChatService` against the mock |
 | `src/__tests__/utils.test.ts` | 20 | `dateUtils`, `lastSeenFormatter`, `scheduleUtils` |
 | `src/__tests__/notificationService.test.ts` | 6 | **Real** notification write path — column contract, de-duplication |
+| `src/__tests__/apiRoutes.test.ts` | 14 | **Real** `server/api.ts` — routing, CORS/origin guard, body caps, auth (Node env) |
 | `src/__tests__/app.smoke.test.tsx` | 4 | **Real** `<App />` — login form → chat list, `/forgot-password` reset mode |
 
 ---
@@ -33,7 +34,8 @@ them.
 `dev/test/setup.ts` polyfills the browser APIs jsdom lacks (`matchMedia`,
 `IntersectionObserver`, `ResizeObserver`, `scrollIntoView`, `HTMLMediaElement.play`,
 `navigator.mediaDevices`) and **resets the mock database and localStorage
-before every test**.
+before every test**. Those shims are skipped when a test runs in the Node
+environment (`hasDom`), so API tests can reuse the same setup file.
 
 Timeouts are raised (`testTimeout: 25000`) because the smoke test drives a real
 login through several async React round trips.
@@ -61,6 +63,14 @@ explicitly:
 > `text` — `sql/01_core_schema.sql` has no `text` column. The mock now mirrors
 > the SQL default (`is_read boolean default false`) so an insert that forgets
 > the flag fails a test instead of passing locally.
+
+> **Testing the API:** `src/__tests__/apiRoutes.test.ts` calls
+> `handleApiRequest(request, env)` directly — the exact function Cloudflare
+> Pages Functions and the Express adapter both call. It runs with
+> `// @vitest-environment node`, because jsdom does not implement
+> `Request`/`Response`; `dev/test/setup.ts` guards its browser shims for that.
+> The rate limiter is module-level state, so keep new cases well under the
+> per-minute budget or use a distinct route.
 
 ### 2. App tests (`src/__tests__/`)
 

@@ -10,3 +10,9 @@ dist/
 # test / tooling caches
 .vite/
 *.tsbuildinfo
+
+# Cloudflare: `wrangler pages dev` state, build output, and .dev.vars secrets
+.wrangler/
+.dev.vars
+!.dev.vars.example
+
