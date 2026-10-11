@@ -1,5 +1,5 @@
 # Continuous integration only — Cloudflare Pages builds and deploys the site
-# itself from this repository (Workers & Pages → grixchat).
+# itself from this repository (Workers & Pages → gtwdchat).
 #
 # This workflow exists to fail fast on a broken push: a type error, a failing
 # test or a broken bundle, before Cloudflare picks the commit up.
@@ -28,10 +28,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
+        with:
+          # Nothing here needs git history beyond the commit being tested.
+          fetch-depth: 1
 
       - name: Set up Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           # 22, not 20: `wrangler@4` requires Node >= 22 and exits non-zero on
           # older runtimes. The app itself builds on 20 — this is for the
