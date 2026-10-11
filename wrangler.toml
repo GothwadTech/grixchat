@@ -10,7 +10,8 @@
 #   Build command:       npm run build
 #   Build output dir:    dist
 #   Root directory:      /            (repo root)
-#   Node version:        20           (Settings → Environment variables: NODE_VERSION=20)
+#   Node version:        22           (Settings → Environment variables: NODE_VERSION=22,
+#                                      because wrangler@4 requires Node >= 22)
 #
 # Runtime variables go in Settings → Environment variables (Production +
 # Preview). Every VITE_* value is inlined into the bundle at build time, so

@@ -187,7 +187,7 @@ Cloudflare dashboard → **Workers & Pages → gtwdchat → Settings**:
 | Build output directory | `dist` |
 | Root directory | `/` (repo root) |
 | Framework preset | None / Vite |
-| Node version | `NODE_VERSION=20` (environment variable) |
+| Node version | `NODE_VERSION=22` (environment variable — `wrangler@4` needs Node ≥ 22) |
 | Production branch | your main branch |
 
 `wrangler.toml` pins the same output directory and the compatibility date, so
@@ -230,7 +230,7 @@ redeploy), the rest is read per request by the Functions.
 | `SUPABASE_SERVICE_ROLE_KEY` | Push fan-out + FCM token cleanup |
 | `APP_URL` | `https://grixchat.gothwadtech.com` — OAuth redirect base and the CORS allowlist |
 | `ALLOWED_ORIGINS` | Optional extra origins |
-| `NODE_VERSION` | `20` |
+| `NODE_VERSION` | `22` |
 | `NODE_ENV` | Optional; set `production` to hide the diagnostic route (already hidden on Pages) |
 
 Missing credentials degrade gracefully — the API logs a warning and returns a
