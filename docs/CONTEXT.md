@@ -163,6 +163,8 @@ The long version is in **[../AGENTS.md](../AGENTS.md)**. Short version:
 
 1. **Never listen to a whole table.** Every `postgres_changes` subscription
    must carry a `filter`. Unfiltered listeners are banned for egress reasons.
+   And a Realtime event may **patch state, never trigger a list-wide query** —
+   that one habit cost 5 GB/month; see [EGRESS_AUDIT.md](./EGRESS_AUDIT.md).
 2. **Transient state goes over Broadcast/Presence, not the DB.** Typing, read
    ticks, call signalling, presence → `channel().send()`, 0 bytes of egress.
 3. **Don't import across sibling features.** `features/chat/` must not reach
@@ -186,5 +188,6 @@ The long version is in **[../AGENTS.md](../AGENTS.md)**. Short version:
 | [DATA_MODEL.md](./DATA_MODEL.md) | you touch the database |
 | [ARCHITECTURE.md](./ARCHITECTURE.md) | you need to find where something lives |
 | [KNOWN_ISSUES.md](./KNOWN_ISSUES.md) | you want the prioritised bug/fix list |
+| [EGRESS_AUDIT.md](./EGRESS_AUDIT.md) | egress is high, or you touch Realtime / list queries |
 | [DEAD_CODE.md](./DEAD_CODE.md) | the deletion record — what was removed and why |
 | [legacy/](./legacy/) | historical docs — **not current guidance** |

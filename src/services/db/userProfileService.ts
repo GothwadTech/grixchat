@@ -2,6 +2,14 @@ import { supabase } from '../../lib/supabase';
 import { UserProfile } from '../../types';
 import { storage } from '../StorageService';
 
+/**
+ * Minimum gap between presence writes to the `users` row. Presence itself is
+ * carried by Realtime Presence (0 DB bytes); these columns are only the
+ * offline fallback. Writing them broadcasts the whole row to every subscriber
+ * (REPLICA IDENTITY FULL), so keep this slow. See docs/EGRESS_AUDIT.md.
+ */
+export const STATUS_WRITE_THROTTLE_MS = 240_000;
+
 // Throttled update tracker to minimize DB writes on free tier (Issue 2)
 let lastPresenceWriteTime = 0;
 let lastKnownStatusState: boolean | null = null;
@@ -15,8 +23,10 @@ export const userProfileService = {
     const timeSinceLastWrite = now - lastPresenceWriteTime;
     const statusChanged = lastKnownStatusState !== isOnline;
 
-    // Throttle heartbeat to once every 45-60s unless it's a critical state transition
-    if (!force && !statusChanged && timeSinceLastWrite < 45000) {
+    // Presence is carried by Realtime Presence; the DB columns are only the
+    // offline fallback. Writing `is_online`/`last_seen` broadcasts the whole
+    // user row (REPLICA IDENTITY FULL), so keep this slow.
+    if (!force && !statusChanged && timeSinceLastWrite < STATUS_WRITE_THROTTLE_MS) {
       return; // Skip write to conserve Supabase Free Tier throughput
     }
 

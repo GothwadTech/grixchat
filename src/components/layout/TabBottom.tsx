@@ -92,12 +92,15 @@ export default function TabBottom() {
           return;
         }
 
+        // Capped on purpose: this returns one row per unread message and grows
+        // with the backlog. docs/EGRESS_AUDIT.md → `last_read_at` replaces it.
         const { data: messages, error: mError } = await supabase
           .from('messages')
           .select('conversation_id')
           .eq('is_read', false)
           .neq('sender_id', authUser.id)
-          .in('conversation_id', myConvIds);
+          .in('conversation_id', myConvIds)
+          .limit(500);
         
         if (!mError && messages) {
           const distinctConversations = Array.from(new Set(messages.map(m => m.conversation_id as string)));

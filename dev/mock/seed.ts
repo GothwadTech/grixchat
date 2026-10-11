@@ -360,6 +360,9 @@ export function buildSeed() {
         id: `p${String(pIdx++).padStart(35, '0')}`,
         conversation_id,
         user_id,
+        // Read marker (sql/09_egress_optimizations.sql). Unread is derived from
+        // `last_read_at` instead of scanning every unread message row.
+        last_read_at: daysAgo(1),
         created_at: daysAgo(28),
         joined_at: daysAgo(28),
       });

@@ -25,6 +25,8 @@ dashboard, Supabase, or a decision.
 | C | Confirm the Pages build settings: build command `npm run build`, output `dist`, root `/`; production branch = your main branch; custom domain `grixchat.gothwadtech.com` attached | Cloudflare → the project's Settings / Custom domains | `wrangler.toml` pins the output dir and compatibility date, but the dashboard values win. |
 | D | Decide the fate of `call_candidates` (issue 7) | Supabase SQL editor | It is defined but unused. Drop it with:<br>`DROP TABLE IF EXISTS public.call_candidates CASCADE;`<br>or keep it and adopt the table-based signalling in `db/3_webrtc_signaling_architecture.md`. |
 | E | Add a **Cloudflare Rate Limiting Rule** on `/api/*` (optional, but recommended before scaling) | Cloudflare → Security → WAF | The limiter in `server/api.ts` counts in memory, i.e. per isolate — a speed bump, not a hard global quota. |
+| F | Run **`sql/09_egress_optimizations.sql`** (2 minutes, idempotent, ends with a self-check) | Supabase → SQL Editor | Read receipts become one row instead of one per unread message, the chat-list preview is maintained by a trigger, `REPLICA IDENTITY` stops shipping whole rows + the passcode hash, and the missing RLS UPDATE policy on `conversation_participants` gets created. Full analysis: [EGRESS_AUDIT.md](./EGRESS_AUDIT.md). |
+| G | Decide whether to enable the **RLS hardening** block at the end of that same file (commented out) | Supabase → SQL Editor | Today `users` and `conversation_participants` are readable by every authenticated account: `email`, `phone`, `lock` (passcode hash), `fcm_tokens`, and the whole follow/participant graph. |
 
 Optional: set `ALLOWED_ORIGINS=https://your-domain.tld,https://your-other.tld`
 (comma-separated) to extend the CORS/origin allowlist beyond same-origin +
@@ -226,6 +228,27 @@ a call, so `drop` rightly leaves it alone.
 
 ---
 
+## 🟠 P0 — Egress (fixed in code; SQL is a 2-minute step)
+
+### 19. 5 GB of Supabase egress in a month with 2–3 users — ✅ FIXED in code, 🧑 needs one SQL run
+
+Every realtime event (each message *and* each individual read receipt) made each
+open client re-download its **entire conversation list**: 6 queries, ~127 KB
+measured, no debounce, `users(*)` per participant, plus a separate query for the
+newest message rows in all chats. ~178 MB/day ≈ 5.3 GB/month, which is exactly
+what the dashboard showed.
+
+- **In code:** the list is patched from the Realtime payload (0 bytes per
+  message), one channel instead of one per chat, one round trip, narrow
+  columns, cached follows, read-receipt writes collapsed into one row, and
+  photos are downscaled + cached for a year. Regression tests:
+  `src/__tests__/egressBudget.test.ts`, `src/__tests__/egressRealtime.test.tsx`.
+- **Needs you:** run `sql/09_egress_optimizations.sql` (row F above).
+- **Analysis, measurements, database-foundation mistakes, caching plan:**
+  [EGRESS_AUDIT.md](./EGRESS_AUDIT.md).
+
+---
+
 ## 🟢 P3 — Quality
 
 ### 15. 470 `any` usages — ❌ STILL OPEN
@@ -301,3 +324,4 @@ with it:
 | Pages base path, no CI typecheck/test, env not wired | **#9, #10, #11 — this pass** |
 | 1.14 MB entry chunk, eager emoji picker, console in prod | **#12, #13, #14 — this pass** |
 | Stale Reels leftovers in a live screen | **#18 — this pass** |
+| 5 GB/month of egress from per-event list refetches | **#19 — this pass; SQL hand-off in row F** |

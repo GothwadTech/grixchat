@@ -84,6 +84,40 @@ list screens.
 
 Initial loads are 20–30 rows. `ChatService.getMessages(id, limit = 50)`.
 
+**Every list query gets a `limit`.** No exceptions — an unbounded `.select()`
+is a full table download billed as egress.
+
+### E. A Realtime event patches state — it never triggers a list-wide query
+
+**A Realtime event may patch state. It may never trigger a list-wide query.**
+
+The payload is the data. One incoming message updates one row in the
+conversation list, in place, from the event itself:
+
+```ts
+// ❌ banned — every message re-downloads the whole conversation list
+.on('postgres_changes', {event: 'INSERT', schema: 'public', table: 'messages'}, () => fetchConversations())
+
+// ✅ required — the payload is enough (useConversations.patchConversationFromMessage)
+.on('postgres_changes', {event: 'INSERT', ...}, (payload) => patchConversationFromMessage(payload.new))
+```
+
+Refetching a whole list on individual events is what burned 5 GB/month with
+three active users. Mount, focus and *structural* changes (a chat added, a
+participant changed) may refetch — traffic may not. Full analysis and the
+measurements: **[EGRESS_AUDIT.md](./EGRESS_AUDIT.md)**. The two rules are
+machine-checked by `src/__tests__/egressBudget.test.ts` (the list query stays
+narrow and message-free) and `src/__tests__/egressRealtime.test.tsx` (an
+incoming message causes zero `conversations` /
+`conversation_participants` queries).
+
+### F. Narrow selects, always
+
+Never `select('*')` on a shared table, and never `users(*)` for other people —
+the row carries `settings`, `lock` (passcode hash), `fcm_tokens` and six
+private arrays. Name the columns: the conversation list needs six of them.
+Response bytes are egress, whether or not you render them.
+
 ---
 
 ## 3. Code structure
@@ -180,7 +214,7 @@ Rules:
 |---|---|
 | `npm run build` | ✅ passes |
 | `npm run dev` / `dev:mock` | ✅ passes |
-| `npm test` | ✅ 99/99 |
+| `npm test` | ✅ 104/104 |
 | `npm run lint` | ✅ 0 errors |
 | Dead code | ✅ **0 files** — 189/189 reachable. See [`docs/DEAD_CODE.md`](./docs/DEAD_CODE.md) |
 | Tables queried but missing from `sql/` | ✅ 0 |
@@ -191,7 +225,8 @@ Rules:
 | Notifications inbox | ✅ written by `services/db/notificationService.ts`, read from `content` |
 | CI | ✅ typecheck + test + Functions bundle check + build (no deploy step) |
 | Pages secrets | 🧑 **check they are set in the Cloudflare dashboard** — see KNOWN_ISSUES |
-| Test coverage | ⚠️ only login→chat, the notification writer and the reset route are exercised |
+| Egress | ✅ list query patched from Realtime payloads, 0 bytes per message — see [`docs/EGRESS_AUDIT.md`](./docs/EGRESS_AUDIT.md) |
+| Test coverage | ⚠️ only login→chat, the notification writer, the reset route and the two egress guards are exercised |
 
 Full prioritised list: **[`docs/KNOWN_ISSUES.md`](./docs/KNOWN_ISSUES.md)**.
 
@@ -216,5 +251,6 @@ change.
 | [`docs/DATA_MODEL.md`](./docs/DATA_MODEL.md) | every table and RPC, and what is missing |
 | [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md) | directory map, data flow, what is reachable |
 | [`docs/KNOWN_ISSUES.md`](./docs/KNOWN_ISSUES.md) | prioritised bug/fix list |
+| [`docs/EGRESS_AUDIT.md`](./docs/EGRESS_AUDIT.md) | Supabase egress, Realtime traffic, list-query rules |
 | [`docs/DEAD_CODE.md`](./docs/DEAD_CODE.md) | the deletion record — what was removed and why |
 | [`docs/legacy/`](./docs/legacy/) | historical — **not current guidance** |

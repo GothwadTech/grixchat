@@ -31,7 +31,10 @@ export const SupabaseStorageService = {
       const { data, error: uploadError } = await supabase.storage
         .from(bucket)
         .upload(filePath, file, {
-          cacheControl: '3600',
+          // Object names are unique (`random_timestamp`), so a client that has
+          // the file never needs it again. A 1-hour cache meant every device
+          // re-downloaded the same photo all day, straight onto the egress bill.
+          cacheControl: '31536000',
           upsert: false,
         });
 

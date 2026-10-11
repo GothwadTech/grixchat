@@ -8,6 +8,14 @@ import { sessionService } from '../services/db/sessionService';
 import { LocalDataCache } from '../services/LocalDataCache';
 import { MultiAccountService } from '../services/MultiAccountService';
 
+/**
+ * How often the client re-asserts "I am online" while the tab is visible.
+ * Presence is Realtime Presence; this only refreshes the DB fallback columns,
+ * and each write re-broadcasts the whole `users` row to its subscribers.
+ * 300 s was 60 s before the egress work — see docs/EGRESS_AUDIT.md.
+ */
+const PRESENCE_HEARTBEAT_MS = 300_000;
+
 interface CustomUser extends User {
   uid: string;
 }
@@ -248,7 +256,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       updateStatus(isVisible);
       if (isVisible) {
         if (!heartbeatInterval) {
-          heartbeatInterval = setInterval(() => updateStatus(true), 60000);
+          heartbeatInterval = setInterval(() => updateStatus(true), PRESENCE_HEARTBEAT_MS);
         }
       } else if (heartbeatInterval) {
         clearInterval(heartbeatInterval);
@@ -258,7 +266,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     updateStatus(true);
     if (document.visibilityState === 'visible') {
-      heartbeatInterval = setInterval(() => updateStatus(true), 60000);
+      heartbeatInterval = setInterval(() => updateStatus(true), PRESENCE_HEARTBEAT_MS);
     }
 
     document.addEventListener('visibilitychange', handleVisibility);

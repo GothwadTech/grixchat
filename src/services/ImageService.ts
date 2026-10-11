@@ -12,6 +12,45 @@ export class ImageService {
    * @param onProgress Callback for upload progress.
    * @returns The public URL of the uploaded image.
    */
+  /**
+   * Downscale + re-encode before upload.
+   *
+   * Photos used to go to Storage at full camera resolution (3–8 MB), and every
+   * recipient then downloaded that original to render a 300 px bubble. Photos
+   * are the one asset where the egress bill scales with the file, so shrink
+   * them before they ever reach the bucket.
+   *
+   * JPEG/WebP only — a PNG may carry transparency, and a decoder may not exist
+   * (SSR/older browsers), in which case the original is uploaded untouched.
+   */
+  static async compressImage(file: File, maxEdge: number = 1600, quality: number = 0.82): Promise<File> {
+    const compressible = file.type === 'image/jpeg' || file.type === 'image/webp';
+    if (!compressible) return file;
+    if (typeof document === 'undefined' || typeof createImageBitmap !== 'function') return file;
+
+    try {
+      const bitmap = await createImageBitmap(file);
+      const largestEdge = Math.max(bitmap.width, bitmap.height);
+      const scale = Math.min(1, maxEdge / largestEdge);
+      if (scale === 1 && file.size < 300 * 1024) return file;
+
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.max(1, Math.round(bitmap.width * scale));
+      canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return file;
+
+      ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+      const blob: Blob | null = await new Promise((resolve) => canvas.toBlob(resolve, 'image/jpeg', quality));
+      if (!blob || blob.size >= file.size) return file;
+
+      const name = file.name.replace(/\.[^.]+$/, '') + '.jpg';
+      return new File([blob], name, { type: 'image/jpeg' });
+    } catch {
+      return file;
+    }
+  }
+
   static async uploadImage(
     file: File, 
     onProgress?: (progress: number) => void,
@@ -19,7 +58,8 @@ export class ImageService {
   ): Promise<string> {
     try {
       if (onProgress) onProgress(20);
-      const url = await SupabaseStorageService.uploadImage(file, onProgress, bucket);
+      const optimized = await ImageService.compressImage(file);
+      const url = await SupabaseStorageService.uploadImage(optimized, onProgress, bucket);
       if (onProgress) onProgress(100);
       return url;
     } catch (error) {

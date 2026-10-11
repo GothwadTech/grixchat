@@ -4,6 +4,97 @@ import { useAuth } from '../../../providers/AuthProvider.tsx';
 import { LocalDataCache } from '../../../services/LocalDataCache';
 import { isUserOnline } from '../../../utils/presence';
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Egress guards
+//
+// A conversation-list refresh is 6 round-trips and ~25–130 KB (measured, see
+// docs/EGRESS_AUDIT.md). It used to run on EVERY realtime event — one per
+// message and one per row of every read receipt — which is what filled the
+// Supabase egress quota. It now runs on mount, on focus and on *structural*
+// changes only; message traffic patches the list in place from the realtime
+// payload, with no network call at all.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Follows only change when someone follows/unfollows; cache them. */
+const FOLLOWS_TTL_MS = 5 * 60 * 1000;
+/** Coalesce bursts of structural events (new chat, participant added) into one refresh. */
+const STRUCTURAL_DEBOUNCE_MS = 1200;
+/** `conversation_id=in.(…)` filter length cap — beyond this, rely on focus refreshes. */
+const REALTIME_IN_FILTER_LIMIT = 60;
+
+/**
+ * Does `conversation_participants.last_read_at` exist yet?
+ * `null` = untested. Until sql/09_egress_optimizations.sql is applied we fall
+ * back to the legacy `messages.is_read` scan, so the app works either way.
+ */
+let participantsSupportReadMarker: boolean | null = null;
+
+const followsCacheKey = (myId: string) => `follows_v1_${myId}`;
+
+/**
+ * The conversation-list query.
+ *
+ * Exported so `src/__tests__/egressBudget.test.ts` can measure exactly what
+ * ships over the wire. Rules this string encodes (docs/EGRESS_AUDIT.md):
+ *   - never `users(*)` — the list renders six columns, not settings/lock/tokens
+ *   - never fetch message rows — `conversations.last_message*` is authoritative
+ *   - one embedded select = one round trip
+ */
+export const CONVERSATION_LIST_SELECT = `
+  conversation_id,
+  last_read_at,
+  conversation:conversations (
+    id, type, name, photo_url, last_message, last_message_at, updated_at, created_at,
+    participants:conversation_participants (
+      user_id, last_read_at,
+      user:users (id, username, full_name, photo_url, is_online, last_seen)
+    )
+  )
+`;
+
+async function getMutualFriends(myId: string): Promise<Set<string>> {
+  const key = followsCacheKey(myId);
+  const cached = LocalDataCache.get<{ at: number; rows: any[] }>(key);
+  if (cached && cached.rows && Date.now() - (cached.at || 0) < FOLLOWS_TTL_MS) {
+    return buildMutualSet(cached.rows, myId);
+  }
+  if (!supabase) return new Set();
+  const { data } = await supabase
+    .from('follows')
+    .select('follower_id, following_id')
+    .or(`follower_id.eq.${myId},following_id.eq.${myId}`);
+  LocalDataCache.set(key, { at: Date.now(), rows: data || [] });
+  return buildMutualSet(data || [], myId);
+}
+
+function invalidateFollows(myId: string) {
+  LocalDataCache.set(followsCacheKey(myId), { at: 0, rows: [] });
+}
+
+/** The chat list shows a one-line preview — strip the forward markers. */
+function cleanPreview(text: string): string {
+  if (typeof text !== 'string') return '';
+  if (text.startsWith('\u200B[FWD_MANY]\u200B')) {
+    return '↪ Forwarded many times: ' + text.replace('\u200B[FWD_MANY]\u200B', '');
+  }
+  if (text.startsWith('\u200B[FWD]\u200B')) {
+    return '↪ Forwarded: ' + text.replace('\u200B[FWD]\u200B', '');
+  }
+  return text;
+}
+
+function buildMutualSet(rows: any[], myId: string): Set<string> {
+  const iFollow = new Set<string>();
+  const followsMe = new Set<string>();
+  (rows || []).forEach((row: any) => {
+    if (row.follower_id === myId) iFollow.add(row.following_id);
+    if (row.following_id === myId) followsMe.add(row.follower_id);
+  });
+  const mutual = new Set<string>();
+  iFollow.forEach((id) => { if (followsMe.has(id)) mutual.add(id); });
+  return mutual;
+}
+
 export const useConversations = (activeFilter: string) => {
   const { user, isAuthReady, userData } = useAuth();
   
@@ -39,6 +130,15 @@ export const useConversations = (activeFilter: string) => {
   const chatChannelsRef = useRef<any[]>([]);
   const subscribedIdsRef = useRef<string[]>([]);
 
+  /** Keeps a synchronous copy of the list so realtime patches never race React state. */
+  const listRef = useRef<any[]>(conversations);
+  useEffect(() => { listRef.current = conversations; }, [conversations]);
+
+  /** Only one refresh may be in flight; bursts collapse into it. */
+  const inFlightRef = useRef(false);
+  const structuralTimerRef = useRef<any>(null);
+  const refreshRef = useRef<(() => void) | null>(null);
+
   const formatTime = useCallback((date: Date) => {
     const now = new Date();
     const diff = now.getTime() - date.getTime();
@@ -50,229 +150,141 @@ export const useConversations = (activeFilter: string) => {
 
   const fetchConversations = useCallback(async () => {
     if (!user || activeFilter === 'Calls' || !supabase || !isAuthReady) return;
+    if (inFlightRef.current) return; // coalesce bursts into one request
+    inFlightRef.current = true;
+
     const myId = user.id;
     const cached = LocalDataCache.getConversations(myId) || [];
-    
-    if (isPaginating) {
-      setLoadingMore(true);
-    } else if (limit === 15) {
-      if (!cached || cached.length === 0) {
-        setLoading(true);
-      }
-    }
+    if (cached.length === 0) setLoading(true);
+
+    const SELECT_MODERN = CONVERSATION_LIST_SELECT;
+    const SELECT_LEGACY = `
+      conversation_id,
+      conversation:conversations (
+        id, type, name, photo_url, last_message, last_message_at, updated_at, created_at,
+        participants:conversation_participants (
+          user_id,
+          user:users (id, username, full_name, photo_url, is_online, last_seen)
+        )
+      )
+    `;
 
     try {
-      // 1. Fetch all conversation IDs the user is part of
-      const { data: participations, error: pError } = await supabase
-        .from('conversation_participants')
-        .select('conversation_id')
-        .eq('user_id', myId);
+      // ── 1. ONE round trip for the whole list ───────────────────────────────
+      // `users(*)` used to bring 0.8 KB per participant (settings, the passcode
+      // hash, FCM tokens); the list renders six columns.
+      let rows: any[] | null = null;
+      let haveReadMarker = participantsSupportReadMarker !== false;
 
-      if (pError) {
-        console.error('Error fetching participant IDs:', pError);
-        return;
+      if (participantsSupportReadMarker !== false) {
+        const { data, error } = await supabase
+          .from('conversation_participants')
+          .select(SELECT_MODERN)
+          .eq('user_id', myId);
+
+        if (!error) {
+          rows = data as any[];
+          participantsSupportReadMarker = true;
+          haveReadMarker = true;
+        } else {
+          // Column not there yet (sql/09_egress_optimizations.sql not applied).
+          participantsSupportReadMarker = false;
+          haveReadMarker = false;
+        }
       }
 
-      const convIds = (participations || []).map(p => p.conversation_id);
-      if (convIds.length === 0) {
+      if (rows === null) {
+        const { data, error } = await supabase
+          .from('conversation_participants')
+          .select(SELECT_LEGACY)
+          .eq('user_id', myId);
+        if (error) {
+          console.error('Error fetching conversation list:', error);
+          return;
+        }
+        rows = data as any[];
+      }
+
+      const queryData = (rows || [])
+        .filter((r: any) => r && r.conversation)
+        .map((r: any) => ({ participation: r, conversation: r.conversation }));
+
+      if (queryData.length === 0) {
+        LocalDataCache.saveConversations(myId, []);
         setConversations([]);
         setHasMore(false);
-        setLoading(false);
-        setLoadingMore(false);
-        setIsPaginating(false);
         return;
       }
 
-      // Delta synchronization strategy to bypass massive row scans and network payload limits
-      let maxUpdatedAt = '1970-01-01T00:00:00.000Z';
-      cached.forEach((c: any) => {
-        const updateTime = c.lastMsgAt || c.updated_at || c.created_at;
-        if (updateTime && new Date(updateTime).getTime() > new Date(maxUpdatedAt).getTime()) {
-          maxUpdatedAt = updateTime;
-        }
-      });
+      const conversationIds = queryData.map((item: any) => item.conversation.id);
 
-      // Offset checkTimestamp by 10s to satisfy active clock drift in Supabase containers
-      const checkTimestamp = new Date(new Date(maxUpdatedAt).getTime() - 10000).toISOString();
-      let changedConvIds: string[] = [];
-      let isDelta = cached && cached.length > 0 && !isPaginating;
+      // ── 2. Mutual friends — cached for 5 minutes ───────────────────────────
+      const mutualFriendsSet = await getMutualFriends(myId);
 
-      if (isDelta) {
-        const { data: updatedConvs, error: uError } = await supabase
-          .from('conversations')
-          .select('id')
-          .in('id', convIds)
-          .gt('updated_at', checkTimestamp);
+      // ── 3. Unread — a comparison, not a per-message scan ───────────────────
+      const unreadMap: Record<string, number> = {};
 
-        if (!uError && updatedConvs) {
-          changedConvIds = updatedConvs.map(c => c.id);
-        } else if (uError) {
-          console.error('Error fetching delta updates:', uError);
-          isDelta = false; // Fallback to full sync
-        }
-      }
+      if (haveReadMarker) {
+        queryData.forEach(({ participation, conversation }: any) => {
+          const seenAt = participation?.last_read_at;
+          const lastAt = conversation.last_message_at || conversation.updated_at || conversation.created_at;
+          if (!lastAt) return;
+          if (seenAt && new Date(lastAt) <= new Date(seenAt)) return;
 
-      // If it's delta-sync and NO conversations have updated, complete instantly!
-      if (isDelta && changedConvIds.length === 0) {
-        console.log('[Delta Sync] Zero conversation changes found. Serving instant cached chats.');
-        setLoading(false);
-        setLoadingMore(false);
-        setIsPaginating(false);
-        return;
-      }
-
-      const idsToQuery = isDelta ? changedConvIds : convIds;
-
-      // 2. Fetch details for required conversations, ordering by newest activity (updated_at) primarily to ensure live updates bubble to the top
-      const { data: convData, error: cError } = await supabase
-        .from('conversations')
-        .select(`
-          *,
-          participants:conversation_participants (
-            user:users (*)
-          )
-        `)
-        .in('id', idsToQuery)
-        .order('updated_at', { ascending: false })
-        .order('last_message_at', { ascending: false })
-        .limit(isDelta ? changedConvIds.length : limit + 1);
-
-      if (cError) {
-        console.error('Error fetching conversations details:', cError);
-        return;
-      }
-
-      let hasMoreData = false;
-      let queryData = (convData || []).map(conv => ({ conversation: conv }));
-      if (!isDelta && queryData.length > limit) {
-        hasMoreData = true;
-        queryData = queryData.slice(0, limit);
-      }
-      if (!isDelta) {
-        setHasMore(hasMoreData);
-      }
-
-      // Fetch missing hidden or archived chats so they are never lost from local state
-      const fetchedIds = new Set(queryData.map((item: any) => item.conversation?.id).filter(Boolean));
-      const missingHiddenIds = (userData?.hiddenChats || []).filter((id: string) => !fetchedIds.has(id));
-      const missingArchivedIds = (userData?.archivedChats || []).filter((id: string) => !fetchedIds.has(id));
-      const allMissingIds = [...missingHiddenIds, ...missingArchivedIds];
-
-      if (allMissingIds.length > 0) {
-        const { data: missingData, error: missingError } = await supabase
-          .from('conversation_participants')
-          .select(`
-            conversation:conversations (
-              *,
-              participants:conversation_participants (
-                user:users (*)
-              )
-            )
-          `)
-          .eq('user_id', myId)
-          .in('conversation_id', allMissingIds);
-        
-        if (!missingError && missingData && missingData.length > 0) {
-          queryData = [...queryData, ...missingData];
-        }
-      }
-
-      // Fetch mutual follows to filter out non-friends from direct chats
-      const { data: followRows } = await supabase
-        .from('follows')
-        .select('follower_id, following_id')
-        .or(`follower_id.eq.${myId},following_id.eq.${myId}`);
-
-      const IFollow = new Set<string>();
-      const FollowsMe = new Set<string>();
-
-      followRows?.forEach((row: any) => {
-        if (row.follower_id === myId) {
-          IFollow.add(row.following_id);
-        }
-        if (row.following_id === myId) {
-          FollowsMe.add(row.follower_id);
-        }
-      });
-
-      const mutualFriendsSet = new Set<string>();
-      IFollow.forEach(id => {
-        if (FollowsMe.has(id)) {
-          mutualFriendsSet.add(id);
-        }
-      });
-
-      const conversationIds = queryData.map((item: any) => item.conversation?.id).filter(Boolean);
-
-      // Fetch unread messages count for all my conversations at once
-      let unreadData: any[] = [];
-      if (conversationIds.length > 0) {
+          // Exact count only when the messages are already on the device.
+          const cachedMsgs = LocalDataCache.getMessages(conversation.id) as any[] | null;
+          if (cachedMsgs && cachedMsgs.length > 0) {
+            const n = cachedMsgs.filter((m: any) =>
+              m && m.sender_id !== myId && (!seenAt || new Date(m.created_at) > new Date(seenAt))
+            ).length;
+            if (n > 0) unreadMap[conversation.id] = n;
+          } else {
+            unreadMap[conversation.id] = 1;
+          }
+        });
+      } else if (conversationIds.length > 0) {
+        // Legacy path: one row per unread message. Capped — this query grows
+        // with the unread backlog, which is exactly what the read marker fixes.
         const { data: res } = await supabase
           .from('messages')
           .select('conversation_id')
           .eq('is_read', false)
           .neq('sender_id', myId)
-          .in('conversation_id', conversationIds);
-        unreadData = res || [];
-      }
-
-      const unreadMap: Record<string, number> = {};
-      unreadData.forEach(m => {
-        unreadMap[m.conversation_id] = (unreadMap[m.conversation_id] || 0) + 1;
-      });
-
-      // Fetch the actual newest message from messages table for each conversation to prevent race conditions
-      const latestMessagesMap: Record<string, any> = {};
-      const hasMessagesInDb = new Set<string>();
-
-      if (conversationIds.length > 0) {
-        const { data: latestMsgs } = await supabase
-          .from('messages')
-          .select('conversation_id, text, media_type, created_at, sender_id, deleted_by')
           .in('conversation_id', conversationIds)
-          .order('created_at', { ascending: false })
-          .limit(Math.max(50, conversationIds.length * 5));
-
-        latestMsgs?.forEach((m: any) => {
-          hasMessagesInDb.add(m.conversation_id);
-          // Filter out if deleted by key-user (Delete for me)
-          if (Array.isArray(m.deleted_by) && m.deleted_by.includes(myId)) {
-            return;
-          }
-          if (!latestMessagesMap[m.conversation_id]) {
-            latestMessagesMap[m.conversation_id] = m;
-          }
+          .limit(500);
+        (res || []).forEach((m: any) => {
+          unreadMap[m.conversation_id] = (unreadMap[m.conversation_id] || 0) + 1;
         });
       }
 
-      // Fetch custom chat settings (nickname, custom avatar) to override globally
-      let chatSettingsData: any[] = [];
+      // ── 4. Per-chat nickname/avatar overrides ──────────────────────────────
+      let settingsMap: Record<string, { nickname?: string; customPhotoUrl?: string }> = {};
       try {
         const { data: cSettings } = await supabase
           .from('chat_settings')
           .select('receiver_id, nickname, custom_photo_url')
           .eq('user_id', myId);
-        chatSettingsData = cSettings || [];
+        (cSettings || []).forEach((s: any) => {
+          if (s.receiver_id) {
+            settingsMap[s.receiver_id] = {
+              nickname: s.nickname || undefined,
+              customPhotoUrl: s.custom_photo_url || undefined,
+            };
+          }
+        });
       } catch (settingsError) {
-        console.warn("Error fetching all chat_settings:", settingsError);
+        console.warn('Error fetching all chat_settings:', settingsError);
       }
 
-      const settingsMap: Record<string, { nickname?: string; customPhotoUrl?: string }> = {};
-      chatSettingsData.forEach((s: any) => {
-        if (s.receiver_id) {
-          settingsMap[s.receiver_id] = {
-            nickname: s.nickname || undefined,
-            customPhotoUrl: s.custom_photo_url || undefined,
-          };
-        }
-      });
-
+      // ── 5. Shape the list. `last_message*` is maintained by the writer (and
+      //      by a trigger once sql/09 is applied) — no message rows are fetched
+      //      just to fill a one-line preview.
       const rawList = queryData
         .map((item: any) => {
           const conv = item.conversation;
           if (!conv) return null;
           const isGroup = conv.type === 'group';
-          const otherParticipants = conv.participants.filter((p: any) => p?.user?.id !== myId);
+          const otherParticipants = (conv.participants || []).filter((p: any) => p?.user?.id !== myId);
           const firstOther = otherParticipants[0]?.user;
 
           if (!isGroup && !firstOther) return null;
@@ -283,22 +295,20 @@ export const useConversations = (activeFilter: string) => {
           }
 
           const unreadCount = unreadMap[conv.id] || 0;
-          const latestDbMsg = latestMessagesMap[conv.id];
 
-          let lastMsgVal = (conv as any).last_message || 'New Conversation';
-          let lastMsgAtVal = (conv as any).last_message_at || conv.updated_at || conv.created_at;
-          let lastMsgSenderId = (conv as any).last_message_sender_id;
+          let lastMsgVal = conv.last_message || 'New Conversation';
+          let lastMsgAtVal = conv.last_message_at || conv.updated_at || conv.created_at;
+          let lastMsgSenderId: string | undefined;
 
-          if (latestDbMsg) {
-            lastMsgVal = latestDbMsg.text || (latestDbMsg.media_type ? `Sent a ${latestDbMsg.media_type}` : 'Sent a file');
-            lastMsgAtVal = latestDbMsg.created_at;
-            lastMsgSenderId = latestDbMsg.sender_id;
-          } else if (hasMessagesInDb.has(conv.id)) {
-            // All messages in this conversation were deleted/hidden for this user
-            lastMsgVal = 'New Conversation';
+          // Ticks for the list row come from messages already cached on device.
+          const cachedMsgs = LocalDataCache.getMessages(conv.id) as any[] | null;
+          if (cachedMsgs && cachedMsgs.length > 0) {
+            const newest = cachedMsgs[cachedMsgs.length - 1];
+            if (newest && (!lastMsgAtVal || new Date(newest.created_at) >= new Date(lastMsgAtVal))) {
+              lastMsgSenderId = newest.sender_id;
+            }
           }
 
-          // Clean any forward tagging indicators for raw display in Chat List
           if (typeof lastMsgVal === 'string') {
             if (lastMsgVal.startsWith('\u200B[FWD_MANY]\u200B')) {
               lastMsgVal = '↪ Forwarded many times: ' + lastMsgVal.replace('\u200B[FWD_MANY]\u200B', '');
@@ -312,10 +322,9 @@ export const useConversations = (activeFilter: string) => {
             lastMsgStatusVal = lastMsgSenderId === myId ? 'Sent' : 'Received';
           }
 
-          // Apply nickname overrides
           const customSetts = isGroup ? null : settingsMap[firstOther.id];
           const dynamicName = customSetts?.nickname || (isGroup ? (conv.name || 'Group') : (firstOther.full_name || firstOther.username || 'Unknown'));
-          const dynamicAvatar = isGroup 
+          const dynamicAvatar = isGroup
             ? (conv.photo_url || `https://cdn-icons-png.flaticon.com/512/166/166258.png`)
             : (customSetts?.customPhotoUrl || firstOther?.photo_url || `https://cdn-icons-png.flaticon.com/512/149/149071.png`);
 
@@ -338,29 +347,14 @@ export const useConversations = (activeFilter: string) => {
         })
         .filter(Boolean);
 
-      let finalFormattedList: any[] = [];
-      if (isDelta) {
-        const cacheMap = new Map();
-        cached.forEach((c: any) => {
-          if (c && c.id) cacheMap.set(c.id, c);
-        });
-        rawList.forEach((conv: any) => {
-          if (conv && conv.id) cacheMap.set(conv.id, conv);
-        });
-        finalFormattedList = Array.from(cacheMap.values());
-      } else {
-        finalFormattedList = rawList;
-      }
-
       // De-duplicate direct conversations: Keep only the one with the most recent activity / actual messages
       const seenDict: Record<string, any> = {};
-      finalFormattedList.forEach((conv: any) => {
+      (rawList as any[]).forEach((conv: any) => {
         if (conv.type !== 'direct') return;
         const existing = seenDict[conv.otherUserId];
         if (!existing) {
           seenDict[conv.otherUserId] = conv;
         } else {
-          // If one has real messages and the other is empty ('New Conversation'), keep the real one
           const currentHasMsg = conv.lastMsg && conv.lastMsg !== 'New Conversation';
           const existingHasMsg = existing.lastMsg && existing.lastMsg !== 'New Conversation';
 
@@ -369,7 +363,6 @@ export const useConversations = (activeFilter: string) => {
           } else if (!currentHasMsg && existingHasMsg) {
             // keep existing, do nothing
           } else {
-            // both have messages or both are empty, keep the one with the more recent lastMsgAt
             if (new Date(conv.lastMsgAt).getTime() > new Date(existing.lastMsgAt).getTime()) {
               seenDict[conv.otherUserId] = conv;
             }
@@ -377,124 +370,179 @@ export const useConversations = (activeFilter: string) => {
         }
       });
 
-      const formattedList = finalFormattedList
+      const formattedList = (rawList as any[])
         .filter((conv: any) => {
           if (conv.type !== 'direct') return true;
           return seenDict[conv.otherUserId]?.id === conv.id;
         })
-        .sort((a, b) => {
-          return new Date(b.lastMsgAt).getTime() - new Date(a.lastMsgAt).getTime();
-        });
+        .sort((a, b) => new Date(b.lastMsgAt).getTime() - new Date(a.lastMsgAt).getTime());
 
       LocalDataCache.saveConversations(myId, formattedList);
+      listRef.current = formattedList;
       setConversations(formattedList);
+      setHasMore(false);
     } catch (err) {
       console.error('Crash in fetchConversations execution details:', err);
     } finally {
+      inFlightRef.current = false;
       setLoading(false);
       setLoadingMore(false);
       setIsPaginating(false);
     }
-  }, [user, activeFilter, isAuthReady, formatTime, limit, isPaginating, userData]);
+  }, [user, activeFilter, isAuthReady, formatTime]);
+
+  useEffect(() => { refreshRef.current = fetchConversations; }, [fetchConversations]);
+
+  /** Debounced structural refresh: new chats, new participants, follow changes. */
+  const scheduleStructuralRefresh = useCallback(() => {
+    if (structuralTimerRef.current) return;
+    structuralTimerRef.current = setTimeout(() => {
+      structuralTimerRef.current = null;
+      refreshRef.current?.();
+    }, STRUCTURAL_DEBOUNCE_MS);
+  }, []);
+
+  /**
+   * Realtime message → patch the list row in place.
+   * This is the whole egress fix: the old code called `fetchConversations()`
+   * here (6 round-trips, 25–130 KB) for every message and every read receipt.
+   */
+  const patchConversationFromMessage = useCallback((row: any) => {
+    if (!user?.id || !row?.conversation_id) return;
+    const myId = user.id;
+    const current = listRef.current;
+    const idx = current.findIndex((c) => c.id === row.conversation_id);
+    if (idx === -1) {
+      scheduleStructuralRefresh(); // a chat we do not know about yet
+      return;
+    }
+
+    const isMine = row.sender_id === myId;
+    const text = cleanPreview(row.text || (row.media_type ? `Sent a ${row.media_type}` : 'Sent a file'));
+    const at = row.created_at || new Date().toISOString();
+    const prev = current[idx];
+    const updated = {
+      ...prev,
+      lastMsg: text,
+      lastMsgAt: at,
+      time: formatTime(new Date(at)),
+      lastMsgStatus: isMine ? 'Sent' : 'Received',
+      unread: isMine ? prev.unread : true,
+      unreadCount: isMine ? prev.unreadCount : (prev.unreadCount || 0) + 1,
+    };
+    const next = [updated, ...current.filter((_, i) => i !== idx)];
+    listRef.current = next;
+    setConversations(next);
+    LocalDataCache.saveConversations(myId, next);
+  }, [user?.id, formatTime, scheduleStructuralRefresh]);
+
+  /** Realtime `conversations` UPDATE → same idea, from the denormalized columns. */
+  const patchConversationFromRow = useCallback((row: any) => {
+    if (!user?.id || !row?.id) return;
+    const current = listRef.current;
+    const idx = current.findIndex((c) => c.id === row.id);
+    if (idx === -1) return;
+    const prev = current[idx];
+    const at = row.last_message_at || row.updated_at || prev.lastMsgAt;
+    const updated = {
+      ...prev,
+      lastMsg: row.last_message ? cleanPreview(row.last_message) : prev.lastMsg,
+      lastMsgAt: at,
+      time: formatTime(new Date(at)),
+    };
+    const next = [updated, ...current.filter((_, i) => i !== idx)];
+    listRef.current = next;
+    setConversations(next);
+    LocalDataCache.saveConversations(user.id, next);
+  }, [user?.id, formatTime]);
 
   useEffect(() => {
     if (!user || activeFilter === 'Calls' || !supabase || !isAuthReady) return;
 
-    // Subscribe to Cache Updates for instant off-line updates
+    // Local cache first: instant, zero egress.
     const unsubscribeCache = LocalDataCache.subscribe('conversations', (updatedList) => {
       if (updatedList && Array.isArray(updatedList)) {
+        listRef.current = updatedList;
         setConversations(updatedList);
       } else {
-        fetchConversations();
+        scheduleStructuralRefresh();
       }
     });
 
-    fetchConversations();
+    refreshRef.current?.();
 
-    // Subscribe to conversation updates and new participants
-    const channelId = `conversations-realtime-${Math.random().toString(36).substring(2, 9)}`;
+    // Structural events only — these mean the list itself changed shape.
+    // (A message arriving is NOT one of them any more: it patches in place.)
+    const channelId = `conversations-realtime-${user.id}`;
     const channel = supabase
       .channel(channelId)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'conversation_participants', filter: `user_id=eq.${user.id}` }, () => {
-        fetchConversations();
+        scheduleStructuralRefresh();
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'follows', filter: `follower_id=eq.${user.id}` }, () => {
-        fetchConversations();
+        invalidateFollows(user.id);
+        scheduleStructuralRefresh();
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'follows', filter: `following_id=eq.${user.id}` }, () => {
-        fetchConversations();
+        invalidateFollows(user.id);
+        scheduleStructuralRefresh();
       })
       .subscribe();
+
+    // Coming back to the tab is the natural moment to reconcile.
+    const handleFocus = () => scheduleStructuralRefresh();
+    window.addEventListener('focus', handleFocus);
+    document.addEventListener('visibilitychange', handleFocus);
 
     return () => {
       supabase.removeChannel(channel);
       unsubscribeCache();
+      window.removeEventListener('focus', handleFocus);
+      document.removeEventListener('visibilitychange', handleFocus);
+      if (structuralTimerRef.current) {
+        clearTimeout(structuralTimerRef.current);
+        structuralTimerRef.current = null;
+      }
     };
-  }, [user, activeFilter, isAuthReady, fetchConversations]);
+  }, [user?.id, activeFilter, isAuthReady, scheduleStructuralRefresh]);
 
-  // Subscribe dynamically to new messages/conversations for all of the user's active conversations
+  /**
+   * Live traffic — ONE channel for the whole list, and every handler patches
+   * local state from the realtime payload. Nothing here issues a query.
+   */
   useEffect(() => {
     if (!supabase || !user || conversations.length === 0) return;
 
-    const currentIds = conversations.map(c => c.id).sort();
-    const prevIds = [...subscribedIdsRef.current].sort();
+    const ids = conversations.map((c) => c.id).slice(0, REALTIME_IN_FILTER_LIMIT);
+    const inFilter = `(${ids.join(',')})`;
+    if (ids.length === 0) return;
 
-    const isIdentical = currentIds.length === prevIds.length && 
-                        currentIds.every((id, idx) => id === prevIds[idx]);
+    const channelName = `chat-list-live-${user.id}`;
+    const ch = supabase
+      .channel(channelName)
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'messages',
+        filter: `conversation_id=in.${inFilter}`,
+      }, (payload: any) => patchConversationFromMessage(payload.new))
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'conversations',
+        filter: `id=in.${inFilter}`,
+      }, (payload: any) => patchConversationFromRow(payload.new))
+      .subscribe();
 
-    if (isIdentical) {
-      return; // Save resources by not re-subscribing if conversation list hasn't structurally changed
-    }
-
-    // Unsubscribe from existing chat channels
-    chatChannelsRef.current.forEach(ch => {
-      try {
-        supabase.removeChannel(ch);
-      } catch (err) {
-        console.warn('Error removing channel:', err);
-      }
-    });
-    chatChannelsRef.current = [];
-
-    const newChannels = conversations.map(c => c.id).map(convId => {
-      const channelName = `sub-chat-${convId}-${Math.random().toString(36).substring(2, 7)}`;
-      const ch = supabase
-        .channel(channelName)
-        .on('postgres_changes', {
-          event: '*',
-          schema: 'public',
-          table: 'messages',
-          filter: `conversation_id=eq.${convId}`
-        }, () => {
-          fetchConversations();
-        })
-        .on('postgres_changes', {
-          event: '*',
-          schema: 'public',
-          table: 'conversations',
-          filter: `id=eq.${convId}`
-        }, () => {
-          fetchConversations();
-        })
-        .subscribe();
-      return ch;
-    });
-
-    chatChannelsRef.current = newChannels;
-    subscribedIdsRef.current = conversations.map(c => c.id);
+    chatChannelsRef.current = [ch];
+    subscribedIdsRef.current = ids;
 
     return () => {
-      chatChannelsRef.current.forEach(ch => {
-        try {
-          supabase.removeChannel(ch);
-        } catch (err) {
-          console.warn('Error removing channel on cleanup:', err);
-        }
-      });
+      try { supabase.removeChannel(ch); } catch (err) { console.warn('Error removing channel:', err); }
       chatChannelsRef.current = [];
       subscribedIdsRef.current = [];
     };
-  }, [conversations, user?.id, supabase, fetchConversations]);
+  }, [conversations.map((c) => c.id).join(','), user?.id, patchConversationFromMessage, patchConversationFromRow]);
 
   // Suggested users fetch
   useEffect(() => {
