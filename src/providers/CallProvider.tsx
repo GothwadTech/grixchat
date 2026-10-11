@@ -583,13 +583,13 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
           if (contentType && contentType.includes("application/json")) {
             payload = await res.json();
           } else {
-            console.warn("[Calling] Received non-JSON response from backend. Defaulting to sandbox mode.");
+            console.warn('[Calling] The token endpoint answered with something other than JSON — falling back to peer-to-peer.');
           }
         } else {
-          console.warn(`[Calling] Backend token generation returned status ${res.status}. Defaulting to sandbox mode.`);
+          console.warn(`[Calling] The token endpoint returned status ${res.status} — falling back to peer-to-peer.`);
         }
       } catch (fetchErr) {
-        console.warn("[Calling] Failed to communicate with livekit-token API or parse JSON. Defaulting to sandbox mode:", fetchErr);
+        console.warn('[Calling] Could not reach the LiveKit token endpoint — falling back to peer-to-peer:', fetchErr);
       }
       
       // Fallback or explicit cloud address
