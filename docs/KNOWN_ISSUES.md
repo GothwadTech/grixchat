@@ -1,223 +1,243 @@
 # Known Issues
 
-Prioritised. Verified against the code on 2026-10-10, after the dead-code
-removal. The command that proved each item is noted where useful.
+Prioritised. Originally verified against the code on 2026-10-10; **re-verified
+and largely fixed on 2026-10-11** (see the status on each item).
 
 **Severity:** 🔴 blocks a safe deploy · 🟠 breaks a feature or misleads a
 developer · 🟡 quality / performance · 🟢 nice to have
 
+**Legend:** ✅ fixed in code · ⚠️ partly fixed · ❌ still open · 🧑 needs a
+human step (SQL run, secret, or a product decision)
+
 ---
 
-## 🔴 P0 — Security
+## 🧑 Read this first — the three things code cannot do
 
-### 1. `/api/send-notification` is an open push relay
+Everything that could be fixed from the repository alone **has been**. These
+tasks need Supabase, GitHub settings or a decision:
 
-`server.ts:153`. No authentication, no origin check, no rate limit.
+| # | Task | Where | Why it matters |
+|---|---|---|---|
+| A | Add `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` (+ the `VITE_FIREBASE_*` and `VITE_LIVEKIT_URL` values) as **Actions secrets** | GitHub → Settings → Secrets and variables → Actions | The Pages workflow now passes them to the build. **Without them the Supabase SDK is compiled out and the deployed app cannot sign in** — the build warns loudly in the log. |
+| B | Set the server secrets on whichever host runs `server.ts` (Vercel/Cloudflare): `GEMINI_API_KEY`, `FIREBASE_SERVICE_ACCOUNT`, `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET`, `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`, `SUPABASE_SERVICE_ROLE_KEY`, `APP_URL` | host dashboard | The new auth layer verifies JWTs against `VITE_SUPABASE_URL` + `VITE_SUPABASE_ANON_KEY`, so those two must be set **server-side** as well. |
+| C | Decide the fate of `call_candidates` (issue 7) | Supabase SQL editor | It is defined but unused. Drop it with:<br>`DROP TABLE IF EXISTS public.call_candidates CASCADE;`<br>or keep it and adopt the table-based signalling in `db/3_webrtc_signaling_architecture.md`. |
 
-```bash
-curl -X POST https://<host>/api/send-notification \
-  -H 'Content-Type: application/json' \
-  -d '{"tokens":["<any FCM token>"],"title":"Alert","body":"Tap here"}'
-```
+Optional: set `ALLOWED_ORIGINS=https://your-domain.tld,https://your-other.tld`
+(comma-separated) on the server to extend the CORS/origin allowlist beyond
+same-origin + `APP_URL`.
 
-FCM tokens live client-side (`users.fcm_tokens`), so a leaked token plus this
-endpoint is a spam/phishing channel to the whole user base.
+---
 
-**Fix:** verify a Supabase JWT (`Authorization: Bearer`) and confirm the caller
-participates in the conversation; add a per-IP rate limit.
+## ✅ P0 — Security (all fixed)
 
-### 2. `/api/upload-file` is an open file host
+### 1. `/api/send-notification` was an open push relay — ✅ FIXED
 
-`server.ts:346`. Multer limit **100 MB per file**, `express.json` limit 50 MB.
-No auth, no rate limit, no MIME allowlist. Re-uploads to `catbox.moe` /
-`gofile.io`, so the server is a free anonymous file host on your bandwidth.
+It is no longer a token relay at all:
 
-**Fix:** require auth; cap size per media type; rate limit; preferably upload
-straight to Supabase Storage with a signed URL.
+- **Auth:** requires `Authorization: Bearer <supabase access token>`, verified
+  with `supabase.auth.getUser()` (`server.ts` → `requireAuth`).
+- **Recipients are derived server-side.** The client now sends only
+  `{ conversationId, body }`; the server checks the caller is a participant and
+  reads the other participants' `fcm_tokens` itself. Client-supplied token
+  lists are ignored for conversations.
+- **Self-test mode** (the diagnostics button in notification settings) accepts
+  tokens only if they are already registered on the caller's own profile.
+- **Title can no longer be spoofed** — it is read from the sender's row.
+- **Limits:** 200-char body, 20 requests/min/IP (`notificationLimiter`).
+- **Bonus:** `removeInvalidFcmToken()` no longer scans the whole `users` table
+  — it uses `contains('fcm_tokens', [...])`.
 
-### 3. No server hardening at all
+Client side: `pushNotificationService.ts` and `NotificationsSettingsScreen.tsx`
+go through the new `src/lib/apiClient.ts`, which attaches the session token.
 
-```
-grep -n "cors\|helmet\|rate" server.ts   →  0 results
-```
+### 2. `/api/upload-file` was an open 100 MB file host — ✅ FIXED
 
-No CORS policy, no security headers, no rate limiting on any route.
+- Auth required (`requireAuth`).
+- **MIME allowlist** (`ALLOWED_MIME_TYPES`) — no more anonymous `.exe`, and
+  `image/svg+xml` is deliberately excluded (script container).
+- **Size caps by media type:** images 15 MB, audio 25 MB, documents 25 MB,
+  video 50 MB (hard ceiling), 1 file per request, temp file always unlinked.
+- Rate limited to 8 uploads/min/IP (`uploadLimiter`).
 
-**Fix:** `helmet()` + an explicit `cors({origin})` allowlist + `express-rate-limit`.
+> No caller in this repository uses this route. It is kept for the Android
+> WebView wrapper, but now requires a signed-in session.
+
+### 3. No server hardening at all — ✅ FIXED
+
+`server.ts` now runs:
+
+| Layer | What |
+|---|---|
+| `helmet()` | nosniff, referrer policy, `X-Powered-By` off, CORP `cross-origin`. CSP/COOP/COEP/frameguard are deliberately relaxed so the Vite dev server, the GitHub OAuth popup and the WebView/TWA wrapper keep working (documented inline). |
+| `cors()` | Reflects an origin only when it is same-origin or allowlisted (`APP_URL` + `ALLOWED_ORIGINS` + localhost). |
+| Origin guard | Cross-origin writes to `/api/*` are refused with **403** (CSRF belt-and-braces). Loopback/bind-all hosts are exempt so tunnel/preview deployments keep working. |
+| `express-rate-limit` | global 300/min · API 60/min · notifications 20/min · uploads 8/min · AI 20/min, per IP. `trust proxy` is set so the real client IP is used behind Vercel/preview proxies. |
+| Body limits | `express.json` is opt-in per route: **256 kB** by default, 32 MB only for the GitHub push routes. The blanket 50 MB parser is gone. |
+| Error handling | Unknown `/api/*` → JSON 404; malformed JSON → 400; oversized body → 413. |
+
+Also hardened while in there: `/api/livekit-token` requires auth **and** checks
+the caller actually participates in that call/conversation (the token identity
+comes from the verified session, not the request body); `/api/grix-ai` requires
+auth (upstream quota); `/api/github/debug` returns 404 in production.
 
 ---
 
 ## 🟠 P1 — Correctness
 
-### 4. Nothing writes to `notifications`
+### 4. Nothing wrote to `notifications` — ✅ FIXED
 
-Every insert into `notifications` lived in `features/home/components/`
-(`PostCard.tsx`, `VideoPostCard.tsx`), which was dead code and has been deleted.
-The remaining five call sites are all **reads**:
+New `src/services/db/notificationService.ts` is the single write path
+(`create`, `notifyFollow`, `notifySystem`). It is wired into every place a
+connection is created:
 
-```
-src/components/layout/TabHeader.tsx:82                       select
-src/features/notifications/NotificationsScreen.tsx           select
-src/features/notifications/LikeNotificationsScreen.tsx:29    select
-src/features/notifications/LikeNotificationsScreen.tsx:52    update(is_read)
-```
+- `features/profile/UserProfileScreen.tsx` — send request, and accept request
+- `features/chat/MessageRequestsScreen.tsx` — accept
+- `services/db/transactionQueueService.ts` — the offline follow worker
 
-`grep -rn "from('notifications')" src | grep -c insert` → **0**
+Re-following updates the existing row (bumped to unread) instead of stacking
+duplicates. Failures are swallowed with a warning so they can never abort the
+follow itself. Covered by `src/__tests__/notificationService.test.ts` (6 tests).
 
-So the notification screens will always be empty.
+### 5. `notifications` column mismatch — ✅ FIXED
 
-**Fix:** either add a write path (e.g. on new messages / follows) or remove the
-screens. Decide deliberately — right now the UI advertises a feature the
-backend never feeds.
+`sql/01_core_schema.sql` is right: the column is `content`. Both readers now
+map `content` (with a `text` fallback kept only for rows written by older
+builds), and the new writer only ever writes `content`. The mock seeds both and
+the mock now applies the `is_read DEFAULT FALSE` the SQL declares.
 
-### 5. `notifications` column mismatch
+### 6. `users.saved_posts` was not in the schema — ✅ FIXED
 
-`sql/01_core_schema.sql:157` defines `title` and **`content`**.
-`NotificationsScreen.tsx:118` reads **`notif.text`**.
+The column never existed; the only consumers were a read in
+`userProfileService.ts` and a field on `UserProfile`, both leftovers from the
+deleted Posts/Reels features. Removed from the code **and** from `dev/mock/`, so
+the mock keeps mirroring `sql/`.
 
-```tsx
-<span className="…">{notif.text}</span>
-```
+### 7. `call_candidates` is defined but never used — ❌ STILL OPEN (needs SQL)
 
-Whatever write path you add must agree with the reader and the schema. Pick
-`content` (matches the migration) and change the reader.
+The live calling path (`providers/CallProvider.tsx`) signals over Broadcast
+channels, so the table is dead weight. Dropping it is a one-line migration the
+repo cannot run for you — see task **C** at the top. No code change is pending
+on either side of the decision.
 
-### 6. `users.saved_posts` is not in the schema
+### 8. Password reset had no path — ✅ FIXED
 
-`services/db/userProfileService.ts:192` reads and writes it; `sql/` does not
-define it. Either add the column or drop the field.
-
-### 7. `call_candidates` is defined but never used
-
-`sql/01_core_schema.sql:135` creates it for WebRTC ICE signalling, but the live
-calling path (`providers/CallProvider.tsx`) signals over Broadcast channels.
-Either use it or drop it. `db/3_webrtc_signaling_architecture.md` describes the
-table-based design that was not adopted.
-
-### 8. Password reset has no path
-
-```tsx
-// App.tsx
-<Route path="/forgot-password" element={<Navigate to="/login" replace />} />
-```
-
-`ForgotPasswordScreen.tsx` was deleted as dead code. `LoginScreen` still has a
-working `isForgotPassword` mode that calls `auth.resetPasswordForEmail`, so
-users can reset from the login screen — but the dedicated route is a dead end.
-Either wire the route to that mode or remove it.
+`/forgot-password` now renders `LoginScreen` in its reset mode instead of
+redirecting to `/login`. The screen derives the mode from the route and keeps
+`/login` ↔ `/forgot-password` in sync (including browser back/forward), so the
+existing working `auth.resetPasswordForEmail` flow is finally reachable from a
+URL. Covered by a new case in `src/__tests__/app.smoke.test.tsx`.
 
 ---
 
-## 🟡 P2 — Deploy & CI
+## 🟡 P2 — Deploy & CI (all fixed)
 
-### 9. GitHub Pages base path
+### 9. GitHub Pages base path — ✅ FIXED
 
-`vite.config.ts` now reads `base: process.env.VITE_BASE_URL || '/'`. The
-workflow deploys `dist/` to Pages for `GothwadTech/grixchat`, which serves from
-`/grixchat/`, and there is no `CNAME`. Every absolute `/assets/…` URL would 404
-→ blank page.
+`.github/workflows/deploy.yml` builds with `VITE_BASE_URL: /grixchat/`, so
+`dist/assets/…` is emitted under the sub-path Pages serves from.
 
-**Fix:** add to the workflow's Build step:
+### 10. CI did not typecheck or test — ✅ FIXED
 
-```yaml
-env:
-  VITE_BASE_URL: /grixchat/
-```
+The workflow now runs `npm run lint` (tsc) and `npm test` before `npm run
+build`. Both pass.
 
-or add a `CNAME` for a custom domain.
+### 11. `.env.example` and CI env were not connected — ✅ FIXED
 
-> *Static analysis — an actual Pages deploy was not executed.*
+The Pages build receives every `VITE_*` value from Actions secrets (add them —
+task **A**). Two extra safeguards came out of this:
 
-### 10. CI does not typecheck or test
-
-`.github/workflows/deploy.yml` runs only `npm run build`. Vite does not
-typecheck, so type errors ship silently.
-
-**Fix:**
-
-```yaml
-- name: Lint
-  run: npm run lint
-- name: Test
-  run: npm test
-```
-
-Both currently pass, so this is free.
-
-### 11. `.env.example` and CI env are not connected
-
-`.env.example` now lists all 22 variables, but the workflow sets none. The
-GitHub Pages build works because it is client-only, but any server-side deploy
-target needs them wired up.
+- `vite.config.ts` prints a loud build-time warning when a production build has
+  no `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY`.
+- That warning exists because of a nastier trap found while fixing this:
+  `src/lib/supabase.ts` returns `null` without those two values, Rollup
+  constant-folds that into `null`, and then **tree-shakes the entire Supabase
+  SDK out of the bundle**. The build "succeeds", the app just can never reach
+  the backend. With the credentials present the SDK is bundled normally
+  (`vendor-supabase`, 207 kB).
 
 ---
 
-## 🟡 P2 — Performance
+## 🟡 P2 — Performance (all fixed)
 
-### 12. Main bundle is 1.14 MB (317 KB gzip)
+### 12. Main bundle was 1.14 MB — ✅ FIXED
+
+`build.rollupOptions.output.manualChunks` splits the heavyweights. With
+credentials configured, the build now emits:
 
 ```
-dist/assets/index-*.js        1,148.43 kB │ gzip: 316.76 kB
-dist/assets/MessageList-*.js    415.67 kB │ gzip: 100.87 kB
-dist/assets/GithubScreen-*.js   194.51 kB │ gzip:  59.89 kB
+before                              after
+index-*.js        1,148 kB     →    index-*.js          170 kB  (gzip 43 kB)
+MessageList-*.js    416 kB     →    MessageList-*.js     97 kB
+GithubScreen-*.js   195 kB     →    GithubScreen-*.js   190 kB
+                               →    vendor-react        232 kB
+                               →    vendor-supabase     207 kB
+                               →    vendor-emoji        309 kB  (lazy)
+                               →    vendor-livekit      527 kB  (calls only)
 ```
 
-`vite.config.ts` has **no `manualChunks`**, so firebase + livekit + supabase
-all land in one chunk. Vite emits its own >500 kB warning.
+### 13. `emoji-picker-react` statically imported twice — ✅ FIXED
 
-**Fix:** split vendors with `build.rollupOptions.output.manualChunks`.
-Deleting the dead features did not shrink this — the weight is in the vendor
-libraries, not the app code.
+Both call sites (`components/chat-ui/ChatMessageMenu.tsx` and
+`EmojiPickerMenu.tsx`) now render `LazyEmojiPicker`, which wraps the package in
+`React.lazy` + `Suspense`. The `Theme` enum is no longer imported statically
+(that alone would have defeated the split), so the picker lives in its own chunk
+and is fetched on first tap.
 
-### 13. `emoji-picker-react` is statically imported twice
+### 14. ~350 `console.*` calls shipped to production — ✅ FIXED
 
-`ChatMessageMenu.tsx:18` and `EmojiPickerMenu.tsx:3`. A heavy dependency pulled
-into the chat chunk.
-
-**Fix:** `React.lazy`.
-
-### 14. 350 `console.*` statements ship to production
-
-`grep -rn "console\.\(log\|warn\|error\)" src | wc -l` → **350** (was 499).
-
-**Fix:** `esbuild.drop: ['console']` for the client build, or a logger that
-no-ops in production.
+`vite.config.ts` sets `esbuild.drop: ['console', 'debugger']` for production
+builds only; dev keeps its logging. The built client went from 350+ calls to 20
+references, and those 20 are load-bearing: `ConsoleLoggerService` patching
+`console` itself, and pre-existing `.catch(console.error)` — a *reference*, not
+a call, so `drop` rightly leaves it alone.
 
 ---
 
 ## 🟢 P3 — Quality
 
-### 15. 470 `any` usages
+### 15. 470 `any` usages — ❌ STILL OPEN
 
-`grep -rno ": any\|as any\|<any>" src | wc -l` → **470** (was 624).
-`AGENTS.md` forbids this.
+Now 478: this pass added exactly one in app code (`apiClient.ts`'s
+`{ auth?: any }` cast, because the exported client is already `any`) and the
+rest are in the new test file, which follows the existing `(row: any)`
+convention. Everything else added by this pass is typed. The remaining burn-down
+is mechanical, file-by-file work, not something to do blind.
 
-### 16. `src/types/database.types.ts` does not exist
+### 16. `src/types/database.types.ts` does not exist — ❌ STILL OPEN (needs project id)
 
-`AGENTS.md` mandates strictly-typed Supabase schema definitions.
+Generating it requires the Supabase project:
 
-**Fix:** `npx supabase gen types typescript --project-id <id> > src/types/database.types.ts`
+```bash
+npx supabase gen types typescript --project-id <id> > src/types/database.types.ts
+```
 
-### 17. Giant files
+Then prefer those row types over hand-written shapes.
+
+### 17. Giant files — ❌ STILL OPEN
+
+Unchanged:
 
 ```
 1244  features/github/GithubScreen.tsx
  987  providers/CallProvider.tsx
  844  features/chat/components/MessageBubble.tsx
- 746  features/chat/ImagePreviewScreen.tsx
- 739  features/chat/ChatSettingsScreen.tsx
- 649  features/chat/components/ChatUserList.tsx
- 603  features/auth/SignupScreen.tsx
- 602  features/chat/ChatScreen.tsx
- 581  App.tsx
 ```
 
-`AGENTS.md`: *"Do not bloat files like `App.tsx` or `ChatScreen.tsx`."*
+Pure extraction work with real regression risk — worth doing deliberately, per
+file, with tests, not as a drive-by.
 
-### 18. Stale reference in a live file
+### 18. Stale reference in a live file — ✅ FIXED
 
-`features/chat/SearchUserScreen.tsx:73` renders `reel.likes_count` but the
-screen only queries `users` — a leftover variable from the Reels feature.
+`features/chat/SearchUserScreen.tsx` lost its dead `VideoGridItem` /
+`ReelGridItem` components, the `SearchTab = 'users' | 'videos' | 'reels'` union
+and the leftover `reel.likes_count` read (30 lines). Two related dead ends went
+with it:
+
+- the `/search-user` route redirected to `/profile`, which made the “Discover
+  People” button in the notifications empty state a no-op. It now renders the
+  screen it already lazy-imported.
+- the sitemap advertised `/reels` and `/tools`, two features that no longer
+  exist. It now lists real routes.
 
 ---
 
@@ -226,7 +246,7 @@ screen only queries `users` — a leftover variable from the Reels feature.
 | Issue | Resolution |
 |---|---|
 | No way to run the app without credentials | `npm run dev:mock` + `dev/mock/` |
-| No test infrastructure | Vitest + jsdom + Testing Library, **78 tests** |
+| No test infrastructure | Vitest + jsdom + Testing Library, **85 tests** |
 | No agent context docs | `docs/` (7 files) + rewritten `AGENTS.md` |
 | `npm run lint` failed with 11 errors | dead code deleted → **0 errors** |
 | 13,103+ lines of unreachable code | **146 files deleted, 0 remaining** |
@@ -234,10 +254,16 @@ screen only queries `users` — a leftover variable from the Reels feature.
 | 5 RPCs called but never defined | same → **0** |
 | Two divergent Express servers | `src/server/server.ts` deleted; `vercel.json` → `server.ts` |
 | Vercel missing `/api/grix-ai` + `/api/livekit-token` | fixed by the above |
-| `vite.config.ts` hardcoded `base: '/'` | now `process.env.VITE_BASE_URL \|\| '/'` |
-| `.env.example` listed 6 of 21 vars | all 22 documented; `VITE_GROQ_API_KEY` dropped |
+| `vite.config.ts` hardcoded `base: '/'` | now `process.env.VITE_BASE_URL \|\| '/'`, wired in CI |
+| `.env.example` listed 6 of 21 vars | all documented; missing server vars added |
 | 7 unused npm dependencies | removed (103 packages) |
 | 5 stale root `.sql` duplicates | deleted; `sql/` is the only source |
 | ~2.3 MB of unreferenced binaries | deleted |
 | `dist/` not gitignored | added to `.gitignore` |
 | `firestore.rules`, `firebase-blueprint.json`, `metadata.json` | deleted (AI Studio / Firestore leftovers) |
+| Open push relay, open file host, no hardening | **#1, #2, #3 — this pass** |
+| Notification screens had no write path | **#4, #5 — this pass** |
+| Dead password-reset route | **#8 — this pass** |
+| Pages base path, no CI typecheck/test, env not wired | **#9, #10, #11 — this pass** |
+| 1.14 MB entry chunk, eager emoji picker, console in prod | **#12, #13, #14 — this pass** |
+| Stale Reels leftovers in a live screen | **#18 — this pass** |

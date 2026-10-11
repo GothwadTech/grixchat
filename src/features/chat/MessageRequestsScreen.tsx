@@ -5,6 +5,7 @@ import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../providers/AuthProvider';
 import { getAcceptedChats, acceptChat, declineChat } from '../../utils/acceptedChats';
 import { chatService } from './services/chatService';
+import { notificationService } from '../../services/db/notificationService';
 import { LocalDataCache } from '../../services/LocalDataCache';
 import Avatar from '../../components/common/Avatar';
 
@@ -112,6 +113,9 @@ export default function MessageRequestsScreen() {
         following_id: otherId
       });
       if (error) throw error;
+
+      // Friendships created from this screen have to notify too.
+      notificationService.notifyFollow(authUser.id, otherId);
 
       // Pre-accept and pre-create direct chat conversation so it's fully ready
       const convId = await chatService.getOrCreateDirectConversation(authUser.id, otherId);

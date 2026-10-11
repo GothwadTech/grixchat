@@ -5,7 +5,7 @@ npm test            # one-shot run
 npm run test:watch  # watch mode
 ```
 
-**Current state: 78 tests across 5 files, all passing, ~9 s.**
+**Current state: 85 tests across 6 files, all passing, ~11 s.**
 
 | File | Tests | What it covers |
 |---|---|---|
@@ -13,7 +13,8 @@ npm run test:watch  # watch mode
 | `dev/mock/__tests__/auth-rpc.test.ts` | 17 | Mock auth, all 7 RPCs, realtime channels |
 | `src/__tests__/chatService.test.ts` | 15 | **Real** `ChatService` against the mock |
 | `src/__tests__/utils.test.ts` | 20 | `dateUtils`, `lastSeenFormatter`, `scheduleUtils` |
-| `src/__tests__/app.smoke.test.tsx` | 3 | **Real** `<App />` — login form → chat list |
+| `src/__tests__/notificationService.test.ts` | 6 | **Real** notification write path — column contract, de-duplication |
+| `src/__tests__/app.smoke.test.tsx` | 4 | **Real** `<App />` — login form → chat list, `/forgot-password` reset mode |
 
 ---
 
@@ -55,6 +56,11 @@ explicitly:
 - `postgres_changes` filters (`sender_id=eq.<id>`) include *and exclude*
   correctly — both directions are tested, because a filter that matches
   everything looks identical to a working filter in a happy-path test
+
+> **Testing the notification writer:** assert on the `content` column, not
+> `text` — `sql/01_core_schema.sql` has no `text` column. The mock now mirrors
+> the SQL default (`is_read boolean default false`) so an insert that forgets
+> the flag fails a test instead of passing locally.
 
 ### 2. App tests (`src/__tests__/`)
 

@@ -11,6 +11,7 @@ import {MemoryRouter} from 'react-router-dom';
 import App from '../App';
 import {AppProviders} from '../providers/AppProviders';
 import {SEED} from '../../dev/mock/seed';
+import {mockAuth} from '../../dev/mock/auth';
 
 async function renderApp(at = '/login') {
   const utils = render(
@@ -56,6 +57,21 @@ describe('app smoke test', () => {
     await waitFor(() => {
       expect(screen.getByText(/mock data ready/i)).toBeInTheDocument();
     }, {timeout: 15000});
+  });
+
+  it('serves /forgot-password as the reset form instead of bouncing to /login', async () => {
+    // The previous test leaves a signed-in session behind, and a signed-in
+    // user is (correctly) redirected away from the public auth routes.
+    await mockAuth.signOut();
+    await renderApp('/forgot-password');
+
+    // Reset mode hides the password field and swaps the submit label
+    // (KNOWN_ISSUES #8: this route used to be a dead end).
+    await waitFor(() => {
+      expect(screen.getByPlaceholderText(/Email, Phone or Username/i)).toBeInTheDocument();
+    }, {timeout: 8000});
+    expect(screen.queryByPlaceholderText('Password')).not.toBeInTheDocument();
+    expect(screen.getByText(/Reset password to access your account securely/i)).toBeInTheDocument();
   });
 
   it('does not crash when a route is deep-linked before auth resolves', async () => {

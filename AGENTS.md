@@ -12,7 +12,7 @@
 npm install
 npm run dev:mock      # full app, no credentials → http://localhost:3000
                       # login: demo@grixchat.app / grixchat
-npm test              # 78 tests, ~9s
+npm test              # 85 tests, ~11s
 npm run lint          # tsc --noEmit → 0 errors
 ```
 
@@ -97,7 +97,13 @@ Initial loads are 20–30 rows. `ChatService.getMessages(id, limit = 50)`.
 - **No loose `any`.** There are currently 470 of them — that is technical
   debt to burn down, not a licence to add more.
 - `src/types/database.types.ts` **does not exist yet**. Generate it
-  (`supabase gen types typescript`) and prefer it over hand-written row shapes.
+  (`supabase gen types typescript --project-id <id>`) and prefer it over
+  hand-written row shapes.
+- Browser → `/api` calls go through `src/lib/apiClient.ts`; it attaches the
+  Supabase access token the server verifies. Never call the API routes with a
+  bare `fetch` — you will get a 401.
+- Notifications: write through `services/db/notificationService.ts` only, and
+  read the `content` column (`sql/01_core_schema.sql` has no `text`).
 
 ### File size
 
@@ -135,7 +141,7 @@ aliased to `dev/mock/` in `vitest.config.ts` so a test can never reach a real
 project.
 
 ```bash
-npm test             # 78 tests, 5 files
+npm test             # 85 tests, 6 files
 npm run test:watch
 ```
 
@@ -161,16 +167,18 @@ Rules:
 |---|---|
 | `npm run build` | ✅ passes |
 | `npm run dev` / `dev:mock` | ✅ passes |
-| `npm test` | ✅ 78/78 |
+| `npm test` | ✅ 85/85 |
 | `npm run lint` | ✅ 0 errors |
 | Dead code | ✅ **0 files** — 189/189 reachable. See [`docs/DEAD_CODE.md`](./docs/DEAD_CODE.md) |
 | Tables queried but missing from `sql/` | ✅ 0 |
 | RPCs called but missing from `sql/` | ✅ 0 |
 | Vercel deploy | ✅ fixed — duplicate server deleted, `vercel.json` → `server.ts` |
-| GitHub Pages deploy | ⚠️ needs `VITE_BASE_URL=/grixchat/` in the workflow |
-| `/api/send-notification`, `/api/upload-file` | 🔴 **unauthenticated** — fix before any public deploy |
-| `notifications` table | ⚠️ nothing writes to it any more; reader uses `text`, schema says `content` |
-| Test coverage | ⚠️ only the login→chat path is exercised |
+| GitHub Pages deploy | ✅ `VITE_BASE_URL=/grixchat/` set in the workflow |
+| `/api/send-notification`, `/api/upload-file` | ✅ **authenticated** + rate limited + allowlisted (see `requireAuth`) |
+| Notifications inbox | ✅ written by `services/db/notificationService.ts`, read from `content` |
+| CI | ✅ typecheck + test + build |
+| Deploy secrets | 🧑 **not wired** — see KNOWN_ISSUES "the three things code cannot do" |
+| Test coverage | ⚠️ only login→chat, the notification writer and the reset route are exercised |
 
 Full prioritised list: **[`docs/KNOWN_ISSUES.md`](./docs/KNOWN_ISSUES.md)**.
 

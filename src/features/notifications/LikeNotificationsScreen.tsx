@@ -30,7 +30,8 @@ export default function LikeNotificationsScreen() {
         .select('*, from_user:from_user_id(username, full_name, photo_url)')
         .eq('user_id', authUser.id)
         .in('type', ['like', 'comment'])
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .limit(50);
 
       if (!error && data) {
         const mapped = data.map(n => ({
@@ -40,7 +41,9 @@ export default function LikeNotificationsScreen() {
           fromUserAvatar: n.from_user?.photo_url,
           createdAt: n.created_at,
           read: n.is_read,
-          postId: n.post_id
+          postId: n.post_id,
+          // Schema column is `content`; `text` is a fallback for legacy rows.
+          text: n.content || n.text || 'sent you a notification'
         }));
         setNotifications(mapped);
         LocalDataCache.saveNotifications(authUser.id, 'activity', mapped);

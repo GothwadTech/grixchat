@@ -189,7 +189,6 @@ export const userProfileService = {
         fcmTokens: p.fcm_tokens || [],
         settings: p.settings,
         lock: p.lock,
-        saved_posts: p.saved_posts || [],
         blockedUsers: p.blocked_users || [],
         blocked_users: p.blocked_users || [],
         muted_users: p.muted_users || [],

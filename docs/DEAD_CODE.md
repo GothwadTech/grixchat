@@ -17,7 +17,7 @@ Verification after the deletion:
 | Reachability re-scan | **0 dead files** (189/189 reachable from entry points) |
 | Broken relative imports | **0** |
 | `npm run lint` (`tsc --noEmit`) | **exit 0, 0 errors** — was 11 |
-| `npm test` | **78/78 pass** |
+| `npm test` | **85/85 pass** |
 | `npm run build` | **exit 0** |
 | Dev server module graph | **55 modules walked, 0 failures** |
 | `npm install` | 103 packages removed (7 unused deps) |

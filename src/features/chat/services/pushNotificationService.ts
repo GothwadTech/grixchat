@@ -1,9 +1,14 @@
 import { supabase } from '../../../lib/supabase';
+import { apiPostJson } from '../../../lib/apiClient';
 
 export const pushNotificationService = {
   /**
-   * Retrieves FCM tokens of all participants (except sender) for a given conversation,
-   * then triggers the bulk push notification proxy API.
+   * Notifies the other participants of a conversation about a new message.
+   *
+   * Only the conversation id and the message preview are sent — the server
+   * looks up the recipients' FCM tokens itself and derives the notification
+   * title from the authenticated sender, so this endpoint can no longer be
+   * used to push arbitrary text to arbitrary devices.
    */
   async sendNotificationForMessage(
     conversationId: string,
@@ -12,6 +17,8 @@ export const pushNotificationService = {
     messageText: string,
     mediaType?: string
   ) {
+    // `senderName` is intentionally unused: the server reads the sender's
+    // display name from the database so it cannot be spoofed.
     if (!supabase) return;
 
     try {
@@ -60,30 +67,26 @@ export const pushNotificationService = {
 
       const bodyText = messageText || (mediaType ? `Sent a ${mediaType}` : 'Sent an attachment');
 
-      // 3. Dispatch bulk send request through our proxy API
+      // 3. Dispatch bulk send request through our proxy API.
+      //
+      // The server re-derives the recipient tokens and the notification title
+      // from `conversationId`, and only keeps tokens that belong to the other
+      // participants — the local `allTokens` list is a cheap pre-flight check
+      // that keeps us from calling the API when nobody can be notified.
       console.log(`FCM: Dispatching push dispatch for conversation ${conversationId} to ${allTokens.length} tokens.`);
-      const response = await fetch('/api/send-notification', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          tokens: allTokens,
-          title: senderName || "New Chat Alert",
-          body: bodyText,
-          data: {
-            click_action: `/chats/${conversationId}`,
-            conversationId,
-            senderId
-          }
-        })
+      const { ok, status, data: resData } = await apiPostJson('/api/send-notification', {
+        conversationId,
+        body: bodyText,
+        data: {
+          click_action: `/chats/${conversationId}`,
+          conversationId,
+          senderId
+        }
       });
 
-      const responseText = await response.text();
-      let resData: any = null;
-      try {
-        resData = responseText ? JSON.parse(responseText) : null;
-      } catch (parseErr) {
-        console.warn(`FCM: Received non-JSON response from server. Status: ${response.status}. Response body: ${responseText.substring(0, 500)}`);
-        throw new Error(`Failed to parse FCM server response: ${responseText.substring(0, 150) || '(empty)'}`);
+      if (!ok) {
+        console.warn(`FCM: Push dispatch rejected by the server (${status}):`, resData);
+        return;
       }
       console.log('FCM: Push notification service response:', resData);
     } catch (err) {

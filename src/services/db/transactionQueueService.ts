@@ -1,4 +1,5 @@
 import { supabase } from '../../lib/supabase';
+import { notificationService } from './notificationService';
 import { IndexedDBService } from '../IndexedDBService';
 
 export interface PendingTransaction {
@@ -347,6 +348,10 @@ class TransactionQueueService {
           console.warn('Failed follows relationship insertion attempt:', error.message);
           return false;
         }
+
+        // The queued (offline) follow paths notify too, so a follow made
+        // offline still shows up in the recipient's notifications inbox.
+        await notificationService.notifyFollow(payload.followerId, payload.followingId);
       } else {
         const { error } = await supabase.from('follows')
           .delete()

@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { APP_CONFIG } from '../../config/appConfig';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { motion, AnimatePresence } from 'motion/react';
 import { Eye, EyeOff, Mail, Lock, User as UserIcon, ArrowRight, Github, Apple, Twitter, Facebook } from 'lucide-react';
@@ -20,9 +20,34 @@ export default function LoginScreen() {
   const [twitterLoading, setTwitterLoading] = useState(false);
   const [facebookLoading, setFacebookLoading] = useState(false);
   const [showSocial, setShowSocial] = useState(false);
-  const [isForgotPassword, setIsForgotPassword] = useState(false);
   const [success, setSuccess] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // `/forgot-password` renders this same screen, so the route is the source of
+  // truth for the reset mode (KNOWN_ISSUES #8). Keeping them in sync in an
+  // effect means browser back/forward toggles modes correctly too.
+  const [isForgotPassword, setIsForgotPassword] = useState(
+    () => location.pathname === '/forgot-password'
+  );
+
+  useEffect(() => {
+    setIsForgotPassword(location.pathname === '/forgot-password');
+  }, [location.pathname]);
+
+  const goToForgotPassword = () => {
+    setIsForgotPassword(true);
+    setSuccess(false);
+    setError('');
+    if (location.pathname !== '/forgot-password') navigate('/forgot-password');
+  };
+
+  const goToLogin = () => {
+    setIsForgotPassword(false);
+    setSuccess(false);
+    setError('');
+    if (location.pathname !== '/login') navigate('/login');
+  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -300,11 +325,7 @@ export default function LoginScreen() {
                 </div>
                 <button 
                   type="button" 
-                  onClick={() => {
-                    setIsForgotPassword(true);
-                    setSuccess(false);
-                    setError('');
-                  }}
+                  onClick={goToForgotPassword}
                   className="text-[11px] font-bold text-[var(--primary)] hover:underline"
                 >
                   Forgot Password
@@ -366,11 +387,7 @@ export default function LoginScreen() {
             <div className="text-center pt-2">
               <button 
                 type="button"
-                onClick={() => {
-                  setIsForgotPassword(false);
-                  setSuccess(false);
-                  setError('');
-                }}
+                onClick={goToLogin}
                 className="text-[11px] font-bold text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors cursor-pointer"
               >
                 Remember your password? <span className="text-[var(--primary)] hover:underline">Sign in</span>

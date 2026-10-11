@@ -39,7 +39,7 @@ To support more than 50,000 active users comfortably on Supabase's free tier, da
 ## 📁 System Registry Map
 
 - `/src/providers`: Application context singletons (Supabase `AuthProvider`, global WebRTC `CallProvider`).
-- `/src/features`: Modular screens broken into focus zones (`chat`, `call`, `profile`, `search`, `reels`).
+- `/src/features`: Modular screens broken into focus zones (`chat`, `call`, `profile`, `search`, `stories`, `github`, `grixai`).
 - `/src/components`: UI layouts, bottom/top navigation components, and global drop-downs.
 - `/sql`: The **only** place for schema — numbered migrations `01_` … `08_`, plus `00_master_instructions.md`. Contains tables, PostgreSQL functions, triggers, row-level security and indices.
 - `/docs`: Developer documentation — orientation, setup, testing, data model, known issues.
@@ -72,10 +72,13 @@ npm run dev
 
 ### 4. Test and build
 ```bash
-npm test                  # 78 tests
+npm test                  # 85 tests
 npm run lint              # tsc --noEmit
 npm run build             # vite build + server bundle
 ```
+
+CI (`.github/workflows/deploy.yml`) runs all three before deploying to Pages,
+and builds with `VITE_BASE_URL=/grixchat/`.
 
 ---
 Crafted under high-precision directives for the GrixChat Mobile Ecosystem. 🌌

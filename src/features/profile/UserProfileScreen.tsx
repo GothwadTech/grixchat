@@ -25,6 +25,7 @@ import {
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { profileService } from './services/profileService';
+import { notificationService } from '../../services/db/notificationService';
 import { useAuth } from '../../providers/AuthProvider.tsx';
 import { motion, AnimatePresence } from 'motion/react';
 import { truncateToChars } from '../../utils/bioHelper';
@@ -306,6 +307,9 @@ export default function UserProfileScreen() {
                       });
                       if (error) throw error;
 
+                      // They accepted a request → tell the other side about the new connection.
+                      notificationService.notifyFollow(authUser.id, userId);
+
                       const convId = await chatService.getOrCreateDirectConversation(authUser.id, userId);
                       if (convId) {
                         acceptChat(convId);
@@ -352,6 +356,9 @@ export default function UserProfileScreen() {
                         following_id: userId
                       });
                       if (error) throw error;
+
+                      // Write path for the notifications inbox — nothing else feeds it.
+                      notificationService.notifyFollow(authUser.id, userId);
 
                       LocalDataCache.invalidateConversations(authUser.id);
                     } catch (err) {

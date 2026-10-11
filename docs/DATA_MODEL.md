@@ -47,8 +47,9 @@ Profile row, 1:1 with `auth.users`.
 | `hidden_chat_settings` | JSONB | `{secretCode, showMenuEntry}` |
 | `fcm_tokens` | TEXT[] | FCM registration tokens |
 
-> 🔴 `services/db/userProfileService.ts:192` reads `saved_posts` — **not in the
-> schema**. Add the column or drop the field.
+> ✅ The `saved_posts` read that lived in `userProfileService.ts` was a leftover
+> from the deleted Reels feature — the column never existed in `sql/`, so the
+> field was dropped from the code and the mock instead of being added.
 
 ### `follows` — `:56`
 `id`, `follower_id`, `following_id`, `created_at`. `UNIQUE(follower_id, following_id)`.
@@ -95,12 +96,15 @@ Per-user chat customisation. `id`, `user_id`, `receiver_id`, `nickname`,
 `id`, `user_id`, `from_user_id`, `type`, `title`, `content`, `is_read`,
 `post_id`, `created_at`.
 
-> 🔴 **Two problems.**
-> 1. **Nothing writes to it.** Every insert lived in the deleted
->    `features/home/components/`. All five remaining call sites are reads.
->    `grep -rn "from('notifications')" src | grep -c insert` → `0`.
-> 2. **Column mismatch.** The schema defines `content`; the reader at
->    `NotificationsScreen.tsx:118` reads `notif.text`.
+> ✅ Both problems are fixed. `services/db/notificationService.ts` is the single
+> write path (`create` / `notifyFollow` / `notifySystem`), called when a
+> connection is made or accepted in `UserProfileScreen`, `MessageRequestsScreen`
+> and the offline follow worker. Readers use `content` — the column the schema
+> defines — and the writer only writes `content`.
+>
+> Writes need no new policy: `sql/01_core_schema.sql` already grants
+> `INSERT` on `notifications` to `authenticated`, and `UPDATE` to the row owner
+> (used to mark notifications read).
 
 ### `posts` — `sql/02_posts_and_interactions_schema.sql`
 `id`, `user_id`, `image_url`, `caption`, `created_at`.

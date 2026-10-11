@@ -28,6 +28,19 @@ The Express server exists only for things a browser cannot do: holding secret
 API keys, OAuth code exchange, and FCM's service-account auth. **It holds no
 application data.** All state lives in Supabase.
 
+Every `/api` route runs the same security chain (`server.ts`):
+
+```
+helmet → cors(allowlist) → origin guard → rate limit → json(≤256kB)
+      → requireAuth (Supabase JWT) → route-specific authorisation
+```
+
+Routes that fan out or cost money add their own limiter, and the two routes
+that used to trust the client — `send-notification` and `livekit-token` — derive
+their recipients/grant from the database instead. The browser side of that
+contract lives in `src/lib/apiClient.ts` (`apiFetch` / `apiPostJson`), which
+attaches the session token.
+
 ---
 
 ## Boot sequence

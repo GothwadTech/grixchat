@@ -1,29 +1,293 @@
-import express from "express";
+import express, { type Request, type NextFunction, type Response } from "express";
 import path from "path";
 import axios from "axios";
+import cors from "cors";
 import dotenv from "dotenv";
+import helmet from "helmet";
 import multer from "multer";
 import FormData from "form-data";
 import fs from "fs";
 import os from "os";
+import rateLimit from "express-rate-limit";
 import { GoogleAuth } from "google-auth-library";
 import { GoogleGenAI } from "@google/genai";
 import { AccessToken } from "livekit-server-sdk";
-import { createClient } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient, type User } from "@supabase/supabase-js";
 
 dotenv.config();
 
 const app = express();
-app.use(express.json({ limit: '50mb' }));
+
+// Every deploy target (Vercel, the sandbox preview proxy) terminates TLS in
+// front of this process, so `req.ip` must be read from X-Forwarded-For for the
+// rate limiter to see the real caller.
+app.set("trust proxy", 1);
+app.disable("x-powered-by");
+
+const MOCK_MODE = process.env.MOCK_SUPABASE === "1" || process.env.MOCK_SUPABASE === "true";
 
 // GitHub OAuth Config
 const GITHUB_CLIENT_ID = process.env.GITHUB_CLIENT_ID;
 const GITHUB_CLIENT_SECRET = process.env.GITHUB_CLIENT_SECRET;
 
-// Configure Multer for temporary storage in the OS temp directory
-const upload = multer({ 
+// ─────────────────────────────────────────────────────────────────────────────
+// SECURITY LAYER — headers, CORS, origin check, rate limits, body limits
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * helmet, with the three defaults that would break this particular app relaxed:
+ *
+ * - CSP is left to the deploy target: the Vite dev server injects inline
+ *   scripts/styles and the GitHub callback page is an inline `<script>`.
+ * - COOP `same-origin` severs `window.opener`, which the GitHub OAuth popup
+ *   relies on to post the token back (`/auth/github/callback`).
+ * - COEP/CORP would block LiveKit + FCM cross-origin media.
+ * - frameguard is off so the Android WebView (TWA) wrapper and preview hosts
+ *   can embed the app.
+ */
+app.use(
+  helmet({
+    contentSecurityPolicy: false,
+    crossOriginOpenerPolicy: false,
+    crossOriginEmbedderPolicy: false,
+    crossOriginResourcePolicy: { policy: "cross-origin" },
+    frameguard: false,
+    hsts: process.env.NODE_ENV === "production" ? undefined : false,
+  })
+);
+
+/** Hosts that are always allowed to call the API from a browser. */
+const EXTRA_ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || "")
+  .split(",")
+  .map((o) => o.trim())
+  .filter(Boolean);
+
+const hostOf = (value: string): string => {
+  if (!value) return "";
+  try {
+    return new URL(value.includes("://") ? value : `https://${value}`).host.toLowerCase();
+  } catch {
+    return "";
+  }
+};
+
+// APP_URL + anything an operator adds through ALLOWED_ORIGINS, plus the local
+// dev origins. Everything else has to be same-origin as the request itself,
+// which is what makes this work behind any proxy (Vercel, e2b preview, Pages).
+const STATIC_ALLOWED_HOSTS = new Set(
+  [
+    hostOf(process.env.APP_URL || ""),
+    ...EXTRA_ALLOWED_ORIGINS.map(hostOf),
+    "localhost:3000",
+    "127.0.0.1:3000",
+    "localhost:5173",
+    "127.0.0.1:5173",
+  ].filter(Boolean)
+);
+
+/** True when the request arrived on a loopback/bind-all address. */
+function isLocalRequestHost(host: string): boolean {
+  const hostname = host.split(":")[0].replace(/^\[|\]$/g, "");
+  return ["localhost", "127.0.0.1", "0.0.0.0", "::1", "host.docker.internal"].includes(hostname);
+}
+
+/** True when `origin` is same-origin with the request, or explicitly allowlisted. */
+function isAllowedOrigin(req: Request, origin?: string | null): boolean {
+  // No Origin header → not a browser (curl, server-to-server, native app).
+  if (!origin) return true;
+
+  const originHost = hostOf(origin);
+  if (!originHost) return false;
+
+  const requestHosts = [req.headers["x-forwarded-host"], req.headers.host]
+    .flatMap((h) => (typeof h === "string" ? h.split(",") : []))
+    .map((h) => h.trim().toLowerCase())
+    .filter(Boolean);
+
+  // Same-origin: the browser is talking to the very host that served it.
+  if (requestHosts.includes(originHost)) return true;
+
+  // Behind a tunnel / container preview the process only ever sees its own
+  // bind address (`0.0.0.0:3000`) while the browser reports the public
+  // hostname, so there is no way to compare the two. Those deployments have
+  // no production data behind them; let them through instead of breaking the
+  // preview, and let `ALLOWED_ORIGINS` restore strictness when needed.
+  if (requestHosts.length > 0 && requestHosts.every(isLocalRequestHost)) return true;
+
+  return STATIC_ALLOWED_HOSTS.has(originHost);
+}
+
+// CORS: reflect the origin only when it passes `isAllowedOrigin`, so unknown
+// sites get no CORS headers at all and the browser refuses to hand them the
+// response. A fresh `cors()` instance per request is what lets the check see
+// `req` (the package's `origin` callback has no access to it).
+app.use((req, res, next) => {
+  cors({
+    origin: (origin, callback) => callback(null, isAllowedOrigin(req, origin)),
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
+    maxAge: 600,
+  })(req, res, next);
+});
+
+/**
+ * CSRF belt-and-braces for state-changing API calls: a browser that sends an
+ * Origin we do not recognise is rejected outright. Requests without an Origin
+ * header (native clients) are untouched.
+ */
+app.use("/api", (req: Request, res: Response, next: NextFunction) => {
+  if (req.method === "GET" || req.method === "HEAD" || req.method === "OPTIONS") return next();
+  const origin = req.headers.origin;
+  if (origin && !isAllowedOrigin(req, origin)) {
+    console.warn(`Blocked cross-origin ${req.method} ${req.path} from ${origin}`);
+    return res.status(403).json({ error: "Origin not allowed" });
+  }
+  next();
+});
+
+const limiterDefaults = {
+  standardHeaders: "draft-7" as const,
+  legacyHeaders: false,
+  message: { error: "Too many requests. Please slow down and try again shortly." },
+};
+
+/** Broad safety net for every route. */
+const globalLimiter = rateLimit({ windowMs: 60_000, limit: 300, ...limiterDefaults });
+/** Authenticated API surface. */
+const apiLimiter = rateLimit({ windowMs: 60_000, limit: 60, ...limiterDefaults });
+/** Push dispatch — an expensive fan-out, keep it tight. */
+const notificationLimiter = rateLimit({ windowMs: 60_000, limit: 20, ...limiterDefaults });
+/** File uploads — the most bandwidth-hungry route. */
+const uploadLimiter = rateLimit({ windowMs: 60_000, limit: 8, ...limiterDefaults });
+/** AI completions — paid upstream quota. */
+const aiLimiter = rateLimit({ windowMs: 60_000, limit: 20, ...limiterDefaults });
+
+app.use(globalLimiter);
+
+// Body parsing is opt-in per route instead of a blanket 50 MB `express.json`,
+// so an anonymous caller can no longer make the process buffer 50 MB of JSON.
+const jsonSmall = express.json({ limit: "256kb" });
+const jsonLarge = express.json({ limit: "32mb" });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// AUTH — Supabase JWT verification for the server-only endpoints
+// ─────────────────────────────────────────────────────────────────────────────
+
+const SUPABASE_URL = process.env.VITE_SUPABASE_URL;
+const SUPABASE_ANON_KEY = process.env.VITE_SUPABASE_ANON_KEY;
+const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+interface AuthedRequest extends Request {
+  authUser?: User;
+  /** Supabase client bound to the caller's JWT, so RLS applies. */
+  db?: SupabaseClient;
+}
+
+/** Client that talks to Postgres as the caller (RLS enforced). */
+function userScopedClient(accessToken: string): SupabaseClient | null {
+  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) return null;
+  return createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    global: { headers: { Authorization: `Bearer ${accessToken}` } },
+    auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+  });
+}
+
+/** Client that bypasses RLS. Falls back to the caller's own client. */
+function serviceClient(): SupabaseClient | null {
+  if (!SUPABASE_URL) return null;
+  const key = SUPABASE_SERVICE_ROLE_KEY || SUPABASE_ANON_KEY;
+  if (!key) return null;
+  return createClient(SUPABASE_URL, key, {
+    auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+  });
+}
+
+/**
+ * Verifies the `Authorization: Bearer <supabase access token>` header and
+ * attaches the user plus an RLS-scoped client to the request.
+ *
+ * In `MOCK_SUPABASE=1` (local dev, `npm run dev:mock`) there is no Supabase
+ * project to verify against, so the check is skipped loudly instead of
+ * breaking the credential-free dev loop. It can never be skipped in a build
+ * that has a real project configured.
+ */
+async function requireAuth(req: AuthedRequest, res: Response, next: NextFunction) {
+  // `npm run dev:mock` talks to the in-memory mock, so there is no project to
+  // verify against — skip loudly. Never possible in a production build.
+  if (MOCK_MODE && process.env.NODE_ENV !== "production") {
+    console.warn(`[Auth] MOCK mode — skipping JWT verification for ${req.method} ${req.path}`);
+    return next();
+  }
+
+  const header = req.headers.authorization || "";
+  const token = header.startsWith("Bearer ") ? header.slice(7).trim() : "";
+  if (!token) {
+    return res.status(401).json({ error: "Authentication required" });
+  }
+
+  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+    console.error("[Auth] VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY are not configured on the server.");
+    return res.status(503).json({ error: "Server authentication is not configured" });
+  }
+
+  try {
+    const client = userScopedClient(token)!;
+    const { data, error } = await client.auth.getUser(token);
+    if (error || !data?.user) {
+      return res.status(401).json({ error: "Invalid or expired session" });
+    }
+    req.authUser = data.user;
+    req.db = client;
+    return next();
+  } catch (err: any) {
+    console.error("[Auth] Token verification failed:", err?.message || err);
+    return res.status(401).json({ error: "Invalid or expired session" });
+  }
+}
+
+/** Reads from the DB with the strongest client available, in order of trust. */
+function dbFor(req: AuthedRequest): SupabaseClient | null {
+  return serviceClient() || req.db || null;
+}
+
+// Configure Multer for temporary storage in the OS temp directory.
+// The byte cap below is the *hard* ceiling; `sizeLimitFor()` applies the
+// per-media-type limit afterwards.
+const MAX_UPLOAD_BYTES = 50 * 1024 * 1024; // 50MB
+
+const ALLOWED_MIME_TYPES = new Set([
+  // images (no image/svg+xml — it is a script container, not a picture)
+  "image/jpeg", "image/png", "image/gif", "image/webp", "image/heic", "image/heif", "image/bmp", "image/avif",
+  // video
+  "video/mp4", "video/webm", "video/quicktime", "video/x-matroska", "video/3gpp", "video/mpeg",
+  // audio
+  "audio/mpeg", "audio/mp4", "audio/aac", "audio/wav", "audio/x-wav", "audio/ogg", "audio/webm", "audio/flac",
+  // documents
+  "application/pdf", "text/plain", "text/csv", "application/json",
+  "application/zip", "application/x-zip-compressed", "application/x-rar-compressed",
+  "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "application/vnd.ms-excel", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  "application/vnd.ms-powerpoint", "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+]);
+
+/** Per-media-type byte cap: images are cheap, video is not. */
+function sizeLimitFor(mimeType: string): number {
+  if (mimeType.startsWith("image/")) return 15 * 1024 * 1024;   // 15MB
+  if (mimeType.startsWith("video/")) return 50 * 1024 * 1024;   // 50MB
+  if (mimeType.startsWith("audio/")) return 25 * 1024 * 1024;   // 25MB
+  return 25 * 1024 * 1024;                                      // 25MB
+}
+
+const upload = multer({
   dest: os.tmpdir(),
-  limits: { fileSize: 100 * 1024 * 1024 } // 100MB limit
+  limits: { fileSize: MAX_UPLOAD_BYTES, files: 1 },
+  fileFilter: (_req, file, cb) => {
+    if (!ALLOWED_MIME_TYPES.has(file.mimetype)) {
+      return cb(new Error(`Unsupported file type: ${file.mimetype}`));
+    }
+    cb(null, true);
+  },
 });
 
 // API routes
@@ -32,12 +296,35 @@ app.get("/api/health", (req, res) => {
 });
 
 // LiveKit Token generation endpoint
-app.post("/api/livekit-token", async (req, res) => {
+app.post("/api/livekit-token", apiLimiter, jsonSmall, requireAuth, async (req: AuthedRequest, res) => {
   try {
-    const { roomName, participantIdentity } = req.body;
+    const { roomName, participantIdentity } = req.body || {};
     if (!roomName || !participantIdentity) {
       return res.status(400).json({ error: "Missing roomName or participantIdentity parameters" });
     }
+
+    // The caller may only be issued a token for a room they are actually part
+    // of: either a call they are a participant in, or a conversation they
+    // belong to. Without this check any signed-in user could mint a publish
+    // grant for an arbitrary room name.
+    const db = dbFor(req);
+    if (req.authUser && db) {
+      const [{ data: call }, { data: participants }] = await Promise.all([
+        db.from("calls").select("id").eq("id", roomName)
+          .or(`caller_id.eq.${req.authUser.id},receiver_id.eq.${req.authUser.id}`)
+          .maybeSingle(),
+        db.from("conversation_participants").select("user_id")
+          .eq("conversation_id", roomName).eq("user_id", req.authUser.id).maybeSingle(),
+      ]);
+
+      if (!call && !participants) {
+        console.warn(`[LiveKit] Refusing token for room ${roomName} — ${req.authUser.id} is not a participant.`);
+        return res.status(403).json({ error: "You are not a participant in this call" });
+      }
+    }
+
+    // Never trust a client-supplied identity over the verified session.
+    const identity = req.authUser?.id || participantIdentity;
 
     const apiKey = process.env.LIVEKIT_API_KEY;
     const apiSecret = process.env.LIVEKIT_API_SECRET;
@@ -52,7 +339,7 @@ app.post("/api/livekit-token", async (req, res) => {
     }
 
     const at = new AccessToken(apiKey, apiSecret, {
-      identity: participantIdentity,
+      identity,
     });
 
     at.addGrant({
@@ -70,15 +357,25 @@ app.post("/api/livekit-token", async (req, res) => {
   }
 });
 
-// Sitemap route for SEO
+// Sitemap route for SEO.
+// Lists the routes the app actually ships — /tools and /reels were deleted
+// with the dead code and used to 404 from here.
 app.get("/sitemap.xml", (req, res) => {
+  const origin = process.env.APP_URL?.replace(/\/$/, "") || "https://grixchat.gothwad.workers.dev";
+  const routes: Array<[string, string, string]> = [
+    ["/", "1.0", "daily"],
+    ["/chats", "0.9", "daily"],
+    ["/stories", "0.7", "daily"],
+    ["/search", "0.7", "weekly"],
+    ["/calls", "0.6", "weekly"],
+  ];
+
   res.setHeader("Content-Type", "application/xml");
   res.send(`<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url><loc>https://grixchat.gothwad.workers.dev/</loc><priority>1.0</priority><changefreq>daily</changefreq></url>
-  <url><loc>https://grixchat.gothwad.workers.dev/tools</loc><priority>0.8</priority><changefreq>weekly</changefreq></url>
-  <url><loc>https://grixchat.gothwad.workers.dev/chats</loc><priority>0.9</priority><changefreq>always</changefreq></url>
-  <url><loc>https://grixchat.gothwad.workers.dev/reels</loc><priority>0.8</priority><changefreq>always</changefreq></url>
+${routes.map(([path, priority, changefreq]) =>
+    `  <url><loc>${origin}${path}</loc><priority>${priority}</priority><changefreq>${changefreq}</changefreq></url>`
+  ).join("\n")}
 </urlset>`);
 });
 
@@ -110,21 +407,20 @@ app.get("/.well-known/assetlinks.json", (req, res) => {
 
 // Helper to remove invalid/expired FCM tokens from the user profile database
 async function removeInvalidFcmToken(badTokenStr: string) {
-  const supabaseUrl = process.env.VITE_SUPABASE_URL;
-  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY;
-  if (!supabaseUrl || !supabaseKey) {
+  const db = serviceClient();
+  if (!db) {
     console.warn("FCM Server Cleanup: Unable to initialize Supabase client for FCM token cleanup (missing credentials).");
     return;
   }
-  
+
   try {
-    const supabaseServer = createClient(supabaseUrl, supabaseKey);
-    
-    // Find all users who have this token in their fcm_tokens array and remove it
-    const { data: users, error: fetchErr } = await supabaseServer
+    // Target the owners of this token directly instead of scanning every user
+    // row — the old full-table read scaled with the user base.
+    const { data: users, error: fetchErr } = await db
       .from("users")
-      .select("id, fcm_tokens");
-      
+      .select("id, fcm_tokens")
+      .contains("fcm_tokens", [badTokenStr]);
+
     if (fetchErr || !users) {
       console.warn("FCM Server Cleanup: Failed to fetch users for token pruning:", fetchErr);
       return;
@@ -134,11 +430,11 @@ async function removeInvalidFcmToken(badTokenStr: string) {
       if (Array.isArray(u.fcm_tokens) && u.fcm_tokens.includes(badTokenStr)) {
         const filtered = u.fcm_tokens.filter((t: string) => t !== badTokenStr);
         console.log(`FCM Server Cleanup: Removing stale/invalid FCM token from user ${u.id}`);
-        const { error: updateErr } = await supabaseServer
+        const { error: updateErr } = await db
           .from("users")
           .update({ fcm_tokens: filtered })
           .eq("id", u.id);
-          
+
         if (updateErr) {
           console.warn(`FCM Server Cleanup: Failed to update user ${u.id} FCM tokens:`, updateErr);
         }
@@ -149,31 +445,147 @@ async function removeInvalidFcmToken(badTokenStr: string) {
   }
 }
 
+/**
+ * Collects the FCM tokens of `userIds`, honouring each recipient's
+ * `muted_users` list. Returns a de-duplicated list.
+ */
+async function collectTokensFor(
+  db: SupabaseClient,
+  userIds: string[],
+  muterId: string
+): Promise<string[]> {
+  if (userIds.length === 0) return [];
+
+  const { data: profiles, error } = await db
+    .from("users")
+    .select("id, fcm_tokens, muted_users")
+    .in("id", userIds);
+
+  if (error || !profiles) {
+    console.warn("FCM Server: Failed to fetch recipient profiles:", error);
+    return [];
+  }
+
+  const tokens = new Set<string>();
+  for (const profile of profiles) {
+    const isMuted = Array.isArray(profile.muted_users) && profile.muted_users.includes(muterId);
+    if (isMuted) continue;
+    if (Array.isArray(profile.fcm_tokens)) {
+      profile.fcm_tokens.forEach((t: string) => {
+        if (typeof t === "string" && t.trim()) tokens.add(t);
+      });
+    }
+  }
+  return [...tokens];
+}
+
 // Send Notification Proxy using Firebase Cloud Messaging HTTP v1 API
-app.post("/api/send-notification", async (req, res) => {
+app.post("/api/send-notification", notificationLimiter, jsonSmall, requireAuth, async (req: AuthedRequest, res) => {
   try {
     if (!req.body) {
       return res.status(400).json({ error: "Missing request body" });
     }
-    const { tokens, title, body, data } = req.body;
+    const { conversationId, tokens: requestedTokens, body, data } = req.body;
+    const db = dbFor(req);
 
-    if (!tokens || !Array.isArray(tokens) || tokens.length === 0) {
-      return res.status(400).json({ error: "Missing recipient registration tokens" });
+    // ── Who is actually allowed to receive this? ───────────────────────────
+    // Nothing sent by the client is trusted: in conversation mode the
+    // recipients are derived from the database, and in self-test mode the
+    // tokens are intersected with the caller's own registered tokens. That is
+    // what stops this route from being an open relay to arbitrary devices.
+    let validTokens: string[] = [];
+    let title = "GrixChat";
+
+    // Without a database there is nothing to derive recipients from. The only
+    // acceptable case is the credential-free dev loop (`npm run dev:mock`),
+    // which simulates a dispatch from the tokens the client sends.
+    const canResolveRecipients = Boolean(db && req.authUser);
+    if (!canResolveRecipients) {
+      if (!(MOCK_MODE && process.env.NODE_ENV !== "production")) {
+        return res.status(503).json({ error: "Server database is not configured" });
+      }
+      const devTokens = Array.isArray(requestedTokens)
+        ? [...new Set<string>(requestedTokens.filter((t: any) => typeof t === "string" && t.trim()))]
+        : [];
+      console.warn(`[FCM] MOCK mode — simulating a dispatch to ${devTokens.length} client-supplied token(s).`);
+      return res.json({
+        success: true,
+        simulated: true,
+        total: devTokens.length,
+        sentCount: 0,
+        message: "Mock mode: push dispatch simulated, no device was contacted.",
+      });
     }
 
-    // Ensure all tokens are valid non-empty strings
-    const validTokens = tokens.filter(t => typeof t === 'string' && t.trim().length > 0);
+    if (conversationId) {
+      const callerId = req.authUser!.id;
+
+      const { data: participants, error: partErr } = await db
+        .from("conversation_participants")
+        .select("user_id")
+        .eq("conversation_id", conversationId);
+
+      if (partErr) {
+        console.error("FCM Server: Failed to read conversation participants:", partErr);
+        return res.status(500).json({ error: "Failed to read conversation participants" });
+      }
+
+      const participantIds: string[] = (participants || []).map((p: any) => p.user_id);
+      if (!participantIds.includes(callerId)) {
+        return res.status(403).json({ error: "You are not a participant in this conversation" });
+      }
+
+      const recipientIds = participantIds.filter((id) => id !== callerId);
+      validTokens = await collectTokensFor(db!, recipientIds, callerId);
+
+      // Sender name comes from the database, never from the request, so the
+      // title cannot be spoofed into a phishing message.
+      const { data: sender } = await db
+        .from("users")
+        .select("full_name, username")
+        .eq("id", callerId)
+        .maybeSingle();
+      title = sender?.full_name || sender?.username || "New message";
+    } else {
+      // Self-send mode: the notification-settings test button sends to the
+      // caller's own devices. Anything that is not registered on the caller's
+      // profile is dropped.
+      if (!Array.isArray(requestedTokens) || requestedTokens.length === 0) {
+        return res.status(400).json({ error: "Missing recipient registration tokens" });
+      }
+
+      const { data: self } = await db!
+        .from("users")
+        .select("fcm_tokens")
+        .eq("id", req.authUser!.id)
+        .maybeSingle();
+      const ownTokens = new Set<string>(
+        Array.isArray(self?.fcm_tokens) ? self!.fcm_tokens.filter((t: any) => typeof t === "string") : []
+      );
+
+      const requested = requestedTokens.filter((t: any) => typeof t === "string" && t.trim().length > 0);
+      validTokens = [...new Set<string>(requested)].filter((t) => ownTokens.has(t));
+
+      if (validTokens.length === 0) {
+        return res.status(403).json({ error: "None of those tokens belong to the authenticated user" });
+      }
+      title = typeof req.body.title === "string" ? req.body.title.slice(0, 120) : "GrixChat";
+    }
+
     if (validTokens.length === 0) {
-      return res.status(400).json({ error: "No valid recipient registration tokens provided" });
+      return res.json({ success: true, total: 0, sentCount: 0, results: [], message: "No registered devices to notify" });
     }
+
+    // Cap the notification body so the endpoint cannot be used to push essays.
+    const bodyText = (typeof body === "string" ? body : "").slice(0, 200);
 
     const serviceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT;
     if (!serviceAccountJson) {
       console.warn("FCM Server: FIREBASE_SERVICE_ACCOUNT variable not set. Simulating push notification dispatch in terminal logs.");
       console.log(`[PUSH NOTIFICATION SIMULATION]`);
       console.log(`Title: ${title}`);
-      console.log(`Body: ${body}`);
-      console.log(`Tokens:`, validTokens);
+      console.log(`Body: ${bodyText}`);
+      console.log(`Tokens: ${validTokens.length} device(s)`);
       return res.json({ 
         success: true, 
         simulated: true, 
@@ -221,7 +633,7 @@ app.post("/api/send-notification", async (req, res) => {
           const payload = {
             message: {
               token,
-              notification: { title, body },
+              notification: { title, body: bodyText },
               data: {
                 click_action: data?.click_action || '/chats',
                 conversationId: data?.conversationId || '',
@@ -282,8 +694,8 @@ app.post("/api/send-notification", async (req, res) => {
 });
 
 // Secure Server-side Gemini AI Completion Proxy (GrixAI)
-app.post("/api/grix-ai", async (req, res) => {
-  const { messages, model, modelType } = req.body;
+app.post("/api/grix-ai", aiLimiter, jsonSmall, requireAuth, async (req, res) => {
+  const { messages, model, modelType } = req.body || {};
 
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
@@ -342,19 +754,33 @@ app.post("/api/grix-ai", async (req, res) => {
   }
 });
 
-// File Upload Proxy (Catbox for images/videos, Gofile.io for others)
-app.post("/api/upload-file", (req, res, next) => {
+// File Upload Proxy (Catbox for images/videos, Gofile.io for others).
+// Signed-in callers only, MIME allowlist, per-media-type size cap, rate
+// limited — this used to be an anonymous 100MB-per-file host.
+app.post("/api/upload-file", uploadLimiter, requireAuth, (req, res, next) => {
   upload.single('file')(req, res, (err) => {
     if (err instanceof multer.MulterError) {
-      return res.status(400).json({ status: 'error', message: `Multer error: ${err.message}` });
+      const tooBig = err.code === 'LIMIT_FILE_SIZE';
+      return res.status(tooBig ? 413 : 400).json({ status: 'error', message: `Multer error: ${err.message}` });
     } else if (err) {
-      return res.status(500).json({ status: 'error', message: `Unknown upload error: ${err.message}` });
+      return res.status(415).json({ status: 'error', message: err.message });
     }
     next();
   });
 }, async (req: any, res) => {
   if (!req.file) {
     return res.status(400).json({ status: 'error', message: 'No file uploaded' });
+  }
+
+  // Re-check the type-specific cap now that the real size is known, and never
+  // leave the temp file behind.
+  const maxBytes = sizeLimitFor(req.file.mimetype);
+  if (req.file.size > maxBytes) {
+    if (fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+    return res.status(413).json({
+      status: 'error',
+      message: `${req.file.mimetype} uploads are capped at ${Math.round(maxBytes / (1024 * 1024))}MB`,
+    });
   }
 
   const isMedia = req.file.mimetype.startsWith('image/') || req.file.mimetype.startsWith('video/');
@@ -422,8 +848,11 @@ app.post("/api/upload-file", (req, res, next) => {
   }
 });
 
-// Debug endpoint
+// Debug endpoint (development only — it reports which secrets are configured)
 app.get("/api/github/debug", (req, res) => {
+  if (process.env.NODE_ENV === "production") {
+    return res.status(404).json({ error: "Not found" });
+  }
   res.json({
     hasClientId: !!GITHUB_CLIENT_ID,
     hasClientSecret: !!GITHUB_CLIENT_SECRET,
@@ -536,7 +965,7 @@ app.get(["/auth/github/callback", "/auth/github/callback/"], async (req, res) =>
 });
 
 // GitHub Push
-app.post("/api/github/push", async (req, res) => {
+app.post("/api/github/push", apiLimiter, jsonLarge, async (req, res) => {
   const { token, owner, repo, path: filePath, content, message, branch = 'main' } = req.body;
   try {
     let sha;
@@ -569,7 +998,7 @@ function calculateGitHubSha(contentBase64: string): string {
 }
 
 // GitHub Batch Push (Atomic commit for multiple files)
-app.post("/api/github/push-batch", async (req, res) => {
+app.post("/api/github/push-batch", apiLimiter, jsonLarge, async (req, res) => {
   const { token, owner, repo, files, message, branch = 'main', isSequential = false } = req.body;
   
   try {
@@ -774,6 +1203,15 @@ app.get("/api/github/get-file-content", (req, res) => {
   }
 });
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Error handling — registered after every route
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Unknown /api/* paths answer with JSON, not the SPA's index.html. */
+app.use("/api", (req, res) => {
+  res.status(404).json({ error: `Unknown API route: ${req.method} ${req.originalUrl}` });
+});
+
 // Vite / Static handling
 if (process.env.NODE_ENV !== "production") {
   // Dynamic import for development
@@ -792,6 +1230,22 @@ if (process.env.NODE_ENV !== "production") {
     res.sendFile(path.resolve(distPath, "index.html"));
   });
 }
+
+// Malformed or oversized JSON bodies (from `express.json`) land here, so they
+// return a JSON error instead of Express's HTML stack page.
+app.use((err: any, req: Request, res: Response, next: NextFunction) => {
+  if (res.headersSent) return next(err);
+
+  if (err?.type === "entity.too.large") {
+    return res.status(413).json({ error: "Request body too large" });
+  }
+  if (err?.type === "entity.parse.failed" || err instanceof SyntaxError) {
+    return res.status(400).json({ error: "Malformed JSON request body" });
+  }
+
+  console.error("Unhandled server error:", err);
+  return res.status(err?.status || 500).json({ error: err?.message || "Internal server error" });
+});
 
 // Start server
 const PORT = 3000;

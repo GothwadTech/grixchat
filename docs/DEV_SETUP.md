@@ -99,8 +99,7 @@ cp .env.example .env
 npm run dev
 ```
 
-`.env.example` is **incomplete** — it lists 6 variables and the codebase reads
-21. The full list:
+`.env.example` lists every variable the codebase reads. The full list:
 
 ### Frontend (`VITE_*` — exposed to the browser bundle)
 
@@ -117,12 +116,17 @@ npm run dev
 | `VITE_FIREBASE_VAPID_KEY` | `NotificationHandler.tsx` |
 | `VITE_FIREBASE_DATABASE_URL` | presence code |
 | `VITE_LIVEKIT_URL` | `src/providers/CallProvider.tsx` |
-| `VITE_IMGBB_API_KEY` | `features/reels/grixtube/TubeUploadScreen.tsx` — ⚠️ see note |
+| `VITE_BASE_URL` | build-time path prefix (`/grixchat/` on GitHub Pages) |
 
-> ⚠️ **`VITE_IMGBB_API_KEY` is a secret exposed to the browser.** Any
-> `VITE_`-prefixed variable is inlined into the shipped bundle in plaintext.
-> That file is currently dead code, so the key is not live — but the pattern
-> must not be copied. Proxy uploads through the server instead.
+> ⚠️ Any `VITE_`-prefixed variable is inlined into the shipped bundle in
+> plaintext. Only the Supabase anon key and the Firebase web config belong
+> there. Secrets go through `server.ts`.
+
+> ⚠️ `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY` must be present at **build**
+> time. `src/lib/supabase.ts` returns `null` without them, Rollup folds that to
+> `null` and tree-shakes the whole SDK out of the bundle — the build succeeds
+> and the app can never reach the backend. `vite.config.ts` now warns loudly
+> when a production build is missing them.
 
 ### Server (`process.env` — never exposed)
 
@@ -132,17 +136,31 @@ npm run dev
 | `FIREBASE_SERVICE_ACCOUNT` | `/api/send-notification` (JSON, newlines may be escaped) |
 | `LIVEKIT_API_KEY` / `LIVEKIT_API_SECRET` | `/api/livekit-token` |
 | `GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET` | `/api/github/auth-url` |
-| `SUPABASE_SERVICE_ROLE_KEY` | server-side Supabase client |
-| `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY` | server-side Supabase client |
-| `APP_URL` | OAuth redirect base |
-| `NODE_ENV` | `production` disables the Vite middleware and serves `dist/` |
+| `SUPABASE_SERVICE_ROLE_KEY` | privileged reads/writes (FCM token cleanup). Falls back to the anon key + the caller's JWT. |
+| `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY` | **required server-side too** — every `/api` route verifies the caller's JWT against the project |
+| `APP_URL` | OAuth redirect base, sitemap origin, first CORS allowlist entry |
+| `ALLOWED_ORIGINS` | extra comma-separated browser origins allowed to call `/api/*` |
+| `MOCK_SUPABASE` | `1` skips JWT verification for the credential-free dev loop (never in production) |
+| `NODE_ENV` | `production` disables the Vite middleware, serves `dist/`, hides `/api/github/debug` |
 
 Every missing credential degrades gracefully — the server logs a warning and
 returns a simulated response rather than crashing. That is deliberate, but it
-also means **a misconfigured deploy looks like it is working.**
+also means **a misconfigured deploy looks like it is working.** The one
+exception is authentication: without `VITE_SUPABASE_URL` +
+`VITE_SUPABASE_ANON_KEY` the `/api` routes answer `503`, on purpose.
 
-> **`VITE_GROQ_API_KEY`** appears in `.env.example` but is read nowhere in the
-> codebase. `groq-sdk` is installed and unused. Both are dead.
+---
+
+## GitHub Actions secrets
+
+The Pages workflow builds the client, so it needs the `VITE_*` values from the
+table above. Add them under **Settings → Secrets and variables → Actions**
+(`.github/workflows/deploy.yml` already references them). Undefined secrets
+resolve to empty strings, so the build still succeeds — you just get a client
+with no backend attached, and the build log says so.
+
+**Server secrets are not needed for the Pages deploy** (it is a static build);
+they belong on whichever host runs `server.ts`.
 
 ---
 
@@ -167,7 +185,7 @@ proxies.
 | `npm run build` | `vite build` + esbuild bundle of `server.ts` → `dist/server.cjs` |
 | `npm run build:mock` | static bundle wired to the mock (for demoing without a backend) |
 | `npm run start` | serve the built `dist/` via `dist/server.cjs` |
-| `npm run test` | `vitest run` — 78 tests |
+| `npm run test` | `vitest run` — 85 tests |
 | `npm run test:watch` | watch mode |
 | `npm run lint` | `tsc --noEmit` — **currently fails, see KNOWN_ISSUES** |
 | `npm run preview` / `preview:mock` | serve the built bundle |
@@ -178,23 +196,18 @@ proxies.
 
 ### Vercel (`vercel.json`)
 
-⚠️ **Broken for two features.** `vercel.json` builds `src/server/server.ts`,
-which lacks `/api/grix-ai` and `/api/livekit-token`. Either point Vercel at the
-root `server.ts`, or port those two routes across. Until then, GrixAI and
-calling 404 in production while working locally.
+✅ `vercel.json` points at the root `server.ts` (the duplicate
+`src/server/server.ts` was deleted), so `/api/grix-ai` and
+`/api/livekit-token` exist there. Set the server-side variables listed above —
+including `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY`, which the auth layer
+needs — or every `/api` call answers `503`.
 
 ### GitHub Pages (`.github/workflows/deploy.yml`)
 
-⚠️ **Likely broken.** The workflow deploys `dist/` to Pages, but
-`vite.config.ts` sets `base: '/'` (now overridable via `VITE_BASE_URL`) and the
-repo has no `CNAME`. A `GothwadTech/grixchat` Pages URL is served from
-`/grixchat/`, so every absolute `/assets/…` path 404s and the app renders
-blank.
-
-Fix: set `VITE_BASE_URL=/grixchat/` in the workflow, or add a `CNAME` for a
-custom domain.
-
-> This is static analysis — an actual Pages deploy was not run.
+✅ The workflow builds with `VITE_BASE_URL=/grixchat/`, so assets resolve under
+the sub-path Pages serves from. Add the `VITE_*` Actions secrets (above) for the
+deployed client to reach a backend; add a `CNAME` file if you move to a custom
+domain at the domain root, and drop `VITE_BASE_URL` at the same time.
 
 ### Android (TWA / WebView)
 

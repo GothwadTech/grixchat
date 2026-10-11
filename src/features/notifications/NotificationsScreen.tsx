@@ -30,7 +30,8 @@ export default function NotificationsScreen() {
         .select('*, from_user:from_user_id(username, full_name, photo_url)')
         .eq('user_id', authUser.id)
         .in('type', ['follow', 'system'])
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .limit(50);
 
       if (!error && data) {
         const mapped = data.map(n => ({
@@ -39,7 +40,10 @@ export default function NotificationsScreen() {
           fromUserName: n.from_user?.username || n.from_user?.full_name || 'User',
           fromUserAvatar: n.from_user?.photo_url,
           createdAt: n.created_at,
-          read: n.is_read
+          read: n.is_read,
+          // `sql/01_core_schema.sql` stores the action phrase in `content`.
+          // `text` is only kept as a fallback for rows written by older builds.
+          text: n.content || n.text || 'sent you a notification'
         }));
         setNotifications(mapped);
         LocalDataCache.saveNotifications(authUser.id, 'social', mapped);
@@ -61,7 +65,8 @@ export default function NotificationsScreen() {
     const channel = supabase
       .channel(`notifications-${authUser.id}`)
       .on('postgres_changes', {
-        event: 'INSERT',
+        // '*' as well as INSERT: re-follows update the existing row.
+        event: '*',
         schema: 'public',
         table: 'notifications',
         filter: `user_id=eq.${authUser.id}`

@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState, useRef } from 'react';
 import { supabase } from '../lib/supabase';
+import { apiFetch } from '../lib/apiClient';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from './AuthProvider';
 import { Phone, PhoneOff, Video, Volume2, ShieldAlert } from 'lucide-react';
@@ -457,7 +458,7 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
       let payload = { success: false, token: "mock-livekit-token-sandbox", error: "" };
       
       try {
-        const res = await fetch("/api/livekit-token", {
+        const res = await apiFetch("/api/livekit-token", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ roomName, participantIdentity })

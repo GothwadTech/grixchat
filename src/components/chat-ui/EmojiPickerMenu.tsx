@@ -1,6 +1,6 @@
 import React from 'react';
 import { Smile } from 'lucide-react';
-import EmojiPicker, { Theme as EmojiTheme } from 'emoji-picker-react';
+import { LazyEmojiPicker } from './LazyEmojiPicker';
 import { useTheme } from '../../contexts/ThemeContext';
 
 export const EmojiPickerMenu: React.FC<{
@@ -23,11 +23,11 @@ export const EmojiPickerMenu: React.FC<{
       </button>
       {showEmojiPicker && (
         <div className="absolute bottom-full left-0 mb-3 z-[9999] animate-in slide-in-from-bottom-2 duration-200 shadow-2xl rounded-2xl overflow-hidden">
-          <EmojiPicker 
+          <LazyEmojiPicker 
             onEmojiClick={(emojiData) => {
               onEmojiSelect(emojiData.emoji);
             }}
-            theme={isDark ? EmojiTheme.DARK : EmojiTheme.LIGHT}
+            theme={isDark ? 'dark' : 'light'}
             lazyLoadEmojis={true}
             searchPlaceholder="Search emojis..."
             width={300}

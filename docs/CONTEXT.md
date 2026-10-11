@@ -43,7 +43,7 @@ engine) via a Vite alias, so nothing touches the network and no `.env` is
 needed. See **[DEV_SETUP.md](./DEV_SETUP.md)**.
 
 ```bash
-npm test             # 78 tests, 5 files, ~10s — includes a real login→chat-list render
+npm test             # 85 tests, 6 files, ~11s — includes a real login→chat-list render
 npm run lint         # tsc --noEmit → 0 errors
 npm run build        # production bundle
 ```
@@ -57,33 +57,40 @@ All three currently pass.
 | Check | Result |
 |---|---|
 | `npm run lint` | ✅ 0 errors |
-| `npm test` | ✅ 78/78 |
+| `npm test` | ✅ 85/85 |
 | `npm run build` | ✅ exit 0 |
 | Dead code | ✅ **0 files** (189/189 reachable) |
 | Tables queried but missing from `sql/` | ✅ **0** |
 | RPCs called but missing from `sql/` | ✅ **0** |
-| Unauthenticated server endpoints | 🔴 2 — see below |
+| Unauthenticated server endpoints | ✅ **0** — every `/api` route is authenticated (mock mode excepted) |
+| Notifications inbox | ✅ has a write path (`services/db/notificationService.ts`) |
 | Vercel deploy | ✅ fixed (`vercel.json` → root `server.ts`) |
-| GitHub Pages deploy | ⚠️ needs `VITE_BASE_URL=/grixchat/` |
+| GitHub Pages deploy | ✅ `VITE_BASE_URL=/grixchat/` set in the workflow |
+| CI | ✅ typecheck + test + build |
 
 ---
 
-## The two things that will still bite you
+## The three things that will still bite you
 
-### 1. Two endpoints are wide open
+### 1. Deploy secrets are not wired up yet
 
-`/api/send-notification` and `/api/upload-file` have **no auth, no origin
-check, no rate limit**. The first lets anyone push a notification to any FCM
-token; the second is a free 100 MB file host. Fix before any public deploy.
-→ **[KNOWN_ISSUES.md](./KNOWN_ISSUES.md#-p0--security)**
+The server endpoints now verify a Supabase JWT. That means `VITE_SUPABASE_URL`,
+`VITE_SUPABASE_ANON_KEY` (and the rest of `.env.example`) have to exist **on the
+server host**, and the `VITE_*` values must be added as GitHub Actions secrets
+for the Pages build — without them the Supabase SDK is compiled out of the
+bundle and the deployed app cannot sign in (the build prints a warning).
+→ **[KNOWN_ISSUES.md → the three things code cannot do](./KNOWN_ISSUES.md#-read-this-first--the-three-things-code-cannot-do)**
 
-### 2. Nothing writes to `notifications`
+### 2. Rate limits and the origin guard are per-process, in-memory
 
-Every notification writer lived in the deleted `features/home/` components. The
-notification screens still read the table, so they will always be empty.
-Either restore a write path or remove the screens.
-Also: `NotificationsScreen.tsx:118` reads `notif.text` but the schema column
-is `content`.
+`express-rate-limit` counts per running instance. On a serverless target that
+scales out, treat the limits as a speed bump, not a quota.
+
+### 3. Nothing else. Really.
+
+The notification tables, the reset-password route, the Pages base path, the
+bundle split and the open endpoints were the outstanding items; each is fixed
+and covered in **[KNOWN_ISSUES.md](./KNOWN_ISSUES.md)**.
 
 ---
 

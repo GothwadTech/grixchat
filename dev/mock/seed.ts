@@ -64,7 +64,6 @@ export function buildSeed() {
       archived_chats: [],
       hidden_chat_settings: { secretCode: null, showMenuEntry: true },
       fcm_tokens: [],
-      saved_posts: [],
     },
     {
       id: SEED.aarav,
@@ -88,7 +87,6 @@ export function buildSeed() {
       archived_chats: [],
       hidden_chat_settings: { secretCode: null, showMenuEntry: true },
       fcm_tokens: [],
-      saved_posts: [],
     },
     {
       id: SEED.sanya,
@@ -112,7 +110,6 @@ export function buildSeed() {
       archived_chats: [],
       hidden_chat_settings: { secretCode: null, showMenuEntry: true },
       fcm_tokens: [],
-      saved_posts: [],
     },
     {
       id: SEED.rohit,
@@ -136,7 +133,6 @@ export function buildSeed() {
       archived_chats: [],
       hidden_chat_settings: { secretCode: null, showMenuEntry: true },
       fcm_tokens: [],
-      saved_posts: [],
     },
     {
       id: SEED.priya,
@@ -160,7 +156,6 @@ export function buildSeed() {
       archived_chats: [],
       hidden_chat_settings: { secretCode: null, showMenuEntry: true },
       fcm_tokens: [],
-      saved_posts: [],
     },
     {
       id: SEED.kabir,
@@ -184,7 +179,6 @@ export function buildSeed() {
       archived_chats: [],
       hidden_chat_settings: { secretCode: null, showMenuEntry: true },
       fcm_tokens: [],
-      saved_posts: [],
     },
     {
       id: SEED.meera,
@@ -208,7 +202,6 @@ export function buildSeed() {
       archived_chats: [],
       hidden_chat_settings: { secretCode: null, showMenuEntry: true },
       fcm_tokens: [],
-      saved_posts: [],
     },
     {
       id: SEED.official,
@@ -232,7 +225,6 @@ export function buildSeed() {
       archived_chats: [],
       hidden_chat_settings: { secretCode: null, showMenuEntry: true },
       fcm_tokens: [],
-      saved_posts: [],
     },
   ];
 

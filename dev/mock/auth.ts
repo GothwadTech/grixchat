@@ -147,7 +147,6 @@ class MockAuth {
       hidden_chats: [], archived_chats: [],
       hidden_chat_settings: { secretCode: null, showMenuEntry: true },
       fcm_tokens: [],
-      saved_posts: [],
     };
     store.table('users').push(profile);
     store.emit('INSERT', 'users', profile);
