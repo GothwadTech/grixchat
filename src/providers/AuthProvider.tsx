@@ -50,7 +50,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [followingIds, setFollowingIds] = useState<string[]>([]);
 
   const profileChannelRef = useRef<RealtimeChannel | null>(null);
-  const presenceChannelRef = useRef<RealtimeChannel | null>(null);
   const sessionRegisteredRef = useRef<boolean>(false);
   const userRef = useRef<CustomUser | null>(user);
 
@@ -189,7 +188,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const setupProfileAndPresence = async () => {
       try {
         if (profileChannelRef.current) supabase.removeChannel(profileChannelRef.current);
-        if (presenceChannelRef.current) supabase.removeChannel(presenceChannelRef.current);
 
         // Fetch primary profile data updates
         fetchProfileData(currentUserId, user.email || '', user.user_metadata);
@@ -211,23 +209,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         profileChannel.subscribe();
         profileChannelRef.current = profileChannel;
 
-        // Setup Presence synchronization
-        const presenceChannel = supabase.channel('online-users', { config: { presence: { key: currentUserId } } });
-        presenceChannel
-          .on('presence', { event: 'sync' }, () => {})
-          .on('presence', { event: 'join' }, ({ key }) => {
-            if (key === currentUserId) userProfileService.throttledSetStatus(currentUserId, true);
-          })
-          .on('presence', { event: 'leave' }, ({ key }) => {
-            if (key === currentUserId) userProfileService.throttledSetStatus(currentUserId, false);
-          });
-
-        presenceChannel.subscribe(async (status) => {
-          if (status === 'SUBSCRIBED') {
-            await presenceChannel.track({ user_id: currentUserId, online_at: new Date().toISOString() });
-          }
-        });
-        presenceChannelRef.current = presenceChannel;
+        // Live presence is owned by PresenceService (`grix-presence`), which
+        // knows who is online for real. The old `online-users` channel here
+        // only ever watched *ourselves* and wrote `is_online` on join/leave,
+        // which duplicated that work (and one extra websocket per client).
+        // `users.is_online` / `last_seen` remain as the durable fallback,
+        // written by the heartbeat below.
       } catch (err) {
         console.error('Presence setup error:', err);
       }
@@ -238,7 +225,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => {
       isSubscribed = false;
       if (profileChannelRef.current) supabase.removeChannel(profileChannelRef.current);
-      if (presenceChannelRef.current) supabase.removeChannel(presenceChannelRef.current);
     };
   }, [user?.id]);
 
@@ -251,30 +237,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       userProfileService.throttledSetStatus(user.id, online);
     };
 
-    const handleVisibility = () => {
-      const isVisible = document.visibilityState === 'visible';
-      updateStatus(isVisible);
-      if (isVisible) {
-        if (!heartbeatInterval) {
-          heartbeatInterval = setInterval(() => updateStatus(true), PRESENCE_HEARTBEAT_MS);
-        }
-      } else if (heartbeatInterval) {
-        clearInterval(heartbeatInterval);
-        heartbeatInterval = null;
-      }
-    };
+    // A background tab is still an open session: switching tabs must not flip
+    // you offline (Telegram Web behaves the same way). Only an actual unload
+    // does. Long background gaps are covered because the heartbeat below keeps
+    // `last_seen` inside `PRESENCE_ONLINE_WINDOW_MS`.
+    const handleUnload = () => updateStatus(false);
 
     updateStatus(true);
-    if (document.visibilityState === 'visible') {
-      heartbeatInterval = setInterval(() => updateStatus(true), PRESENCE_HEARTBEAT_MS);
-    }
+    heartbeatInterval = setInterval(() => updateStatus(true), PRESENCE_HEARTBEAT_MS);
 
-    document.addEventListener('visibilitychange', handleVisibility);
-    window.addEventListener('beforeunload', () => updateStatus(false));
-    
+    window.addEventListener('pagehide', handleUnload);
+    window.addEventListener('beforeunload', handleUnload);
+
     return () => {
       if (heartbeatInterval) clearInterval(heartbeatInterval);
-      document.removeEventListener('visibilitychange', handleVisibility);
+      window.removeEventListener('pagehide', handleUnload);
+      window.removeEventListener('beforeunload', handleUnload);
     };
   }, [user?.id]);
 

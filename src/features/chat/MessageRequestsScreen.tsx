@@ -7,9 +7,12 @@ import { getAcceptedChats, acceptChat, declineChat } from '../../utils/acceptedC
 import { chatService } from './services/chatService';
 import { notificationService } from '../../services/db/notificationService';
 import { LocalDataCache } from '../../services/LocalDataCache';
+import { isUserOnline } from '../../utils/presence';
 import Avatar from '../../components/common/Avatar';
+import { useLivePresence } from '../../providers/PresenceProvider';
 
 export default function MessageRequestsScreen() {
+  const liveOf = useLivePresence();
   const navigate = useNavigate();
   const { user: authUser } = useAuth();
   
@@ -53,7 +56,7 @@ export default function MessageRequestsScreen() {
       if (incomingIds.length > 0) {
         const { data: incUsers } = await supabase
           .from('users')
-          .select('*')
+          .select('id, username, full_name, photo_url, bio, is_online, last_seen')
           .in('id', incomingIds);
         
         if (incUsers) {
@@ -65,7 +68,7 @@ export default function MessageRequestsScreen() {
               fullName: u.full_name,
               photoURL: u.photo_url || '',
               bio: u.bio,
-              isOnline: u.is_online
+              isOnline: isUserOnline(u.is_online, u.last_seen)
             }
           }));
         }
@@ -75,7 +78,7 @@ export default function MessageRequestsScreen() {
       if (outgoingIds.length > 0) {
         const { data: outUsers } = await supabase
           .from('users')
-          .select('*')
+          .select('id, username, full_name, photo_url, bio, is_online, last_seen')
           .in('id', outgoingIds);
         
         if (outUsers) {
@@ -87,7 +90,7 @@ export default function MessageRequestsScreen() {
               fullName: u.full_name,
               photoURL: u.photo_url || '',
               bio: u.bio,
-              isOnline: u.is_online
+              isOnline: isUserOnline(u.is_online, u.last_seen)
             }
           }));
         }
@@ -254,7 +257,7 @@ export default function MessageRequestsScreen() {
                   >
                     {/* User profile details */}
                     <div className="flex items-center gap-3.5 min-w-0 flex-1 cursor-pointer" onClick={() => navigate(`/user/${item.otherUser.id}`)}>
-                      <Avatar url={item.otherUser.photoURL} type="direct" size="md" name={item.otherUser.fullName || item.otherUser.username} isOnline={item.otherUser.isOnline} />
+                      <Avatar url={item.otherUser.photoURL} type="direct" size="md" name={item.otherUser.fullName || item.otherUser.username} isOnline={liveOf(item.otherUser.id) ?? item.otherUser.isOnline} />
                       <div className="min-w-0 flex-1">
                         <span className="text-[13px] font-extrabold text-[var(--text-primary)] truncate block">
                           {item.otherUser.fullName}
@@ -306,7 +309,7 @@ export default function MessageRequestsScreen() {
                   >
                     {/* User profile details */}
                     <div className="flex items-center gap-3.5 min-w-0 flex-1 cursor-pointer" onClick={() => navigate(`/user/${item.otherUser.id}`)}>
-                      <Avatar url={item.otherUser.photoURL} type="direct" size="md" name={item.otherUser.fullName || item.otherUser.username} isOnline={item.otherUser.isOnline} />
+                      <Avatar url={item.otherUser.photoURL} type="direct" size="md" name={item.otherUser.fullName || item.otherUser.username} isOnline={liveOf(item.otherUser.id) ?? item.otherUser.isOnline} />
                       <div className="min-w-0 flex-1">
                         <span className="text-[13px] font-extrabold text-[var(--text-primary)] truncate block">
                           {item.otherUser.fullName}

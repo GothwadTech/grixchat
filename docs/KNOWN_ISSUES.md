@@ -21,9 +21,9 @@ dashboard, Supabase, or a decision.
 | # | Task | Where | Why it matters |
 |---|---|---|---|
 | A | Add the **build-time** variables: `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_FIREBASE_*`, `VITE_LIVEKIT_URL`, `NODE_VERSION=22` | Cloudflare → Workers & Pages → gtwdchat → Settings → Environment variables (Production **and** Preview) | They are inlined into the bundle. **Without `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY` the Supabase SDK is compiled out and the deployed app cannot sign in** — the build prints a loud warning. Changing one requires a redeploy. |
-| B | Add the **runtime secrets** for the API: `GEMINI_API_KEY`, `FIREBASE_SERVICE_ACCOUNT`, `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET`, `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`, `SUPABASE_SERVICE_ROLE_KEY`, `APP_URL=https://grixchat.gothwadtech.com` | same screen as above | The API verifies JWTs against `VITE_SUPABASE_URL` + `VITE_SUPABASE_ANON_KEY`, so those two must be present **server-side as well**. Without any of these the matching feature returns a clear "not configured" error instead of crashing. Step-by-step: [DEV_SETUP.md](./DEV_SETUP.md#deploy--cloudflare-pages). |
+| B | Add the **runtime secrets** for the API: `GEMINI_API_KEY`, `FIREBASE_SERVICE_ACCOUNT`, `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`, `SUPABASE_SERVICE_ROLE_KEY`, `APP_URL=https://grixchat.gothwadtech.com` — and *optionally* `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET` | same screen as above | The API verifies JWTs against `VITE_SUPABASE_URL` + `VITE_SUPABASE_ANON_KEY`, so those two must be present **server-side as well**. Without any of these the matching feature returns a clear "not configured" error instead of crashing. `LIVEKIT_*` is **no longer required for calling**: without it calls run peer-to-peer over WebRTC with Supabase Realtime as the signalling channel (issue 15). Step-by-step: [DEV_SETUP.md](./DEV_SETUP.md#deploy--cloudflare-pages). |
 | C | Confirm the Pages build settings: build command `npm run build`, output `dist`, root `/`; production branch = your main branch; custom domain `grixchat.gothwadtech.com` attached | Cloudflare → the project's Settings / Custom domains | `wrangler.toml` pins the output dir and compatibility date, but the dashboard values win. |
-| D | Decide the fate of `call_candidates` (issue 7) | Supabase SQL editor | It is defined but unused. Drop it with:<br>`DROP TABLE IF EXISTS public.call_candidates CASCADE;`<br>or keep it and adopt the table-based signalling in [`docs/legacy/3_webrtc_signaling_architecture.md`](./legacy/3_webrtc_signaling_architecture.md). |
+| D | Decide the fate of `call_candidates` (issue 7) | Supabase SQL editor | It is defined but unused — and it stays unused: calling signals over a Broadcast topic (`call-rtc:<callId>`, see `src/features/call/services/WebRtcCallService.ts`), which costs nothing and needs no schema. Drop it with:<br>`DROP TABLE IF EXISTS public.call_candidates CASCADE;` |
 | E | Add a **Cloudflare Rate Limiting Rule** on `/api/*` (optional, but recommended before scaling) | Cloudflare → Security → WAF | The limiter in `server/api.ts` counts in memory, i.e. per isolate — a speed bump, not a hard global quota. |
 | F | Run **`sql/01_schema.sql`** then **`sql/02_functions_realtime_storage.sql`** (2 minutes, idempotent, `02` ends with a self-check) | Supabase → SQL Editor | Creates anything missing and updates every policy/function. For the egress work specifically: read receipts become one row instead of one per unread message, the chat-list preview is maintained by a trigger, `REPLICA IDENTITY` stops shipping whole rows + the passcode hash, and the missing RLS UPDATE policy on `conversation_participants` gets created. Runbook: [`../sql/00_master_instructions.md`](../sql/00_master_instructions.md). Full analysis: [EGRESS_AUDIT.md](./EGRESS_AUDIT.md). |
 | G | Decide whether to enable the **RLS hardening** block at the end of that same file (commented out) | Supabase → SQL Editor | Today `users` and `conversation_participants` are readable by every authenticated account: `email`, `phone`, `lock` (passcode hash), `fcm_tokens`, and the whole follow/participant graph. |
@@ -120,10 +120,38 @@ the mock keeps mirroring `sql/`.
 
 ### 7. `call_candidates` is defined but never used — ❌ STILL OPEN (needs SQL)
 
-The live calling path (`providers/CallProvider.tsx`) signals over Broadcast
-channels, so the table is dead weight. Dropping it is a one-line migration the
-repo cannot run for you — see task **C** at the top. No code change is pending
-on either side of the decision.
+The live calling path signals over a Realtime Broadcast topic
+(`call-rtc:<callId>`, see `src/features/call/services/WebRtcCallService.ts`), so
+the table is dead weight. Dropping it is a one-line migration the repo cannot
+run for you — see task **D** at the top. No code change is pending on either
+side of the decision.
+
+### 15. Calling only worked when LiveKit was configured — ✅ FIXED
+
+Two separate problems, both fixed:
+
+- **Silent fake calls.** Without `LIVEKIT_API_KEY`/`LIVEKIT_API_SECRET` (and
+  `VITE_LIVEKIT_URL`), `connectToLiveKitSession()` fell back to a *simulator*
+  that put both phones into a "connected" state after 1.8 s — an outgoing call
+  looked answered while the other device was still ringing, and no media ever
+  moved. The fallback is now a real WebRTC peer-to-peer session: only the caller
+  offers, the receiver answers, ICE candidates are buffered until the remote
+  description lands, and `connected` is only ever reported by the actual
+  `RTCPeerConnection` (see `src/__tests__/callSignaling.test.ts`). LiveKit is
+  still used, unchanged, whenever it *is* configured.
+- **A duplicated incoming-call card.** `App.tsx` mounted
+  `IncomingCallNotification`, and `CallProvider` rendered its own card for the
+  same event: two ringtones, two cards, and the App-level one wrote the status
+  `denied`, which the `calls.status` CHECK constraint rejects — so "decline"
+  from that card never reached the database. The duplicate is deleted; the
+  provider's card is the single source, and declines write `rejected`.
+
+**Remaining human step (only if calls must work on strict corporate/mobile
+networks):** the P2P transport uses public STUN servers and no TURN relay. Most
+home/mobile networks connect directly; symmetric-NAT or locked-down networks
+need a TURN server. Add one to `ICE_SERVERS` in
+`src/features/call/services/WebRtcCallService.ts` (e.g. Cloudflare Calls TURN or
+a self-hosted coturn) — it is a one-line change with no other moving parts.
 
 ### 8. Password reset had no path — ✅ FIXED
 
@@ -331,6 +359,87 @@ with it:
 
 ---
 
+## 🔵 Task 6 — calls, presence & typing (2026-10-11)
+
+Everything below is fixed in code; the only remaining item is the optional TURN
+note under issue 15.
+
+### 21. The call screen re-dialled the peer after a call ended — ✅ FIXED
+
+`CallScreen` started a call whenever `activeCall` was `null`. The moment a call
+ended, `handleEndCallLocally()` sets exactly that — so hanging up (or being hung
+up on) immediately placed a **new** call to the same person, which looked like
+"the call keeps coming back". Ringing is now guarded by a `ringStartedRef`: one
+ring per visit to the screen, and an already-running call is adopted rather than
+re-dialled. Pinned by *ringing is not a failure* in
+`src/__tests__/callSignaling.test.ts`.
+
+### 22. Timeouts disagreed, so calls died at the wrong moment — ✅ FIXED
+
+| Was | Now |
+|---|---|
+| Zombie sweep force-closed a `ringing` row after **40 s** while the caller's own give-up was **45 s** | one constant: `RING_TIMEOUT_MS = 45_000`, sweep threshold = ring timeout + 8 s |
+| The P2P caller's connect clock started at ring time, so an unanswered call showed an error at 30 s with the phone still ringing | the clock starts with the offer (i.e. when the receiver actually picked up); an unanswered call is handled by the ring timeout |
+| The receiver's stale-ring check was 30 s | the ringing window: a call that reconnects inside it still rings |
+| An answered call whose media never arrived rang forever (`accepted` disabled the ring timeout) | `CONNECT_WATCHDOG_MS = 20 s` — then the call ends honestly and the row is finalised |
+
+### 23. A call could stay `accepted` forever, and declines were invisible — ✅ FIXED
+
+- `webRtcCallService`'s `bye`/ICE-failure path only cleared local state; the
+  `calls` row stayed `accepted`, so the history showed a call that never ended.
+  Every transport-driven teardown now finalises the row through one **idempotent**
+  helper (`closeCallRow`, guarded by `.in('status', ['ringing','accepted'])`),
+  which also decides who writes the single "call ended" chat log — both sides
+  notice a hang-up at the same instant.
+- The call history fetched `.eq('status','ended')` only, so a **declined** call
+  (stored as `rejected`) and an interrupted one (`error`) never appeared.
+  `useCalls` and `CallSyncService` now use `.in('status', ['ended','rejected','error'])`.
+- A receiver whose accept failed (no camera permission, dead tab) left the row
+  `accepted`; it is now closed as `error`.
+
+### 24. Chat list lost every realtime event in the mock — ✅ FIXED
+
+Not app code: `dev/mock/realtime.ts` parsed `filter: conversation_id=in.(a,b)`
+with a regex that stripped *backslashes* instead of parentheses, so the parsed
+list was `["(a", "b)"]` and no event ever matched. The list-row patch (the whole
+point of the egress fix) could therefore never fire in tests or `dev:mock` — it
+is what made `src/__tests__/egressRealtime.test.tsx` fail. Fixed, and that test
+is now the regression guard.
+
+### 25. Presence and typing, one source of truth — ✅ FIXED
+
+- Live roster: `src/services/PresenceService.ts` owns **one** Realtime Presence
+  channel (`grix-presence`) for the whole app; `PresenceProvider` exposes it
+  (`useIsUserOnline`, `useLivePresence`). The legacy `online-users` channel
+  `AuthProvider` opened (which only watched *yourself* and wrote `is_online`)
+  is gone — `AuthProvider` now only runs the durable heartbeat.
+- Every online dot reads the roster first and falls back to
+  `users.is_online`/`last_seen` through the single helper `isUserOnline`:
+  chat list, chat header, search results, discover, message requests, forward
+  sheet, profile, read receipts. When the roster is authoritative, a user who
+  closes their tab goes offline **instantly** instead of after the 6-minute
+  fallback window.
+- Typing: one ref-counted broadcast topic per conversation
+  (`src/services/TypingService.ts`) shared by the chat header and the chat-list
+  row, `typing…` in the header, explicit `false` on send/blur/unmount/tab-hidden,
+  and a 6 s receiver-side TTL as the safety net.
+
+### 26. Stories — the only content feature left, reviewed end to end — ✅ FIXED
+
+With the post system deleted, stories carry the whole "look what I did" surface,
+so they were walked through as a feature rather than as a screen:
+
+| Step | What was wrong | Now |
+|---|---|---|
+| Ring list | `select('*')` with no time bound and no audience bound: every story ever posted by everybody, every time the tab was focused | bounded column list, 24 h cutoff, audience = you + the people you follow + your chat partners (≤ 200 ids), 120-row cap, cache-first paint, one `cleanup_expired_stories()` per session, unseen-first ordering with Telegram-style rings |
+| Watching | progress ran on a fixed timer regardless of the video length, a view could be recorded twice, the mute button did nothing for the music track, the exit went to a route that no longer exists | duration-aware progress that resumes correctly, a duplicate `view_story` is skipped, mute drives the `<audio>` element and the `<video>` element, swipe/tap zones, exit to `/stories`, and the owner's view count refreshes |
+| Viewers | `view_story` trusted the caller's `viewer_id_param`, so anybody could record a view as somebody else | the SQL function records `auth.uid()`; an anonymous caller is a no-op and a spoofed parameter is ignored (verified on a scratch Postgres) |
+| Music | picking a track previewed it, then the sheet's audio could keep playing over the story | audited: preview stops on unmount, the chosen track is stored on the story row (`music_title`/`music_artist`/`music_url`) and played by the watcher with the mute state applied |
+| Creation | returned to the (deleted) feed | returns to `/stories` |
+
+An index (`idx_stories_created`) backs the 24 h query. No third-party service is
+involved: tracks are static URLs in `src/features/stories/utils/musicData.ts`.
+
 ## ✅ Fixed
 
 | Issue | Resolution |
@@ -359,4 +468,8 @@ with it:
 | 1.14 MB entry chunk, eager emoji picker, console in prod | **#12, #13, #14 — this pass** |
 | Stale Reels leftovers in a live screen | **#18 — this pass** |
 | 5 GB/month of egress from per-event list refetches | **#19 — this pass; SQL hand-off in row F** |
+| Calls re-dialled the peer, never ended in the DB, and the history hid declines | **#21–#23 — this pass** |
+| Realtime `in.(…)` filters matched nothing in the mock, hiding the egress fix | **#24 — this pass** |
+| Presence/typing had two competing implementations | **#25 — this pass** |
+| Stories were unbounded, double-counted views and leaked audio | **#26 — this pass** |
 | Re-running the setup deleted every table, with no error | **#20 — this pass; re-runnable SQL + guard tests** |

@@ -118,7 +118,11 @@ CREATE TRIGGER on_auth_user_created
 -- ───────────────────────────────────────────────────────────────────────────
 
 -- Record a story view without granting UPDATE on stories to clients.
--- The viewer JSON is built inline to keep the function trivially parseable.
+-- The viewer is always the caller: `auth.uid()` decides, so a client cannot
+-- stuff the viewer list with somebody else's (or a made-up) identity. The
+-- `viewer_*` parameters stay in the signature for older clients and carry the
+-- display fields only. The viewer JSON is built inline to keep the function
+-- trivially parseable.
 CREATE OR REPLACE FUNCTION public.view_story(
     story_id_param UUID,
     viewer_id_param UUID,
@@ -127,11 +131,17 @@ CREATE OR REPLACE FUNCTION public.view_story(
     viewer_photo_url_param TEXT
 )
 RETURNS VOID AS $$
+DECLARE
+    real_viewer UUID := auth.uid();
 BEGIN
+    IF real_viewer IS NULL THEN
+        RETURN; -- anonymous callers may not record views
+    END IF;
+
     UPDATE public.stories
     SET views = COALESCE(views, '[]'::JSONB) || jsonb_build_array(
         jsonb_build_object(
-            'id', viewer_id_param,
+            'id', real_viewer,
             'username', viewer_username_param,
             'full_name', viewer_fullname_param,
             'photo_url', viewer_photo_url_param,
@@ -139,7 +149,7 @@ BEGIN
         )
     )
     WHERE id = story_id_param
-      AND NOT (COALESCE(views, '[]'::JSONB) @> jsonb_build_array(jsonb_build_object('id', viewer_id_param::text)));
+      AND NOT (COALESCE(views, '[]'::JSONB) @> jsonb_build_array(jsonb_build_object('id', real_viewer::text)));
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 

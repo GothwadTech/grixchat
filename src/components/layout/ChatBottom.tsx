@@ -45,6 +45,9 @@ interface ChatBottomProps {
   setFilePreviewUrls: (urls: string[]) => void;
   textareaRef: React.RefObject<HTMLTextAreaElement | null>;
   handleTyping: () => void;
+  /** Called when the message goes out (or the composer loses focus) so the
+   *  peer's "typing…" clears instantly instead of waiting for the TTL. */
+  stopTyping?: () => void;
   showEmojiPicker: boolean;
   setShowEmojiPicker: (show: boolean) => void;
   emojiPickerRef: React.RefObject<HTMLDivElement | null>;
@@ -91,6 +94,7 @@ export default function ChatBottom({
   setFilePreviewUrls,
   textareaRef,
   handleTyping,
+  stopTyping,
   showEmojiPicker,
   setShowEmojiPicker,
   emojiPickerRef,
@@ -368,6 +372,7 @@ export default function ChatBottom({
                       ref={textareaRef}
                       placeholder={placeholder}
                       value={newMessage}
+                      onBlur={() => stopTyping?.()}
                       onChange={(e) => {
                         setNewMessage(e.target.value);
                         handleTyping();
@@ -383,7 +388,9 @@ export default function ChatBottom({
                       onKeyDown={(e) => {
                         if (e.key === 'Enter' && !e.shiftKey && !isMicMode) {
                           e.preventDefault();
-                          handleSendMessage(e as any);
+                          stopTyping?.();
+                          stopTyping?.();
+              handleSendMessage(e as any);
                         }
                       }}
                     />
@@ -449,6 +456,7 @@ export default function ChatBottom({
             } else if (isMicMode) {
               startRecording();
             } else {
+              stopTyping?.();
               handleSendMessage(e as any);
             }
           }}

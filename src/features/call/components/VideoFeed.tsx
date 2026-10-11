@@ -10,6 +10,12 @@ interface VideoFeedProps {
   callStatus: CallStatus;
   timer: number;
   receiver?: any;
+  /**
+   * True as soon as the peer's video track reaches this device. The glass
+   * placeholder is only for the wait — showing it over a live stream (as the
+   * old code did, unconditionally) hides the actual call behind a blur.
+   */
+  hasRemoteVideo?: boolean;
 }
 
 export const VideoFeed: React.FC<VideoFeedProps> = ({
@@ -19,6 +25,7 @@ export const VideoFeed: React.FC<VideoFeedProps> = ({
   callStatus,
   timer,
   receiver,
+  hasRemoteVideo = false,
 }) => {
   const photoUrl = receiver?.photoURL || receiver?.photo_url || "https://cdn-icons-png.flaticon.com/512/149/149071.png";
   const displayName = receiver?.fullName || receiver?.full_name || receiver?.username || 'GrixChat User';
@@ -33,7 +40,8 @@ export const VideoFeed: React.FC<VideoFeedProps> = ({
         className="w-full h-full object-cover transition-opacity duration-1000 absolute inset-0 z-0"
       />
       
-      {/* 2. Premium Glassmorphism fallback when remote stream has not arrived yet / mock calling */}
+      {/* 2. Glassmorphism placeholder — only until the peer's video arrives */}
+      {!hasRemoteVideo && (
       <div className="absolute inset-0 z-1 bg-gradient-to-b from-zinc-950/70 via-zinc-900/40 to-zinc-950/80 backdrop-blur-[60px] flex flex-col items-center justify-center p-6 text-center select-none">
         <div className="relative mb-6 flex items-center justify-center scale-90 md:scale-100">
           {/* Wave Ripple 1 */}
@@ -70,15 +78,16 @@ export const VideoFeed: React.FC<VideoFeedProps> = ({
         <div className="z-10 bg-zinc-900/60 border border-white/5 rounded-3xl p-5 max-w-xs backdrop-blur-md shadow-2xl">
           <p className="text-[10px] font-black tracking-widest text-sky-400 uppercase flex items-center justify-center gap-1.5 mb-1.5">
             <Sparkles size={11} className="text-sky-400" />
-            <span>Simulated Private Terminal</span>
+            <span>{callStatus === 'connected' ? 'Waiting for Video' : 'Connecting Call'}</span>
           </p>
           <h3 className="text-base font-black text-white truncate uppercase tracking-widest">{displayName}</h3>
           <p className="text-[10px] text-zinc-400 font-mono mt-1 flex items-center justify-center gap-1">
             <AudioLines size={12} className="text-zinc-500 animate-pulse" />
-            <span>Establishing Peer Encryption-Line</span>
+            <span>{callStatus === 'connected' ? 'Peer connected — starting video' : 'Establishing secure media line'}</span>
           </p>
         </div>
       </div>
+      )}
 
       {/* 3. Local Video Overlay (Pip) */}
       <motion.div 

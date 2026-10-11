@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../providers/AuthProvider.tsx';
-import { X, Loader2, Music, Volume2, Eye } from 'lucide-react';
+import { X, Loader2, Volume2, VolumeX, Eye } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import Avatar from '../../components/common/Avatar';
 
@@ -17,6 +17,10 @@ export default function StoryWatcherScreen() {
   const [isPaused, setIsPaused] = useState(false);
   const [showViewsSheet, setShowViewsSheet] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [isMuted, setIsMuted] = useState(false);
+  /** Video stories run for their own length, not the 5 s default. */
+  const [videoDurationMs, setVideoDurationMs] = useState<number | null>(null);
+  const elapsedRef = useRef(0);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const pressTimerRef = useRef<any>(null);
   const isLongPressRef = useRef(false);
@@ -28,7 +32,7 @@ export default function StoryWatcherScreen() {
       try {
         const { data, error } = await supabase
           .from('stories')
-          .select('*, users:user_id(username, photo_url)')
+          .select('id, user_id, type, media_url, text_content, bg_color, music_title, music_artist, music_url, filter_applied, created_at, views, users:user_id(username, photo_url)')
           .eq('user_id', userId)
           .order('created_at', { ascending: true });
         
@@ -41,14 +45,14 @@ export default function StoryWatcherScreen() {
           })));
 
           if (data.length === 0) {
-            navigate('/chats');
+            navigate('/stories');
           }
         } else {
-          navigate('/chats');
+          navigate('/stories');
         }
       } catch (err) {
         console.error('Error fetching stories for watcher:', err);
-        navigate('/chats');
+        navigate('/stories');
       } finally {
         setLoading(false);
       }
@@ -70,6 +74,7 @@ export default function StoryWatcherScreen() {
     if (trackUrl) {
       const audio = new Audio(trackUrl);
       audio.volume = 0.5;
+      audio.muted = isMuted;
       audio.loop = true;
       audioRef.current = audio;
       
@@ -94,6 +99,13 @@ export default function StoryWatcherScreen() {
     const activeStory = stories[currentIndex];
     if (!supabase || !authUser?.id || !activeStory || activeStory.user_id === authUser.id) return;
 
+    // Already recorded (visible because `views` ships with the row) → skip the
+    // round trip entirely.
+    const alreadyViewed =
+      Array.isArray(activeStory.views) &&
+      activeStory.views.some((v: any) => v?.id === authUser.id);
+    if (alreadyViewed) return;
+
     const recordStoryView = async () => {
       try {
         await supabase.rpc('view_story', {
@@ -111,6 +123,29 @@ export default function StoryWatcherScreen() {
     recordStoryView();
   }, [currentIndex, stories, authUser?.id, userData]);
 
+  // Opening the viewer list re-reads the row, so the list is never stale.
+  useEffect(() => {
+    if (!showViewsSheet || !supabase) return;
+    const story = stories[currentIndex];
+    if (!story || story.user_id !== authUser?.id) return;
+
+    let cancelled = false;
+    supabase
+      .from('stories')
+      .select('views')
+      .eq('id', story.id)
+      .single()
+      .then(({ data }: any) => {
+        if (cancelled || !data) return;
+        setStories(prev =>
+          prev.map(item => (item.id === story.id ? {...item, views: data.views} : item)),
+        );
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [showViewsSheet, currentIndex, authUser?.id]);
+
   // Handle pausing of audio playback
   useEffect(() => {
     if (!audioRef.current) return;
@@ -121,30 +156,46 @@ export default function StoryWatcherScreen() {
     }
   }, [isPaused, showViewsSheet]);
 
-  // Auto-advance tracking with granular 50ms pauseable frame steps
   useEffect(() => {
-    if (stories.length === 0 || isPaused || showViewsSheet) return;
+    if (audioRef.current) audioRef.current.muted = isMuted;
+  }, [isMuted]);
 
+  // One story restarts its own clock (and the pause resumes where it stopped)
+  useEffect(() => {
+    elapsedRef.current = 0;
     setProgress(0);
+    setVideoDurationMs(null);
+  }, [currentIndex]);
+
+  // Auto-advance: pictures get 5 s, videos get their real length.
+  useEffect(() => {
+    const story = stories[currentIndex];
+    if (!story || isPaused || showViewsSheet) return;
+
+    const totalMs =
+      story.type === 'video' ? (videoDurationMs && videoDurationMs > 0 ? videoDurationMs : 15000) : 5000;
+
+    let last = Date.now();
     const interval = setInterval(() => {
-      setProgress(prev => {
-        if (prev >= 100) {
-          clearInterval(interval);
-          handleNext();
-          return 100;
-        }
-        return prev + 1;
-      });
-    }, 50); // 50ms * 100 = 5000ms (5s duration per story item)
+      const now = Date.now();
+      elapsedRef.current += now - last;
+      last = now;
+      const pct = Math.min(100, (elapsedRef.current / totalMs) * 100);
+      setProgress(pct);
+      if (pct >= 100) {
+        clearInterval(interval);
+        handleNext();
+      }
+    }, 50);
 
     return () => clearInterval(interval);
-  }, [currentIndex, stories, isPaused, showViewsSheet]);
+  }, [currentIndex, stories, isPaused, showViewsSheet, videoDurationMs]);
 
   const handleNext = () => {
     if (currentIndex < stories.length - 1) {
       setCurrentIndex(prev => prev + 1);
     } else {
-      navigate('/chats');
+      navigate('/stories');
     }
   };
 
@@ -154,8 +205,11 @@ export default function StoryWatcherScreen() {
     }
   };
 
-  const handlePointerDown = () => {
+  const swipeStartRef = useRef<{x: number; y: number; at: number} | null>(null);
+
+  const handlePointerDown = (e?: React.PointerEvent) => {
     isLongPressRef.current = false;
+    if (e) swipeStartRef.current = {x: e.clientX, y: e.clientY, at: Date.now()};
     setIsPaused(true);
     pressTimerRef.current = setTimeout(() => {
       isLongPressRef.current = true;
@@ -165,16 +219,30 @@ export default function StoryWatcherScreen() {
     }, 250);
   };
 
-  const handlePointerUp = (action: 'prev' | 'next') => {
+  const handlePointerUp = (action: 'prev' | 'next', e?: React.PointerEvent) => {
     if (pressTimerRef.current) clearTimeout(pressTimerRef.current);
     setIsPaused(false);
-    if (!isLongPressRef.current) {
-      if (typeof navigator !== 'undefined' && navigator.vibrate) {
-        navigator.vibrate(10);
+    if (isLongPressRef.current) return;
+
+    // A horizontal flick is a swipe (Telegram/Instagram), a still tap is a tap.
+    const start = swipeStartRef.current;
+    swipeStartRef.current = null;
+    if (start && e) {
+      const dx = e.clientX - start.x;
+      const dy = e.clientY - start.y;
+      if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy)) {
+        if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(10);
+        if (dx < 0) handleNext();
+        else handlePrev();
+        return;
       }
-      if (action === 'prev') handlePrev();
-      else handleNext();
     }
+
+    if (typeof navigator !== 'undefined' && navigator.vibrate) {
+      navigator.vibrate(10);
+    }
+    if (action === 'prev') handlePrev();
+    else handleNext();
   };
 
   if (loading) {
@@ -216,9 +284,20 @@ export default function StoryWatcherScreen() {
           <Avatar url={currentStory?.photoURL} name={currentStory?.username} size="sm" className="border border-white/20" />
           <span className="text-white font-extrabold text-xs tracking-wider">@{currentStory?.username}</span>
         </div>
-        <button onClick={() => navigate('/chats')} className="text-white p-1 hover:bg-white/10 rounded-full transition-all cursor-pointer">
-          <X size={24} />
-        </button>
+        <div className="flex items-center gap-1">
+          {currentStory?.music_url && (
+            <button
+              onClick={() => setIsMuted(prev => !prev)}
+              className="text-white p-2 hover:bg-white/10 rounded-full transition-all cursor-pointer"
+              title={isMuted ? 'Unmute story audio' : 'Mute story audio'}
+            >
+              {isMuted ? <VolumeX size={20} /> : <Volume2 size={20} />}
+            </button>
+          )}
+          <button onClick={() => navigate('/stories')} className="text-white p-1 hover:bg-white/10 rounded-full transition-all cursor-pointer">
+            <X size={24} />
+          </button>
+        </div>
       </div>
 
       {/* Content */}
@@ -237,6 +316,23 @@ export default function StoryWatcherScreen() {
                 {currentStory.text_content}
               </p>
             </motion.div>
+          ) : currentStory?.type === 'video' ? (
+            <motion.video
+              key={currentStory?.id}
+              initial={{ opacity: 0, scale: 0.96 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 1.04 }}
+              src={currentStory?.media_url}
+              className="w-full h-full object-contain"
+              style={{ filter: currentStory?.filter_applied || 'none' }}
+              autoPlay
+              playsInline
+              muted={isMuted}
+              onLoadedMetadata={(e) => {
+                const seconds = (e.target as HTMLVideoElement).duration;
+                if (Number.isFinite(seconds) && seconds > 0) setVideoDurationMs(seconds * 1000);
+              }}
+            />
           ) : (
             <motion.img 
               key={currentStory?.id}
@@ -296,15 +392,15 @@ export default function StoryWatcherScreen() {
         <div className="absolute inset-0 flex">
           <div 
             className="flex-1 cursor-w-resize" 
-            onPointerDown={handlePointerDown}
-            onPointerUp={() => handlePointerUp('prev')}
-            onPointerLeave={() => setIsPaused(false)}
+            onPointerDown={(e) => handlePointerDown(e)}
+            onPointerUp={(e) => handlePointerUp('prev', e)}
+            onPointerLeave={() => { if (pressTimerRef.current) clearTimeout(pressTimerRef.current); setIsPaused(false); }}
           />
           <div 
             className="flex-1 cursor-e-resize" 
-            onPointerDown={handlePointerDown}
-            onPointerUp={() => handlePointerUp('next')}
-            onPointerLeave={() => setIsPaused(false)}
+            onPointerDown={(e) => handlePointerDown(e)}
+            onPointerUp={(e) => handlePointerUp('next', e)}
+            onPointerLeave={() => { if (pressTimerRef.current) clearTimeout(pressTimerRef.current); setIsPaused(false); }}
           />
         </div>
       </div>

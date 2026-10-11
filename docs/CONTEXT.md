@@ -145,7 +145,16 @@ Full map: **[ARCHITECTURE.md](./ARCHITECTURE.md)**.
 13 tables, all defined in `sql/`: `users`, `follows`, `conversations`,
 `conversation_participants`, `messages`, `stories`, `calls`, `chat_settings`,
 `notifications`, `posts`, `post_likes`, `post_comments`, `support_tickets`.
-(`call_candidates` is defined but unused — calling signals over Broadcast.)
+(`call_candidates` is defined but unused — calling signals over Broadcast:
+`call-rtc:<callId>` carries the SDP/ICE exchange for the peer-to-peer transport,
+while a LiveKit room is used when `LIVEKIT_API_KEY`/`LIVEKIT_API_SECRET` and
+`VITE_LIVEKIT_URL` are configured. Presence and typing are handled by
+`src/services/PresenceService.ts` (one Realtime Presence channel for the whole
+app) and `src/services/TypingService.ts` (ref-counted per-conversation broadcast
+topics) — both 0 database bytes. `users.is_online`/`last_seen` are only the
+*durable fallback* (both for the first paint before the roster syncs and for
+"last seen" text); the heartbeat in `AuthProvider` is the only writer, and no
+other component opens a presence channel of its own.)
 
 3 RPCs, all defined: `get_direct_conversation_id`, `view_story`,
 `cleanup_expired_stories`.

@@ -195,7 +195,6 @@ export default function GrixAIScreen() {
         optionsRef={{ current: null } as any}
         isTyping={isTyping}
         receiverStatus="online"
-        receiverActiveChatId={null}
         currentUserId={user?.id}
         type="direct"
       />

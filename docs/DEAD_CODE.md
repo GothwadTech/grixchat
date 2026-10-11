@@ -253,3 +253,42 @@ Two things got better on the way, not just smaller:
 `src/__tests__/sqlMigrations.test.ts` now also enforces the new house rules: every
 file between 600 and 1000 lines (the newest one may still be filling up), and a
 short `COVERS:` header at the top of each file instead of long prose.
+
+## 2026-10-11 (later) — the second incoming-call card, and two fake call features
+
+**`src/components/incoming-call/IncomingCallNotification.tsx`** — deleted.
+`App.tsx` mounted it *and* `CallProvider` rendered its own incoming-call card
+for the very same event, so a ring produced two cards and two ringtones. Worse,
+the App-level one only navigated to `/call/:id` without calling `acceptCall()`
+(the call never actually started for the receiver) and declined with
+`status: 'denied'`, which the `calls.status` CHECK constraint rejects
+(`ringing | accepted | rejected | ended | error`). The provider card is the one
+that works; the duplicate was routed around by nothing.
+
+**`useChatSync().receiverActiveChatId`** — deleted. It was state that nothing
+ever set, and the chat header used it to render `online - for you` /
+`online - for other` in place of a real presence label. The header now says
+`online`, or `last seen …`, or `typing…`.
+
+**Two call-screen controls that did nothing** — removed from
+`CallControlPanel`: `HD Video Calling` (toggled local state and printed
+"Premium HD Active"; no track was touched) and `Active Vocal Equalizer`
+(four filters that changed a label). `Switch Camera` was fake too and is now
+wired to the real `flipCamera()`; `Share Your Screen` is real (LiveKit
+`setScreenShareEnabled`, or `replaceTrack(getDisplayMedia())` on the P2P
+transport) and is disabled with an explanation on voice calls, where there is no
+video m-line to carry a shared screen.
+
+**The "Simulated Private Terminal" overlay** in `VideoFeed` was rendered
+unconditionally *on top of* the remote video (z-1 over z-0), so a live video
+call was hidden behind a blurred placeholder that said the call was still
+connecting. It now renders only while there is no remote video track.
+
+## 2026-10-11 — the call simulator gave way to real WebRTC
+
+| Removed | Why |
+|---|---|
+| `isSandboxSimulated` (state, context field, `setIsSandboxSimulated` calls) | It described the **fake** transport: a 1.8 s timer that flipped both phones to "connected" with no media. Calling now runs on either a real LiveKit room (when `LIVEKIT_*` + `VITE_LIVEKIT_URL` exist) or a real peer-to-peer `RTCPeerConnection` over `call-rtc:<callId>` (`src/features/call/services/WebRtcCallService.ts`), so there is no simulation left to flag. `CallScreen` keys the `LiveKitRoom` wrapper on `transport === 'livekit'` instead. |
+| The "Simulated Private Terminal" overlay branch in `VideoFeed` | It was keyed on that flag, so a real P2P video call showed a fake "waiting" panel *over* the live stream. The hairline-glass placeholder is now tied to `hasRemoteVideo` (a live remote video track) — wait vs. real. |
+| The caller's blind `connected` transition on the database's `accepted` row | On the peer-to-peer path nothing may report `connected` before ICE does; the media path now owns that transition and the `accepted` row only stops the ringtone. Without this, an answered-but-dead call started its duration counter on a silent line. |
+

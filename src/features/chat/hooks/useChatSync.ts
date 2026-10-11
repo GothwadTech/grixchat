@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../../../lib/supabase';
 import { useAuth } from '../../../providers/AuthProvider.tsx';
-import { isUserOnline } from '../../../utils/presence';
+import { isUserOnline, resolveOnline } from '../../../utils/presence';
+import { useIsUserOnline } from '../../../providers/PresenceProvider';
 import { LocalDataCache } from '../../../services/LocalDataCache';
 
 function getInitialReceiverCached(receiverId: string | undefined, convType: 'direct' | 'group') {
@@ -75,7 +76,6 @@ export function useChatSync(receiverId: string | undefined, chatId: string, conv
     const cached = getInitialReceiverCached(receiverId, convType);
     return cached && cached.isOnline ? 'online' : 'offline';
   });
-  const [receiverActiveChatId, setReceiverActiveChatId] = useState<string | null>(null);
   const [receiverLastSeen, setReceiverLastSeen] = useState<any>(() => {
     const cached = getInitialReceiverCached(receiverId, convType);
     return cached ? cached.lastSeen : null;
@@ -87,6 +87,8 @@ export function useChatSync(receiverId: string | undefined, chatId: string, conv
   const { user, userData: authUser } = useAuth();
 
   const [prevReceiverId, setPrevReceiverId] = useState<string | undefined>(receiverId);
+  // Live roster answer for this chat partner (null until the roster has synced).
+  const livePresence = useIsUserOnline(convType === 'direct' ? receiverId : undefined);
 
   // Synchronously update state on receiverId / convType change to prevent ANY GrixChat User / offline flicker
   if (receiverId !== prevReceiverId) {
@@ -143,7 +145,9 @@ export function useChatSync(receiverId: string | undefined, chatId: string, conv
             isOnline: data.is_online,
             lastSeen: data.last_seen
           });
-          setReceiverStatus(isUserOnline(data.is_online, data.last_seen) ? 'online' : 'offline');
+          setReceiverStatus(
+            resolveOnline(livePresence, data.is_online, data.last_seen) ? 'online' : 'offline'
+          );
           setReceiverLastSeen(data.last_seen);
         }
       } else {
@@ -178,7 +182,9 @@ export function useChatSync(receiverId: string | undefined, chatId: string, conv
             last_seen: data.last_seen
           });
 
-          setReceiverStatus(isUserOnline(data.is_online, data.last_seen) ? 'online' : 'offline');
+          setReceiverStatus(
+            resolveOnline(livePresence, data.is_online, data.last_seen) ? 'online' : 'offline'
+          );
           setReceiverLastSeen(data.last_seen);
           setReceiver(prev => ({ 
             ...prev, 
@@ -197,20 +203,22 @@ export function useChatSync(receiverId: string | undefined, chatId: string, conv
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [receiverId, convType, user?.id]);
+  }, [receiverId, convType, user?.id, livePresence]);
 
-  // Periodically refresh the online status locally as time passes (heartbeat window check)
+  // Presence is the live signal; this tick only lets the *durable* fallback
+  // decay while we are looking at the screen (no network involved).
   useEffect(() => {
     if (convType !== 'direct' || !receiver) return;
 
     const interval = setInterval(() => {
-      const currentOnline = isUserOnline(receiver.isOnline, receiverLastSeen);
-      const expectedStatus = currentOnline ? 'online' : 'offline';
-      setReceiverStatus(expectedStatus);
-    }, 15000); // Check every 15 seconds
+      const expected = resolveOnline(livePresence, receiver.isOnline, receiverLastSeen)
+        ? 'online'
+        : 'offline';
+      setReceiverStatus(expected);
+    }, 20000);
 
     return () => clearInterval(interval);
-  }, [receiver?.isOnline, receiverLastSeen, convType]);
+  }, [receiver?.isOnline, receiverLastSeen, convType, livePresence]);
 
   useEffect(() => {
     // Clear old watch data states instantly when chatId changes
@@ -322,7 +330,6 @@ export function useChatSync(receiverId: string | undefined, chatId: string, conv
   return {
     receiver,
     receiverStatus,
-    receiverActiveChatId,
     receiverLastSeen,
     chatSettings,
     currentUserData,

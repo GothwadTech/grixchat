@@ -342,6 +342,7 @@ export const useConversations = (activeFilter: string) => {
             unread: unreadCount > 0,
             unreadCount: unreadCount,
             isOnline: isGroup ? false : isUserOnline(firstOther?.is_online, firstOther?.last_seen),
+            lastSeen: isGroup ? null : (firstOther?.last_seen || null),
             lastMsgStatus: lastMsgStatusVal
           };
         })
@@ -550,7 +551,7 @@ export const useConversations = (activeFilter: string) => {
     const fetchSuggested = async () => {
       const { data } = await supabase
         .from('users')
-        .select('*')
+        .select('id, username, full_name, photo_url, is_online, last_seen')
         .neq('id', user.id)
         .limit(5);
       

@@ -1,80 +1,83 @@
-import { useState, useEffect, useRef } from 'react';
-import { supabase } from '../../../lib/supabase';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '../../../providers/AuthProvider';
+import { TypingService } from '../../../services/TypingService';
 
-export const useTypingStatus = (chatId: string, receiverId: string) => {
-  const [isOtherTyping, setIsOtherTyping] = useState(false);
-  const typingTimeoutRef = useRef<any>(null);
-  const otherTypingTimeoutRef = useRef<any>(null);
-  const channelRef = useRef<any>(null);
-  const amITypingRef = useRef<boolean>(false);
+/**
+ * Typing indicator for a conversation.
+ *
+ * Returns the ids of the people typing (never yourself) and a `handleTyping`
+ * callback to be called on every keystroke. The channel is shared with the
+ * chat-list row through `TypingService`, so watching a chat does not open a
+ * second subscription for the same topic.
+ *
+ * @param chatId      conversation id (the broadcast topic is `typing:<chatId>`)
+ * @param receiverId  the other participant (direct chats)
+ * @param convType    `'group'` makes the indicator mean "anyone is typing"
+ */
+export const useTypingStatus = (
+  chatId: string,
+  receiverId: string,
+  convType: 'direct' | 'group' = 'direct',
+) => {
   const { user } = useAuth();
+  const [typingIds, setTypingIds] = useState<string[]>([]);
+  const myIdRef = useRef<string | null>(null);
+  myIdRef.current = user?.id || null;
 
   useEffect(() => {
-    if (!user || !supabase || !chatId || !receiverId) return;
+    if (!chatId) return;
+    setTypingIds([]);
+    return TypingService.acquire(chatId, setTypingIds);
+  }, [chatId]);
 
-    // Fast, lightweight broadcast channel for typing events
-    const channel = supabase.channel(`typing:${chatId}`);
-
-    channel
-      .on('broadcast', { event: 'typing' }, ({ payload }) => {
-        if (payload && payload.userId === receiverId) {
-          setIsOtherTyping(payload.isTyping);
-          
-          // Clear any auto-clear timer
-          if (otherTypingTimeoutRef.current) clearTimeout(otherTypingTimeoutRef.current);
-          
-          // Fallback UI reset timer in case the offline/exit event is ever missed
-          if (payload.isTyping) {
-            otherTypingTimeoutRef.current = setTimeout(() => {
-              setIsOtherTyping(false);
-            }, 6000);
-          }
-        }
-      })
-      .subscribe((status) => {
-        if (status === 'SUBSCRIBED') {
-          console.log(`[Typing Sync] Subscribed to broadcast: typing:${chatId}`);
-        }
-      });
-
-    channelRef.current = channel;
-
-    return () => {
-      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
-      if (otherTypingTimeoutRef.current) clearTimeout(otherTypingTimeoutRef.current);
-      supabase.removeChannel(channel);
-      channelRef.current = null;
-      amITypingRef.current = false;
+  // Never leave the peer staring at "typing…": stop on unmount, on chat change
+  // and when the tab goes to the background.
+  useEffect(() => {
+    const stop = () => {
+      if (chatId && myIdRef.current) TypingService.stopTyping(chatId, myIdRef.current);
     };
-  }, [chatId, receiverId, user?.id]);
+    const onVisibility = () => {
+      if (document.visibilityState === 'hidden') stop();
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => {
+      document.removeEventListener('visibilitychange', onVisibility);
+      stop();
+    };
+  }, [chatId]);
 
-  const handleTyping = () => {
-    if (!channelRef.current || !user) return;
+  const others = typingIds.filter((id) => id !== myIdRef.current);
+  const isOtherTyping =
+    convType === 'group' ? others.length > 0 : Boolean(receiverId && others.includes(receiverId));
 
-    // Throttle: Only send typing:true broadcast if we weren't already marked as typing
-    if (!amITypingRef.current) {
-      amITypingRef.current = true;
-      channelRef.current.send({
-        type: 'broadcast',
-        event: 'typing',
-        payload: { userId: user.id, isTyping: true }
-      });
-    }
+  const handleTyping = useCallback(() => {
+    if (!chatId || !myIdRef.current) return;
+    TypingService.notifyTyping(chatId, myIdRef.current);
+  }, [chatId]);
 
-    // Reset fallback timeout to mark idle/not-typing after 3 seconds of silence
-    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
-    typingTimeoutRef.current = setTimeout(() => {
-      if (channelRef.current && user && amITypingRef.current) {
-        amITypingRef.current = false;
-        channelRef.current.send({
-          type: 'broadcast',
-          event: 'typing',
-          payload: { userId: user.id, isTyping: false }
-        });
-      }
-    }, 3000);
-  };
+  const stopTyping = useCallback(() => {
+    if (!chatId || !myIdRef.current) return;
+    TypingService.stopTyping(chatId, myIdRef.current);
+  }, [chatId]);
 
-  return { isOtherTyping, handleTyping };
+  return { isOtherTyping, handleTyping, stopTyping };
+};
+
+/**
+ * Who is typing in this conversation right now (excluding `exceptUserId`).
+ * Used by the chat list, where a row has no idea what your own id is.
+ */
+export const useTypingUsers = (
+  conversationId: string,
+  exceptUserId?: string | null,
+): string[] => {
+  const [ids, setIds] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (!conversationId) return;
+    setIds(TypingService.typingUsers(conversationId, exceptUserId));
+    return TypingService.acquire(conversationId, setIds);
+  }, [conversationId, exceptUserId]);
+
+  return ids.filter((id) => id !== exceptUserId);
 };

@@ -5,7 +5,7 @@ npm test            # one-shot run
 npm run test:watch  # watch mode
 ```
 
-**Current state: 99 tests across 7 files, all passing, ~14 s.**
+**Current state: 125 tests across 12 files, all passing, ~21 s.**
 
 | File | Tests | What it covers |
 |---|---|---|
@@ -16,6 +16,9 @@ npm run test:watch  # watch mode
 | `src/__tests__/notificationService.test.ts` | 6 | **Real** notification write path — column contract, de-duplication |
 | `src/__tests__/apiRoutes.test.ts` | 14 | **Real** `server/api.ts` — routing, CORS/origin guard, body caps, auth (Node env) |
 | `src/__tests__/app.smoke.test.tsx` | 4 | **Real** `<App />` — login form → chat list, `/forgot-password` reset mode |
+| `src/__tests__/presenceTyping.test.ts` | 8 | Presence roster (join/leave/sync, fallback to `is_online`/`last_seen`, future timestamps) and typing (broadcast, explicit stop, idle timeout, ref-counted channels) |
+| `src/__tests__/callSignaling.test.ts` | 5 | The call handshake against a stubbed WebRTC stack — offer/answer, `connected` only from the peer connection, `failed` on ICE failure, `closed` on the peer's hang-up, and *ringing is not a failure* (an unanswered call must not error while it is still ringing) |
+| `src/__tests__/egressRealtime.test.tsx` | 1 | The regression test for the 5 GB/month bug: a realtime INSERT patches the chat-list row with **zero** queries. It also covers the mock Realtime `in.(…)` filter, which silently dropped every unmuted event before this pass |
 
 ---
 

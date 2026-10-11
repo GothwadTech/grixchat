@@ -130,8 +130,8 @@ npm run dev
 | `VITE_FIREBASE_MESSAGING_SENDER_ID` | `src/lib/firebase.ts`, `NotificationHandler.tsx` |
 | `VITE_FIREBASE_APP_ID` | `src/lib/firebase.ts`, `NotificationHandler.tsx` |
 | `VITE_FIREBASE_VAPID_KEY` | `NotificationHandler.tsx` |
-| `VITE_FIREBASE_DATABASE_URL` | presence code |
-| `VITE_LIVEKIT_URL` | `src/providers/CallProvider.tsx` |
+| `VITE_FIREBASE_DATABASE_URL` | **unused** — keep it out of new setups. Presence runs on Supabase Realtime (`src/services/PresenceService.ts`), not the Firebase RTDB. |
+| `VITE_LIVEKIT_URL` | *optional* calling. With it (plus `LIVEKIT_API_KEY`/`LIVEKIT_API_SECRET` server-side) calls use a LiveKit SFU room; without it they run peer-to-peer over WebRTC signalled on a Supabase Broadcast topic. |
 | `VITE_BASE_URL` | build-time path prefix. Cloudflare serves from the domain root — leave empty. |
 
 > ⚠️ Any `VITE_`-prefixed variable is inlined into the shipped bundle in
@@ -150,7 +150,7 @@ npm run dev
 |---|---|
 | `GEMINI_API_KEY` | `/api/grix-ai` |
 | `FIREBASE_SERVICE_ACCOUNT` | `/api/send-notification` (JSON, newlines may be escaped) |
-| `LIVEKIT_API_KEY` / `LIVEKIT_API_SECRET` | `/api/livekit-token` |
+| `LIVEKIT_API_KEY` / `LIVEKIT_API_SECRET` | `/api/livekit-token` — optional, see above |
 | `GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET` | `/api/github/auth-url` |
 | `SUPABASE_SERVICE_ROLE_KEY` | privileged reads/writes (FCM token cleanup). Falls back to the anon key + the caller's JWT. |
 | `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY` | **required server-side too** — every `/api` route verifies the caller's JWT against the project |
@@ -232,10 +232,11 @@ redeploy), the rest is read per request by the Functions.
 | Variable | Needed for |
 |---|---|
 | `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` | The client, **and** the API's JWT verification. Without them the Supabase SDK is tree-shaken out of the bundle — the build prints a loud warning. |
-| `VITE_FIREBASE_*`, `VITE_LIVEKIT_URL` | Push registration and calling |
+| `VITE_FIREBASE_*` | Push registration |
+| `VITE_LIVEKIT_URL` | *(optional)* SFU calling — peer-to-peer WebRTC is the default |
 | `GEMINI_API_KEY` | `/api/grix-ai` |
 | `FIREBASE_SERVICE_ACCOUNT` | `/api/send-notification` (whole JSON, escaped `\n` is healed) |
-| `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET` | `/api/livekit-token` |
+| `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET` | *(optional)* `/api/livekit-token` — calls work without them |
 | `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET` | The GitHub browser's OAuth popup |
 | `SUPABASE_SERVICE_ROLE_KEY` | Push fan-out + FCM token cleanup |
 | `APP_URL` | `https://grixchat.gothwadtech.com` — OAuth redirect base and the CORS allowlist |

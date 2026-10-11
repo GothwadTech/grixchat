@@ -5,6 +5,7 @@ import { useAuth } from '../../providers/AuthProvider.tsx';
 import { Search, X, ArrowLeft, Loader2, MessageSquare } from 'lucide-react';
 import { isUserOnline } from '../../utils/presence';
 import Avatar from '../../components/common/Avatar';
+import { useLivePresence } from '../../providers/PresenceProvider';
 
 interface UserProfile {
   uid: string;
@@ -20,12 +21,14 @@ const UserItem = ({
 }: { 
   user: UserProfile; 
   navigate: any; 
-}) => (
+}) => {
+  const liveOf = useLivePresence();
+  return (
   <div 
     onClick={() => navigate(`/user/${user.uid}`)}
     className="flex items-center gap-3 p-4 hover:bg-[var(--bg-main)] transition-colors cursor-pointer group"
   >
-    <Avatar url={user.photoURL} type="direct" size="md" name={user.username} isOnline={user.isOnline} />
+    <Avatar url={user.photoURL} type="direct" size="md" name={user.username} isOnline={liveOf(user.uid) ?? user.isOnline} />
     <div className="flex-1 min-w-0">
       <h4 className="text-sm font-bold text-[var(--text-primary)] truncate">{user.fullName || user.username}</h4>
       <p className="text-xs text-[var(--text-secondary)] truncate">@{user.username}</p>
@@ -41,7 +44,8 @@ const UserItem = ({
       <span>Message</span>
     </button>
   </div>
-);
+  );
+};
 
 export default function SearchUserScreen() {
   const navigate = useNavigate();

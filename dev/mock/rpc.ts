@@ -86,16 +86,19 @@ function viewStory({
   viewer_id_param,
   viewer_username_param,
   viewer_fullname_param,
+  viewer_photo_url_param,
 }: any) {
   const row = store.table('stories').find((r) => looseEq(r.id, story_id_param));
   if (!row) return fail(`view_story: no story ${story_id_param}`);
   const before = clone(row);
   const views: Row[] = Array.isArray(row.views) ? row.views : [];
-  if (!views.some((v) => looseEq(v.viewer_id, viewer_id_param))) {
+  // Mirrors public.view_story() in sql/02: `id` is the viewer's user id.
+  if (!views.some((v) => looseEq(v.id, viewer_id_param))) {
     views.push({
-      viewer_id: viewer_id_param,
+      id: viewer_id_param,
       username: viewer_username_param,
       full_name: viewer_fullname_param,
+      photo_url: viewer_photo_url_param,
       viewed_at: nowISO(),
     });
     row.views = views;

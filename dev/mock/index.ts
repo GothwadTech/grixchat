@@ -101,8 +101,8 @@ class MockSupabaseClient {
     return callRpc(fn, args);
   }
 
-  channel(topic: string, _opts?: any) {
-    const ch = new MockChannel(topic);
+  channel(topic: string, opts?: any) {
+    const ch = new MockChannel(topic, opts);
     this.channels.add(ch);
     return ch as any;
   }

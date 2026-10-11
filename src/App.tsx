@@ -5,7 +5,6 @@ import { LockService } from './services/LockService.ts';
 import { CacheService } from './services/CacheService.ts';
 import NotificationHandler from './components/NotificationHandler.tsx';
 import DesktopSidebar from './components/layout/DesktopSidebar';
-import IncomingCallNotification from './components/incoming-call/IncomingCallNotification.tsx';
 import { motion } from 'motion/react';
 import { useAuth } from './providers/AuthProvider';
 import { useTheme } from './contexts/ThemeContext';
@@ -485,7 +484,6 @@ export default function App() {
       <NavProvider>
         <LayoutProvider>
           <div className="app-container">
-            {user && <IncomingCallNotification />}
             <div className="flex-1 flex flex-col h-full relative overflow-hidden">
               {user && <NotificationHandler />}
               <div className="flex-1 h-full relative overflow-hidden">

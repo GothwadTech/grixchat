@@ -536,6 +536,8 @@ CREATE INDEX IF NOT EXISTS idx_users_username_lowered ON public.users(LOWER(user
 CREATE INDEX IF NOT EXISTS idx_follows_follower ON public.follows(follower_id);
 CREATE INDEX IF NOT EXISTS idx_follows_following ON public.follows(following_id);
 CREATE INDEX IF NOT EXISTS idx_stories_user ON public.stories(user_id);
+-- The list screen only ever asks for the last 24 h.
+CREATE INDEX IF NOT EXISTS idx_stories_created ON public.stories(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_calls_participants ON public.calls(caller_id, receiver_id);
 CREATE INDEX IF NOT EXISTS idx_chat_settings_user ON public.chat_settings(user_id);
 CREATE INDEX IF NOT EXISTS idx_notifications_user ON public.notifications(user_id);
