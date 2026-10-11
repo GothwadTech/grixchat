@@ -149,7 +149,7 @@ Response bytes are egress, whether or not you render them.
   the edge: `npx wrangler pages functions build`. The CI workflow does this on
   every push.
 - Notifications: write through `services/db/notificationService.ts` only, and
-  read the `content` column (`sql/01_core_schema.sql` has no `text`).
+  read the `content` column (`sql/01_schema.sql` has no `text`).
 
 ### File size
 
@@ -217,7 +217,7 @@ Rules:
 | `npm test` | ✅ 104/104 |
 | `npm run lint` | ✅ 0 errors |
 | Dead code | ✅ **0 files** — 189/189 reachable. See [`docs/DEAD_CODE.md`](./docs/DEAD_CODE.md) |
-| SQL migrations | ✅ re-runnable (fresh install + re-run on live data verified); `npm run sql:bundle` in sync, guarded by `src/__tests__/sqlMigrations.test.ts` |
+| SQL migrations | ✅ `01_schema.sql` + `02_functions_realtime_storage.sql`, both re-runnable (fresh install + re-run on live data verified), 600–1000 lines each, guarded by `src/__tests__/sqlMigrations.test.ts` |
 | Tables queried but missing from `sql/` | ✅ 0 |
 | RPCs called but missing from `sql/` | ✅ 0 |
 | Cloudflare Pages deploy | ✅ `dist/` + `functions/` → <https://grixchat.gothwadtech.com> |

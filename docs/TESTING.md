@@ -60,7 +60,7 @@ explicitly:
   everything looks identical to a working filter in a happy-path test
 
 > **Testing the notification writer:** assert on the `content` column, not
-> `text` — `sql/01_core_schema.sql` has no `text` column. The mock now mirrors
+> `text` — `sql/01_schema.sql` has no `text` column. The mock now mirrors
 > the SQL default (`is_read boolean default false`) so an insert that forgets
 > the flag fails a test instead of passing locally.
 

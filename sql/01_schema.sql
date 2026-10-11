@@ -1,18 +1,27 @@
--- =========================================================================
--- STEP 1/9: GRIXCHAT CORE SCHEMA (users, chats, messages, calls, ...)
--- =========================================================================
--- Supabase Dashboard -> SQL Editor -> New query -> paste -> RUN.
--- Then continue with 02, 03, ... 09 in order (see 00_master_instructions.md).
+-- ═══════════════════════════════════════════════════════════════════════════
+-- 01_schema.sql  —  tables, columns, constraints, RLS, indexes
 --
--- SAFE TO RE-RUN, ON A FRESH PROJECT AND ON A LIVE ONE:
---   * nothing is dropped or truncated — no `DROP TABLE`, ever
---   * tables are created only if missing, missing columns/indexes/constraints
---     are added, policies are re-created so an updated definition replaces the
---     old one
---   * existing rows are never modified by this file
--- =========================================================================
+-- COVERS (detail: 00_master_instructions.md)
+--   §1  core tables: users, follows, conversations, conversation_participants,
+--       messages, stories, calls, call_candidates, chat_settings, notifications
+--   §2  later columns: conversations.chat_time_restrictions, stories.views
+--   §3  column upgrades for older installs
+--   §4  constraints (unique pairs, username length)
+--   §5  row level security enabled
+--   §6  every RLS policy (re-created, so edits apply)
+--   §7  core indexes
+--   §8  posts, post_likes, post_comments (+ RLS, indexes)
+--   §9  support_tickets (+ RLS, index)
+--   §10 schema cache reload
+--
+-- Safe to re-run: nothing is dropped, missing objects are created, existing
+-- rows are never modified.
+-- ═══════════════════════════════════════════════════════════════════════════
 
--- 2. TABLES (created only if missing)
+
+-- ───────────────────────────────────────────────────────────────────────────
+-- §1  CORE TABLES (created only if missing)
+-- ───────────────────────────────────────────────────────────────────────────
 
 -- User Profiles (Integrated with auth.users)
 CREATE TABLE IF NOT EXISTS public.users (
@@ -154,7 +163,22 @@ CREATE TABLE IF NOT EXISTS public.notifications (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 3. COLUMN UPGRADES
+
+-- ───────────────────────────────────────────────────────────────────────────
+-- §2  LATER COLUMNS (kept here so older installs converge on the same shape)
+-- ───────────────────────────────────────────────────────────────────────────
+
+-- 07: per-chat scheduling (custom allowed days/times for direct chats)
+ALTER TABLE public.conversations ADD COLUMN IF NOT EXISTS chat_time_restrictions JSONB DEFAULT NULL;
+
+-- 08: who viewed a story (the RPC that writes it lives in 02)
+ALTER TABLE public.stories ADD COLUMN IF NOT EXISTS views JSONB DEFAULT '[]'::JSONB NOT NULL;
+
+
+-- ───────────────────────────────────────────────────────────────────────────
+-- §3  CORE COLUMN UPGRADES (older installs get the same columns)
+-- ───────────────────────────────────────────────────────────────────────────
+
 -- ---------------------------------------------------------------------------
 -- A project created from an older version of this file can be missing columns
 -- that were added later. `ADD COLUMN IF NOT EXISTS` makes every install converge
@@ -307,7 +331,11 @@ BEGIN
     END IF;
 END $$;
 
--- 4. CONSTRAINTS
+
+-- ───────────────────────────────────────────────────────────────────────────
+-- §4  CONSTRAINTS (added only when missing)
+-- ───────────────────────────────────────────────────────────────────────────
+
 -- Added only when absent; a duplicate row in an old table produces a NOTICE
 -- (never an abort) so the rest of the script still runs.
 DO $$
@@ -336,7 +364,10 @@ EXCEPTION WHEN OTHERS THEN
     RAISE NOTICE 'Constraint skipped (%): existing rows violate it', SQLERRM;
 END $$;
 
--- 5. ENABLE ROW LEVEL SECURITY (CORE PRIVACY)
+
+-- ───────────────────────────────────────────────────────────────────────────
+-- §5  ROW LEVEL SECURITY
+-- ───────────────────────────────────────────────────────────────────────────
 
 ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.follows ENABLE ROW LEVEL SECURITY;
@@ -349,7 +380,10 @@ ALTER TABLE public.call_candidates ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.chat_settings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.notifications ENABLE ROW LEVEL SECURITY;
 
--- 6. RLS POLICIES (re-created on every run, so edits apply)
+
+-- ───────────────────────────────────────────────────────────────────────────
+-- §6  RLS POLICIES (re-created on every run, so edits apply)
+-- ───────────────────────────────────────────────────────────────────────────
 
 -- profiles
 DROP POLICY IF EXISTS "Allow public read access on profiles" ON public.users;
@@ -489,7 +523,11 @@ CREATE POLICY "Allow users to update own notifications" ON public.notifications 
 DROP POLICY IF EXISTS "Allow users to delete own notifications" ON public.notifications;
 CREATE POLICY "Allow users to delete own notifications" ON public.notifications FOR DELETE USING (auth.uid() = user_id);
 
--- 7. PERFORMANCE AND SEARCH INDEXES
+
+-- ───────────────────────────────────────────────────────────────────────────
+-- §7  CORE INDEXES
+-- ───────────────────────────────────────────────────────────────────────────
+
 CREATE INDEX IF NOT EXISTS idx_messages_conversation ON public.messages(conversation_id);
 CREATE INDEX IF NOT EXISTS idx_messages_created_at ON public.messages(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_participants_user ON public.conversation_participants(user_id);
@@ -502,5 +540,171 @@ CREATE INDEX IF NOT EXISTS idx_calls_participants ON public.calls(caller_id, rec
 CREATE INDEX IF NOT EXISTS idx_chat_settings_user ON public.chat_settings(user_id);
 CREATE INDEX IF NOT EXISTS idx_notifications_user ON public.notifications(user_id);
 
--- Notification sound configuration
+
+-- ───────────────────────────────────────────────────────────────────────────
+-- §8  POSTS, LIKES AND COMMENTS (with their RLS and indexes)
+-- ───────────────────────────────────────────────────────────────────────────
+
+-- Posts table
+CREATE TABLE IF NOT EXISTS public.posts (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    user_id UUID REFERENCES public.users(id) ON DELETE CASCADE,
+    image_url TEXT NOT NULL,
+    caption TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+-- RLS for posts
+ALTER TABLE public.posts ENABLE ROW LEVEL SECURITY;
+
+-- Policies
+DROP POLICY IF EXISTS "Allow public read access for posts" ON public.posts;
+CREATE POLICY "Allow public read access for posts" ON public.posts FOR SELECT 
+USING (true);
+
+DROP POLICY IF EXISTS "Allow authenticated insert for posts" ON public.posts;
+CREATE POLICY "Allow authenticated insert for posts" ON public.posts FOR INSERT 
+WITH CHECK (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Allow users to delete their own posts" ON public.posts;
+CREATE POLICY "Allow users to delete their own posts" ON public.posts FOR DELETE 
+USING (auth.uid() = user_id);
+
+
+-- Post likes table (one row per user/post)
+CREATE TABLE IF NOT EXISTS public.post_likes (
+    post_id UUID REFERENCES public.posts(id) ON DELETE CASCADE,
+    user_id UUID REFERENCES public.users(id) ON DELETE CASCADE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+    PRIMARY KEY (post_id, user_id)
+);
+
+-- RLS for post_likes
+ALTER TABLE public.post_likes ENABLE ROW LEVEL SECURITY;
+
+-- Policies
+DROP POLICY IF EXISTS "Allow public read access for post likes" ON public.post_likes;
+CREATE POLICY "Allow public read access for post likes" ON public.post_likes FOR SELECT 
+USING (true);
+
+DROP POLICY IF EXISTS "Allow authenticated insert for post likes" ON public.post_likes;
+CREATE POLICY "Allow authenticated insert for post likes" ON public.post_likes FOR INSERT 
+WITH CHECK (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Allow users to remove their likes" ON public.post_likes;
+CREATE POLICY "Allow users to remove their likes" ON public.post_likes FOR DELETE 
+USING (auth.uid() = user_id);
+
+
+-- Post comments table
+CREATE TABLE IF NOT EXISTS public.post_comments (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    post_id UUID REFERENCES public.posts(id) ON DELETE CASCADE,
+    user_id UUID REFERENCES public.users(id) ON DELETE CASCADE,
+    text TEXT NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+-- RLS for post_comments
+ALTER TABLE public.post_comments ENABLE ROW LEVEL SECURITY;
+
+-- Policies
+DROP POLICY IF EXISTS "Allow public read access for post comments" ON public.post_comments;
+CREATE POLICY "Allow public read access for post comments" ON public.post_comments FOR SELECT 
+USING (true);
+
+DROP POLICY IF EXISTS "Allow authenticated insert for post comments" ON public.post_comments;
+CREATE POLICY "Allow authenticated insert for post comments" ON public.post_comments FOR INSERT 
+WITH CHECK (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Allow users to delete their own comments" ON public.post_comments;
+CREATE POLICY "Allow users to delete their own comments" ON public.post_comments FOR DELETE 
+USING (auth.uid() = user_id);
+
+-- Indexes
+CREATE INDEX IF NOT EXISTS idx_posts_user_id ON public.posts(user_id);
+CREATE INDEX IF NOT EXISTS idx_post_likes_post_id ON public.post_likes(post_id);
+CREATE INDEX IF NOT EXISTS idx_post_comments_post_id ON public.post_comments(post_id);
+
+-- Column upgrades: a project created from an older version of this file may be
+-- missing columns added later. No existing row is touched.
+ALTER TABLE public.posts
+    ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES public.users(id) ON DELETE CASCADE,
+    ADD COLUMN IF NOT EXISTS image_url TEXT,
+    ADD COLUMN IF NOT EXISTS caption TEXT,
+    ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now());
+
+ALTER TABLE public.post_likes
+    ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now());
+
+ALTER TABLE public.post_comments
+    ADD COLUMN IF NOT EXISTS post_id UUID REFERENCES public.posts(id) ON DELETE CASCADE,
+    ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES public.users(id) ON DELETE CASCADE,
+    ADD COLUMN IF NOT EXISTS text TEXT,
+    ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now());
+
+-- Primary key of post_likes is (post_id, user_id); add it only if it is absent.
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint
+                    WHERE conname = 'post_likes_pkey'
+                      AND conrelid = 'public.post_likes'::regclass) THEN
+        ALTER TABLE public.post_likes ADD CONSTRAINT post_likes_pkey PRIMARY KEY (post_id, user_id);
+    END IF;
+EXCEPTION WHEN OTHERS THEN
+    RAISE NOTICE 'post_likes primary key skipped: %', SQLERRM;
+END $$;
+
+
+-- ───────────────────────────────────────────────────────────────────────────
+-- §9  SUPPORT TICKETS (with their RLS and index)
+-- ───────────────────────────────────────────────────────────────────────────
+
+-- Create support tickets Table
+CREATE TABLE IF NOT EXISTS public.support_tickets (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID REFERENCES public.users(id) ON DELETE SET NULL,
+    email TEXT NOT NULL,
+    category TEXT NOT NULL,
+    subject TEXT NOT NULL,
+    message TEXT NOT NULL,
+    status TEXT DEFAULT 'open' CHECK (status IN ('open', 'in_progress', 'resolved')),
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Column upgrades for older installs (no existing row is touched).
+ALTER TABLE public.support_tickets
+    ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES public.users(id) ON DELETE SET NULL,
+    ADD COLUMN IF NOT EXISTS email TEXT,
+    ADD COLUMN IF NOT EXISTS category TEXT,
+    ADD COLUMN IF NOT EXISTS subject TEXT,
+    ADD COLUMN IF NOT EXISTS message TEXT,
+    ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'open',
+    ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW(),
+    ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();
+
+-- RLS
+ALTER TABLE public.support_tickets ENABLE ROW LEVEL SECURITY;
+
+-- Anyone (anon or signed in) may open a ticket
+DROP POLICY IF EXISTS "Allow anonymous and authenticated ticket insertion" ON public.support_tickets;
+CREATE POLICY "Allow anonymous and authenticated ticket insertion" ON public.support_tickets 
+    FOR INSERT 
+    WITH CHECK (true);
+
+-- A user reads only their own tickets
+DROP POLICY IF EXISTS "Allow users to view own tickets" ON public.support_tickets;
+CREATE POLICY "Allow users to view own tickets" ON public.support_tickets 
+    FOR SELECT 
+    USING (auth.uid() = user_id);
+
+-- Index
+CREATE INDEX IF NOT EXISTS idx_support_tickets_user_id ON public.support_tickets(user_id);
+
+
+-- ───────────────────────────────────────────────────────────────────────────
+-- §10  POSTGREST SCHEMA CACHE
+-- ───────────────────────────────────────────────────────────────────────────
+
 NOTIFY pgrst, 'reload schema';

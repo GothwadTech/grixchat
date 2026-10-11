@@ -211,10 +211,10 @@ procedure is:
 
 | Moved | From | Why |
 |---|---|---|
-| `grixchat_latest_db_updates.sql` | `sql/` | Older patch file with duplicate, differently-named policies — running it next to `01_core_schema.sql` created conflicting RLS |
-| `supabase_schema.sql` | `sql/` | Superseded by `01_core_schema.sql` |
-| `supabase_posts_schema.sql` | `sql/` | Superseded by `02_posts_and_interactions_schema.sql` |
-| `supabase_support_tickets_schema.sql` | `sql/` | Superseded by `03_support_tickets_schema.sql` |
+| `grixchat_latest_db_updates.sql` | `sql/` | Older patch file with duplicate, differently-named policies — running it next to `01_schema.sql` created conflicting RLS |
+| `supabase_schema.sql` | `sql/` | Superseded by `01_schema.sql` |
+| `supabase_posts_schema.sql` | `sql/` | Superseded by `01_schema.sql` |
+| `supabase_support_tickets_schema.sql` | `sql/` | Superseded by `01_schema.sql` |
 | `db/1_complete_schema.sql` | `db/` | Early divergent design: `users.email UNIQUE NOT NULL`, `users.status`, `group_call_participants` — **would break a current project if run** |
 | `db/2_realtime_and_security.sql` | `db/` | The matching RLS pass for that design |
 | `db/3_webrtc_signaling_architecture.md` | `db/` → `docs/legacy/` | Design note for signalling that was never adopted (calling uses Broadcast) |
@@ -222,8 +222,34 @@ procedure is:
 All seven now live in [`sql/legacy/`](../sql/legacy/README.md) — parked, not
 deleted, with a README explaining that they must not be run.
 
-Also fixed in the same pass: `01_core_schema.sql`, `02_…` and `03_…` began with
+Also fixed in the same pass: `01_schema.sql`, `02_…` and `03_…` began with
 `DROP TABLE … CASCADE`. Re-running the documented setup on a live project
 therefore **deleted every user, message and post while reporting zero errors**.
 The drops are gone; the files are idempotent now, and
 `src/__tests__/sqlMigrations.test.ts` fails if anyone adds one back.
+
+## 2026-10-11 (later) — SQL files consolidated from 9 files into 2
+
+The setup had grown to nine files of very different sizes (9 to 832 lines), which
+made the run order fragile for anyone forking the repo. They were merged into two
+files that each sit in the 600–1000 line band the project now uses:
+
+| Was | Now |
+|---|---|
+| `01_core_schema.sql`, `02_posts_and_interactions_schema.sql`, `03_support_tickets_schema.sql`, `07_chat_time_scheduling_migration.sql`, `08_stories_expiration_and_views.sql` (tables/policies/indexes parts) | **`01_schema.sql`** — every table, column, constraint, policy and index |
+| `04_triggers_functions_and_rpc.sql`, `05_advanced_optimizations_and_realtime.sql`, `06_storage_configurations.sql`, `08_…` (RPCs), `09_egress_optimizations.sql` | **`02_functions_realtime_storage.sql`** — functions, triggers, realtime, storage, read marker |
+| `grixchat_full_setup.sql` (generated bundle) + `scripts/build-sql-bundle.mjs` | deleted — with only two files the bundle added a sync surface for no benefit |
+
+Two things got better on the way, not just smaller:
+
+* `05`'s insert-only `trg_update_conversation_on_message` and `09`'s
+  `trg_sync_conversation_last_message` both fired on every message INSERT and both
+  wrote `conversations` — double work and double realtime traffic per message. Only
+  the surviving trigger is created now, `02` explicitly drops the old one, and it
+  also keeps `conversations.updated_at` current (which the old one did).
+* The `last_message` picks are now tie-broken by `id`, so a conversation with two
+  messages sharing a timestamp always resolves to the same preview.
+
+`src/__tests__/sqlMigrations.test.ts` now also enforces the new house rules: every
+file between 600 and 1000 lines (the newest one may still be filling up), and a
+short `COVERS:` header at the top of each file instead of long prose.

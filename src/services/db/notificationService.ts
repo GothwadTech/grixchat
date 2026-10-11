@@ -6,7 +6,7 @@ import { supabase } from '../../lib/supabase';
  * `NotificationsScreen` and `LikeNotificationsScreen` could never show
  * anything. This service is the single write path.
  *
- * Column contract (matches `sql/01_core_schema.sql`):
+ * Column contract (matches `sql/01_schema.sql`):
  *   user_id       → recipient
  *   from_user_id  → actor
  *   type          → 'follow' | 'like' | 'comment' | 'system'

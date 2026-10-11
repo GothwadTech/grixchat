@@ -2,7 +2,7 @@
 
 **Status:** the dominant cause is **found, measured and fixed in code**; the
 database half needs one SQL file run by hand
-([`sql/09_egress_optimizations.sql`](../sql/09_egress_optimizations.sql)).
+([`sql/02_functions_realtime_storage.sql`](../sql/02_functions_realtime_storage.sql)).
 
 **Symptom:** 5 GB of Supabase egress in under a month. 2–3 active users,
 2–3 hours of chatting a day, almost no files shared. 70–80 % of the bill with
@@ -36,7 +36,7 @@ Ranked by impact. Line references are to the code *before* this audit's fix.
 | 2 | **Read receipts were one UPDATE per unread message.** `markAsRead` ran `UPDATE messages SET is_read = true WHERE … is_read = false`; Postgres emits one WAL row-change per row, and Realtime broadcasts each one. | `src/features/chat/hooks/useChatMessages.ts` | **30 unread → 30 events → 30 × 127 KB** in the other client |
 | 3 | **The newest-messages query.** Every refetch pulled `.limit(max(50, conversations × 5))` full message rows ordered across *all* chats — to draw a one-line preview that the `conversations.last_message` column already had. | same as #1 | 30 rows = 6.5 KB → 135 rows = **36.7 KB** |
 | 4 | **`select('*')` with a nested `users(*)`.** Every participant came back as the *entire* user row — `settings` jsonb, `lock` (the passcode hash), `fcm_tokens`, six arrays. The list renders six columns. | same as #1 | **0.83 KB per participant row** vs ~0.15 KB needed |
-| 5 | **`REPLICA IDENTITY FULL`** on `users`, `messages`, `conversations`, `calls`. Every UPDATE broadcasts the complete OLD row *and* the complete NEW row to every subscriber. | `sql/05_advanced_optimizations_and_realtime.sql:120-124` (5 tables, incl. `call_candidates`) | 2× payload on every update, and ships the passcode hash |
+| 5 | **`REPLICA IDENTITY FULL`** on `users`, `messages`, `conversations`, `calls`. Every UPDATE broadcasts the complete OLD row *and* the complete NEW row to every subscriber. | `sql/02_functions_realtime_storage.sql` §8 (5 tables, incl. `call_candidates`) | 2× payload on every update, and ships the passcode hash |
 | 6 | **Unread counted by downloading messages.** `.select('conversation_id').eq('is_read', false)` — one row per unread message, uncapped, on **every** refetch, in **two** components (`useConversations` *and* `TabBottom`). | `useConversations.ts`, `src/components/layout/TabBottom.tsx` | 84 rows = 4.8 KB, unbounded with backlog |
 | 7 | **Follows re-fetched every time.** The full follow graph in both directions, on every refetch, though it changes only when someone follows. | `useConversations.ts` | 60 rows = **6.4 KB per refetch** |
 | 8 | **A channel per conversation.** 20 chats = 20 Realtime channels × 2 table bindings, re-created whenever the list identity changed (which the refetch itself caused). | `useConversations.ts` | connection churn, 40+ bindings |
@@ -128,14 +128,14 @@ feature-detected once per session and falls back to the old behaviour.
 ## 5. What only you can run (2 minutes)
 
 Supabase dashboard → **SQL Editor** → paste
-[`sql/09_egress_optimizations.sql`](../sql/09_egress_optimizations.sql) → Run.
+[`sql/02_functions_realtime_storage.sql`](../sql/02_functions_realtime_storage.sql) → Run.
 It is idempotent, and it ends with a self-check query.
 
 What it does:
 
 1. **`conversation_participants.last_read_at`** (+ index **+ a missing RLS
    UPDATE policy**) — the read marker. The policy matters: RLS is enabled on
-   that table and `01_core_schema.sql` defines SELECT/INSERT/DELETE only, so an
+   that table and `01_schema.sql` defines SELECT/INSERT/DELETE only, so an
    UPDATE matches no policy, changes **0 rows and reports no error** — the
    marker would silently never move.
 2. **A trigger that maintains `conversations.last_message*`** (including
@@ -180,7 +180,7 @@ You asked whether the schema itself is wrong. Partly yes:
    means "who read this" is answered by writing N rows, and every row is a
    Realtime event. The normal model is one `last_read_at` per participant —
    which also makes unread a comparison, not a scan. **This is the single
-   biggest design fix** and it is in `09_egress_optimizations.sql`.
+   biggest design fix** and it is in `02_functions_realtime_storage.sql`.
 2. **`REPLICA IDENTITY FULL` on hot, wide, private tables.** It was added so
    DELETE/UPDATE filters would work, but it doubles every UPDATE payload and
    leaks private columns. The right split is: `FULL` only where a *filtered
@@ -208,13 +208,13 @@ You asked whether the schema itself is wrong. Partly yes:
    and no UPDATE policy, writes succeed "silently" by affecting zero rows — the
    most expensive kind of bug to find. Any table the client writes to needs a
    policy per verb; this one only ever had SELECT/INSERT/DELETE. Fixed in
-   `09_egress_optimizations.sql`.
+   `02_functions_realtime_storage.sql`.
 8. **`FOR SELECT USING (true)` on `users` and `conversation_participants`.**
    Every authenticated account can read every other account's `email`, `phone`,
    `lock` (passcode hash), `fcm_tokens`, *and* the whole who-talks-to-whom graph.
    The code fix here (never select secrets, name the columns) stops the
    *egress*, not the *exposure* — hardening SQL is included as a commented block
-   at the end of `09_egress_optimizations.sql` because it needs a
+   at the end of `02_functions_realtime_storage.sql` because it needs a
    `SECURITY DEFINER` helper before it can be switched on.
 
 Nothing here requires a rewrite. Items 1–3 are the ones worth doing now, while

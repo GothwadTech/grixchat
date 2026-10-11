@@ -9,7 +9,7 @@ import { LocalDataCache } from '../../../services/LocalDataCache';
  * with REPLICA IDENTITY FULL each of those rows was broadcast as a full
  * old+new payload *and* triggered a conversation-list refetch in every client.
  * One marker row replaces all of it — with a fallback until
- * sql/09_egress_optimizations.sql is applied. See docs/EGRESS_AUDIT.md.
+ * sql/02_functions_realtime_storage.sql is applied. See docs/EGRESS_AUDIT.md.
  */
 let readMarkerSupported: boolean | null = null;
 const readMarkerKey = (conversationId: string) => `read_at_${conversationId}`;

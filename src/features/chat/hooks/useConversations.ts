@@ -24,7 +24,7 @@ const REALTIME_IN_FILTER_LIMIT = 60;
 
 /**
  * Does `conversation_participants.last_read_at` exist yet?
- * `null` = untested. Until sql/09_egress_optimizations.sql is applied we fall
+ * `null` = untested. Until sql/02_functions_realtime_storage.sql is applied we fall
  * back to the legacy `messages.is_read` scan, so the app works either way.
  */
 let participantsSupportReadMarker: boolean | null = null;
@@ -187,7 +187,7 @@ export const useConversations = (activeFilter: string) => {
           participantsSupportReadMarker = true;
           haveReadMarker = true;
         } else {
-          // Column not there yet (sql/09_egress_optimizations.sql not applied).
+          // Column not there yet (sql/02_functions_realtime_storage.sql not applied).
           participantsSupportReadMarker = false;
           haveReadMarker = false;
         }

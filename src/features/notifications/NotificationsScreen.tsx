@@ -41,7 +41,7 @@ export default function NotificationsScreen() {
           fromUserAvatar: n.from_user?.photo_url,
           createdAt: n.created_at,
           read: n.is_read,
-          // `sql/01_core_schema.sql` stores the action phrase in `content`.
+          // `sql/01_schema.sql` stores the action phrase in `content`.
           // `text` is only kept as a fallback for rows written by older builds.
           text: n.content || n.text || 'sent you a notification'
         }));

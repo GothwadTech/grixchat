@@ -99,11 +99,12 @@ keeps the messages you sent. `__grixMock.reset()` clears it.
 Required for: RLS verification, multi-device realtime, actual FCM push,
 actual file storage.
 
-**1. Prepare the database first.** Supabase → SQL Editor → paste
-[`sql/grixchat_full_setup.sql`](../sql/grixchat_full_setup.sql) → RUN. One paste
-creates every table, policy, bucket, trigger and function, and it is safe to run
-again later (nothing is dropped — see
-[`sql/00_master_instructions.md`](../sql/00_master_instructions.md)). Without it
+**1. Prepare the database first.** Supabase → SQL Editor → run
+[`sql/01_schema.sql`](../sql/01_schema.sql), then
+[`sql/02_functions_realtime_storage.sql`](../sql/02_functions_realtime_storage.sql).
+Two pastes create every table, policy, bucket, trigger and function, and both are
+safe to run again later (nothing is dropped — see
+[`sql/00_master_instructions.md`](../sql/00_master_instructions.md)). Without them
 the app signs in and then shows nothing.
 
 **2. Then run the app:**

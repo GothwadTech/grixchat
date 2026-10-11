@@ -1,15 +1,18 @@
 # Data Model
 
-> `sql/` is the **only** authoritative schema: numbered migrations `01_` … `09_`,
-> run in that order. Old copies are parked in [`sql/legacy/`](../sql/legacy/README.md)
-> (never run them — they define the same tables differently).
+> `sql/` is the **only** authoritative schema: [`01_schema.sql`](../sql/01_schema.sql)
+> (tables, policies, indexes) then
+> [`02_functions_realtime_storage.sql`](../sql/02_functions_realtime_storage.sql)
+> (functions, triggers, realtime, storage). Old copies are parked in
+> [`sql/legacy/`](../sql/legacy/README.md) (never run them — they define the same
+> tables differently).
 >
-> **Every file is re-runnable.** A new project can paste
-> [`sql/grixchat_full_setup.sql`](../sql/grixchat_full_setup.sql); an existing
-> project can run the same set again to pick up missing columns, indexes,
-> constraints, buckets and updated policies. Nothing is ever dropped. Runbook +
-> verification queries: [`sql/00_master_instructions.md`](../sql/00_master_instructions.md).
-> The rule is enforced by `src/__tests__/sqlMigrations.test.ts`.
+> **Every file is re-runnable.** A new project runs both; an existing project runs
+> the same two again to pick up missing columns, indexes, constraints, buckets and
+> updated policies. Nothing is ever dropped. Runbook + verification queries:
+> [`sql/00_master_instructions.md`](../sql/00_master_instructions.md). The rules
+> (re-runnable, 600–1000 lines, `COVERS:` header) are enforced by
+> `src/__tests__/sqlMigrations.test.ts`.
 
 ---
 
@@ -34,7 +37,7 @@ Vibe features.
 
 ## Tables
 
-### `users` — `sql/01_core_schema.sql:30`
+### `users` — `sql/01_schema.sql`
 Profile row, 1:1 with `auth.users`.
 
 | Column | Type | Notes |
@@ -84,7 +87,7 @@ Profile row, 1:1 with `auth.users`.
 `created_at`.
 
 > The `view_story` RPC writes a `views` array — check the migration in
-> `sql/08_stories_expiration_and_views.sql` for the actual column.
+> `sql/01_schema.sql (§2) + sql/02_functions_realtime_storage.sql (§2)` for the actual column.
 
 ### `calls` — `:122`
 `id`, `caller_id`, `receiver_id`, `type` (`audio`/`video`),
@@ -110,16 +113,16 @@ Per-user chat customisation. `id`, `user_id`, `receiver_id`, `nickname`,
 > and the offline follow worker. Readers use `content` — the column the schema
 > defines — and the writer only writes `content`.
 >
-> Writes need no new policy: `sql/01_core_schema.sql` already grants
+> Writes need no new policy: `sql/01_schema.sql` already grants
 > `INSERT` on `notifications` to `authenticated`, and `UPDATE` to the row owner
 > (used to mark notifications read).
 
-### `posts` — `sql/02_posts_and_interactions_schema.sql`
+### `posts` — `sql/01_schema.sql (§8)`
 `id`, `user_id`, `image_url`, `caption`, `created_at`.
 
 ### `post_likes` — composite PK `(post_id, user_id)`, plus `created_at`.
 ### `post_comments` — `id`, `post_id`, `user_id`, `text`, `created_at`.
-### `support_tickets` — `sql/03_support_tickets_schema.sql`.
+### `support_tickets` — `sql/01_schema.sql (§9)`.
 
 ---
 

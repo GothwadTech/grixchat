@@ -21,8 +21,7 @@
     "test:watch": "vitest",
     "test:ui": "vitest --ui",
     "lint": "tsc --noEmit",
-    "clean": "rm -rf dist",
-    "sql:bundle": "node scripts/build-sql-bundle.mjs"
+    "clean": "rm -rf dist"
   },
   "dependencies": {
     "@livekit/components-react": "^2.9.21",

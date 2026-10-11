@@ -169,8 +169,10 @@ The long version is in **[../AGENTS.md](../AGENTS.md)**. Short version:
    ticks, call signalling, presence → `channel().send()`, 0 bytes of egress.
 3. **Don't import across sibling features.** `features/chat/` must not reach
    into `features/call/`. Go through `services/` or a provider.
-4. **SQL changes go in `/sql/`, numbered** (`10_…`, appended to
-   `scripts/build-sql-bundle.mjs`, then `npm run sql:bundle`). Migrations must be
+4. **SQL changes go in `/sql/`.** Write the `.md` first (here or in
+   `EGRESS_AUDIT.md`), then the SQL. Append to the current file until it reaches
+   **600–1000 lines**, then start the next number — no tiny files, no 2000-line
+   files, and every file needs a short `COVERS:` header. Migrations must be
    re-runnable: no `DROP TABLE`, `CREATE … IF NOT EXISTS`, `CREATE OR REPLACE`,
    `DROP POLICY IF EXISTS` before every policy. Superseded files go to
    `sql/legacy/` — never recreate root-level duplicates. Runbook:
