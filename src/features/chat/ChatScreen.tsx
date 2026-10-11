@@ -52,7 +52,6 @@ export default function ChatScreen() {
   const { 
     receiver,
     receiverStatus,
-    receiverActiveChatId,
     receiverLastSeen,
     chatSettings,
     watchData
@@ -76,7 +75,11 @@ export default function ChatScreen() {
     clearChat: performClearChat
   } = useChatActions(chatId, receiverId || '');
 
-  const { isOtherTyping, handleTyping } = useTypingStatus(chatId, receiverId || '');
+  const { isOtherTyping, handleTyping, stopTyping } = useTypingStatus(
+    chatId,
+    receiverId || '',
+    convType,
+  );
 
   const {
     scrollContainerRef,
@@ -356,7 +359,6 @@ export default function ChatScreen() {
         optionsRef={optionsRef}
         isTyping={isOtherTyping}
         receiverStatus={receiverStatus}
-        receiverActiveChatId={receiverActiveChatId}
         currentUserId={user?.id}
         type={convType}
         searchQuery={searchQuery}
@@ -464,6 +466,7 @@ export default function ChatScreen() {
         setFilePreviewUrls={setFilePreviewUrls}
         textareaRef={textareaRef}
         handleTyping={handleTyping}
+        stopTyping={stopTyping}
         showEmojiPicker={showEmojiPicker}
         setShowEmojiPicker={setShowEmojiPicker}
         emojiPickerRef={emojiPickerRef}

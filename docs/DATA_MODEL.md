@@ -1,7 +1,18 @@
 # Data Model
 
-> `sql/` is the **only** authoritative schema. The five stale `.sql` files that
-> used to sit at the repository root have been deleted.
+> `sql/` is the **only** authoritative schema: [`01_schema.sql`](../sql/01_schema.sql)
+> (tables, policies, indexes) then
+> [`02_functions_realtime_storage.sql`](../sql/02_functions_realtime_storage.sql)
+> (functions, triggers, realtime, storage). Old copies are parked in
+> [`sql/legacy/`](../sql/legacy/README.md) (never run them — they define the same
+> tables differently).
+>
+> **Every file is re-runnable.** A new project runs both; an existing project runs
+> the same two again to pick up missing columns, indexes, constraints, buckets and
+> updated policies. Nothing is ever dropped. Runbook + verification queries:
+> [`sql/00_master_instructions.md`](../sql/00_master_instructions.md). The rules
+> (re-runnable, 600–1000 lines, `COVERS:` header) are enforced by
+> `src/__tests__/sqlMigrations.test.ts`.
 
 ---
 
@@ -26,7 +37,7 @@ Vibe features.
 
 ## Tables
 
-### `users` — `sql/01_core_schema.sql:30`
+### `users` — `sql/01_schema.sql`
 Profile row, 1:1 with `auth.users`.
 
 | Column | Type | Notes |
@@ -47,8 +58,9 @@ Profile row, 1:1 with `auth.users`.
 | `hidden_chat_settings` | JSONB | `{secretCode, showMenuEntry}` |
 | `fcm_tokens` | TEXT[] | FCM registration tokens |
 
-> 🔴 `services/db/userProfileService.ts:192` reads `saved_posts` — **not in the
-> schema**. Add the column or drop the field.
+> ✅ The `saved_posts` read that lived in `userProfileService.ts` was a leftover
+> from the deleted Reels feature — the column never existed in `sql/`, so the
+> field was dropped from the code and the mock instead of being added.
 
 ### `follows` — `:56`
 `id`, `follower_id`, `following_id`, `created_at`. `UNIQUE(follower_id, following_id)`.
@@ -75,7 +87,7 @@ Profile row, 1:1 with `auth.users`.
 `created_at`.
 
 > The `view_story` RPC writes a `views` array — check the migration in
-> `sql/08_stories_expiration_and_views.sql` for the actual column.
+> `sql/01_schema.sql (§2) + sql/02_functions_realtime_storage.sql (§2)` for the actual column.
 
 ### `calls` — `:122`
 `id`, `caller_id`, `receiver_id`, `type` (`audio`/`video`),
@@ -85,7 +97,7 @@ Profile row, 1:1 with `auth.users`.
 ### `call_candidates` — `:135` ⚠️ defined, never queried
 WebRTC ICE signalling. The live calling path (`providers/CallProvider.tsx`)
 signals over Broadcast channels instead. Either adopt it or drop it.
-`db/3_webrtc_signaling_architecture.md` describes the design that was not taken.
+[`docs/legacy/3_webrtc_signaling_architecture.md`](./legacy/3_webrtc_signaling_architecture.md) describes the design that was not taken.
 
 ### `chat_settings` — `:145`
 Per-user chat customisation. `id`, `user_id`, `receiver_id`, `nickname`,
@@ -95,19 +107,22 @@ Per-user chat customisation. `id`, `user_id`, `receiver_id`, `nickname`,
 `id`, `user_id`, `from_user_id`, `type`, `title`, `content`, `is_read`,
 `post_id`, `created_at`.
 
-> 🔴 **Two problems.**
-> 1. **Nothing writes to it.** Every insert lived in the deleted
->    `features/home/components/`. All five remaining call sites are reads.
->    `grep -rn "from('notifications')" src | grep -c insert` → `0`.
-> 2. **Column mismatch.** The schema defines `content`; the reader at
->    `NotificationsScreen.tsx:118` reads `notif.text`.
+> ✅ Both problems are fixed. `services/db/notificationService.ts` is the single
+> write path (`create` / `notifyFollow` / `notifySystem`), called when a
+> connection is made or accepted in `UserProfileScreen`, `MessageRequestsScreen`
+> and the offline follow worker. Readers use `content` — the column the schema
+> defines — and the writer only writes `content`.
+>
+> Writes need no new policy: `sql/01_schema.sql` already grants
+> `INSERT` on `notifications` to `authenticated`, and `UPDATE` to the row owner
+> (used to mark notifications read).
 
-### `posts` — `sql/02_posts_and_interactions_schema.sql`
+### `posts` — `sql/01_schema.sql (§8)`
 `id`, `user_id`, `image_url`, `caption`, `created_at`.
 
 ### `post_likes` — composite PK `(post_id, user_id)`, plus `created_at`.
 ### `post_comments` — `id`, `post_id`, `user_id`, `text`, `created_at`.
-### `support_tickets` — `sql/03_support_tickets_schema.sql`.
+### `support_tickets` — `sql/01_schema.sql (§9)`.
 
 ---
 

@@ -1,4 +1,5 @@
 import { storage } from "./StorageService.ts";
+import { apiPostJson } from "../lib/apiClient";
 
 const AI_STORAGE_KEY = 'grixchat_ai_messages';
 const AI_MODEL_KEY = 'grixchat_ai_model';
@@ -75,22 +76,18 @@ class AIService {
         }
       ];
 
-      const response = await fetch('/api/grix-ai', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          messages: payloadMessages,
-          modelType: this.currentModel
-        })
+      // The proxy verifies the Supabase session, so the access token has to
+      // ride along — `apiPostJson` handles that.
+      const { ok, status, data: responseData } = await apiPostJson<any>('/api/grix-ai', {
+        messages: payloadMessages,
+        modelType: this.currentModel
       });
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || "Server returned non-ok response status");
+      if (!ok) {
+        throw new Error(responseData?.error || `Server returned non-ok response status (${status})`);
       }
 
-      const responseData = await response.json();
-      return responseData.reply || "I'm sorry, I couldn't process that.";
+      return responseData?.reply || "I'm sorry, I couldn't process that.";
     } catch (error: any) {
       console.error("Gemini AI Proxy Client Error:", error);
       return "I'm having some trouble connecting to Gemini. Please verify your server API key setup and try again later.";

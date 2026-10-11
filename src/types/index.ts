@@ -49,7 +49,6 @@ export interface UserProfile {
   isPrivate?: boolean;
   profileType?: 'public' | 'private';
   savedPosts?: string[];
-  saved_posts?: string[];
   favorites?: string[];
   muted_users?: string[];
   blocked_users?: string[];

@@ -1,0 +1,34 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Cloudflare Pages — local edge-runtime secrets
+#
+#   cp .dev.vars.example .dev.vars
+#   npx wrangler pages dev dist
+#
+# `wrangler pages dev` does NOT read `.env` — only this file (`.dev.vars`,
+# gitignored). These are the *runtime* values the Functions see; the VITE_*
+# ones are baked into the bundle by `npm run build/`vite already.
+#
+# In production these live in the Cloudflare dashboard:
+#   Workers & Pages → gtwdchat → Settings → Environment variables
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Optional: run the API without any credentials at all.
+# Mock mode is a local-dev convenience and is ignored on any Cloudflare
+# deployment, so it can stay in this file safely.
+MOCK_SUPABASE=1
+NODE_ENV=development
+
+# Origin used for OAuth redirects and the CORS allowlist.
+APP_URL=http://localhost:8788
+
+# ── Real credentials (only needed to exercise the live integrations) ─────────
+GEMINI_API_KEY=
+FIREBASE_SERVICE_ACCOUNT=
+LIVEKIT_API_KEY=
+LIVEKIT_API_SECRET=
+GITHUB_CLIENT_ID=
+GITHUB_CLIENT_SECRET=
+SUPABASE_SERVICE_ROLE_KEY=
+VITE_SUPABASE_URL=
+VITE_SUPABASE_ANON_KEY=
+ALLOWED_ORIGINS=

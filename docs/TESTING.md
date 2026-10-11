@@ -5,7 +5,7 @@ npm test            # one-shot run
 npm run test:watch  # watch mode
 ```
 
-**Current state: 78 tests across 5 files, all passing, ~9 s.**
+**Current state: 128 tests across 13 files, all passing, ~38 s.**
 
 | File | Tests | What it covers |
 |---|---|---|
@@ -13,7 +13,13 @@ npm run test:watch  # watch mode
 | `dev/mock/__tests__/auth-rpc.test.ts` | 17 | Mock auth, all 7 RPCs, realtime channels |
 | `src/__tests__/chatService.test.ts` | 15 | **Real** `ChatService` against the mock |
 | `src/__tests__/utils.test.ts` | 20 | `dateUtils`, `lastSeenFormatter`, `scheduleUtils` |
-| `src/__tests__/app.smoke.test.tsx` | 3 | **Real** `<App />` — login form → chat list |
+| `src/__tests__/notificationService.test.ts` | 6 | **Real** notification write path — column contract, de-duplication |
+| `src/__tests__/apiRoutes.test.ts` | 14 | **Real** `server/api.ts` — routing, CORS/origin guard, body caps, auth (Node env) |
+| `src/__tests__/app.smoke.test.tsx` | 4 | **Real** `<App />` — login form → chat list, `/forgot-password` reset mode |
+| `src/__tests__/presenceTyping.test.ts` | 8 | Presence roster (join/leave/sync, fallback to `is_online`/`last_seen`, future timestamps) and typing (broadcast, explicit stop, idle timeout, ref-counted channels) |
+| `src/__tests__/callFlow.test.tsx` | 3 | The whole call lifecycle through the real app + mock database: an incoming `calls` row rings the receiver, **Decline** writes `rejected` (never the invalid `denied`), **Answer** writes `accepted` and exactly one chat log, **End Call** closes the row, and the screen does not re-dial the peer afterwards |
+| `src/__tests__/callSignaling.test.ts` | 5 | The call handshake against a stubbed WebRTC stack — offer/answer, `connected` only from the peer connection, `failed` on ICE failure, `closed` on the peer's hang-up, and *ringing is not a failure* (an unanswered call must not error while it is still ringing) |
+| `src/__tests__/egressRealtime.test.tsx` | 1 | The regression test for the 5 GB/month bug: a realtime INSERT patches the chat-list row with **zero** queries. It also covers the mock Realtime `in.(…)` filter, which silently dropped every unmuted event before this pass |
 
 ---
 
@@ -32,7 +38,8 @@ them.
 `dev/test/setup.ts` polyfills the browser APIs jsdom lacks (`matchMedia`,
 `IntersectionObserver`, `ResizeObserver`, `scrollIntoView`, `HTMLMediaElement.play`,
 `navigator.mediaDevices`) and **resets the mock database and localStorage
-before every test**.
+before every test**. Those shims are skipped when a test runs in the Node
+environment (`hasDom`), so API tests can reuse the same setup file.
 
 Timeouts are raised (`testTimeout: 25000`) because the smoke test drives a real
 login through several async React round trips.
@@ -55,6 +62,19 @@ explicitly:
 - `postgres_changes` filters (`sender_id=eq.<id>`) include *and exclude*
   correctly — both directions are tested, because a filter that matches
   everything looks identical to a working filter in a happy-path test
+
+> **Testing the notification writer:** assert on the `content` column, not
+> `text` — `sql/01_schema.sql` has no `text` column. The mock now mirrors
+> the SQL default (`is_read boolean default false`) so an insert that forgets
+> the flag fails a test instead of passing locally.
+
+> **Testing the API:** `src/__tests__/apiRoutes.test.ts` calls
+> `handleApiRequest(request, env)` directly — the exact function Cloudflare
+> Pages Functions and the Express adapter both call. It runs with
+> `// @vitest-environment node`, because jsdom does not implement
+> `Request`/`Response`; `dev/test/setup.ts` guards its browser shims for that.
+> The rate limiter is module-level state, so keep new cases well under the
+> per-minute budget or use a distinct route.
 
 ### 2. App tests (`src/__tests__/`)
 

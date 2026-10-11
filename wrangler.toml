@@ -1,0 +1,28 @@
+# Cloudflare Pages project configuration.
+#
+# The site is served by Cloudflare Pages at https://grixchat.gothwadtech.com
+# (project: `gtwdchat`):
+#   - `dist/` is uploaded as static assets
+#   - `functions/` is compiled into Pages Functions and serves the API
+#
+# The Cloudflare Pages project is named `gtwdchat` (Workers & Pages → gtwdchat).
+# Build settings (dashboard → Workers & Pages → gtwdchat → Settings):
+#   Build command:       npm run build
+#   Build output dir:    dist
+#   Root directory:      /            (repo root)
+#   Node version:        22           (Settings → Environment variables: NODE_VERSION=22,
+#                                      because wrangler@4 requires Node >= 22)
+#
+# Runtime variables go in Settings → Environment variables (Production +
+# Preview). Every VITE_* value is inlined into the bundle at build time, so
+# changing one requires a redeploy. See docs/DEV_SETUP.md.
+
+name = "gtwdchat"
+pages_build_output_dir = "./dist"
+compatibility_date = "2025-09-01"
+
+# No `nodejs_compat`: the API is written against the Web platform only
+# (fetch, WebCrypto, FormData, Blob, atob/btoa). Nothing in `functions/` or
+# `server/api.ts` imports a Node built-in — the one capability that needs the
+# filesystem (the GitHub Sync Tool) is injected by the Node adapter and answers
+# 501 here instead of pretending to work.

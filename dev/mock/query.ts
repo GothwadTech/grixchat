@@ -339,6 +339,8 @@ export class MockQueryBuilder implements PromiseLike<{ data: any; error: any; co
     if (out.created_at === undefined) out.created_at = nowISO();
     if (this.table === 'users' && out.updated_at === undefined) out.updated_at = nowISO();
     if (this.table === 'conversations' && out.updated_at === undefined) out.updated_at = nowISO();
+    // Mirrors `notifications.is_read BOOLEAN DEFAULT FALSE` from sql/01.
+    if (this.table === 'notifications' && out.is_read === undefined) out.is_read = false;
     return out;
   }
 

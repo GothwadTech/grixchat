@@ -1,0 +1,71 @@
+# Continuous integration only — Cloudflare Pages builds and deploys the site
+# itself from this repository (Workers & Pages → gtwdchat).
+#
+# This workflow exists to fail fast on a broken push: a type error, a failing
+# test or a broken bundle, before Cloudflare picks the commit up.
+#
+# There is deliberately no deploy step here. Deploying from two places is how
+# you end up shipping a stale bundle, and the GitHub Pages deploy that used to
+# live in `deploy.yml` could never work anyway: the API only exists on
+# Cloudflare (`functions/`), so a github.io build would have a dead backend.
+name: CI
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: "ci-${{ github.ref }}"
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          # Nothing here needs git history beyond the commit being tested.
+          fetch-depth: 1
+
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          # 22, not 20: `wrangler@4` requires Node >= 22 and exits non-zero on
+          # older runtimes. The app itself builds on 20 — this is for the
+          # Pages Functions bundle check below.
+          node-version: 22
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      # `vite build` does not typecheck, so without this an entire class of
+      # breakage ships silently.
+      - name: Typecheck
+        run: npm run lint
+
+      - name: Test
+        run: npm test
+
+      # Verifies the Pages Functions actually bundle for the Workers runtime
+      # (no Node built-ins, no accidental `nodejs_compat` dependency).
+      - name: Build Pages Functions
+        # `pages functions build` needs to find `functions/` and `wrangler.toml`,
+        # so it runs from the repo root. Fails on any Node-only import.
+        run: npx wrangler pages functions build --outdir .wrangler/functions-build
+
+      - name: Build client bundle
+        # Dummy values so this compiles the real Supabase-backed code path and
+        # skips the "credentials are missing" build warning. The artifact is
+        # never deployed — Cloudflare builds separately with the real values
+        # from the project's environment variables.
+        env:
+          VITE_SUPABASE_URL: https://example.supabase.co
+          VITE_SUPABASE_ANON_KEY: ci-placeholder-anon-key
+        run: npm run build

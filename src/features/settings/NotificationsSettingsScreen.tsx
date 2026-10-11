@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
+import { apiPostJson } from '../../lib/apiClient';
 import { useAuth } from '../../providers/AuthProvider';
 
 export default function NotificationsSettingsScreen() {
@@ -99,30 +100,19 @@ export default function NotificationsSettingsScreen() {
 
     setIsSendingTest(true);
     try {
-      const response = await fetch('/api/send-notification', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          tokens: userData.fcmTokens,
-          title: "Test Notification",
-          body: "Hello! This is a test notification from GrixChat 🚀",
-          data: { type: 'test' }
-        })
+      // Self-test: the server only accepts tokens that are registered on the
+      // caller's own profile, so no conversation id is needed.
+      const { ok, status, data } = await apiPostJson<any>('/api/send-notification', {
+        tokens: userData.fcmTokens,
+        title: "Test Notification",
+        body: "Hello! This is a test notification from GrixChat 🚀",
+        data: { type: 'test' }
       });
 
-      const responseText = await response.text();
-      let data: any = null;
-      try {
-        data = responseText ? JSON.parse(responseText) : null;
-      } catch (parseErr) {
-        console.warn(`FCM Settings: Non-JSON response received. Status: ${response.status}. Body: ${responseText}`);
-        throw new Error(`Unexpected server response format: ${responseText.substring(0, 100) || '(empty)'}`);
-      }
-
-      if (data && data.success) {
+      if (ok && data && data.success) {
         alert("Test notification dispatched instantly! Check device system tray.");
       } else {
-        throw new Error((data && data.error) || "Failed to send test notification");
+        throw new Error((data && data.error) || `Failed to send test notification (${status})`);
       }
     } catch (e: any) {
       console.error(e);

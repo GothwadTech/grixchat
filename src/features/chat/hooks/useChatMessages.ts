@@ -3,6 +3,17 @@ import { supabase } from '../../../lib/supabase';
 import { useAuth } from '../../../providers/AuthProvider.tsx';
 import { LocalDataCache } from '../../../services/LocalDataCache';
 
+/**
+ * Does `conversation_participants.last_read_at` exist yet?
+ * `null` = untested. Read receipts used to UPDATE one row per unread message;
+ * with REPLICA IDENTITY FULL each of those rows was broadcast as a full
+ * old+new payload *and* triggered a conversation-list refetch in every client.
+ * One marker row replaces all of it — with a fallback until
+ * sql/02_functions_realtime_storage.sql is applied. See docs/EGRESS_AUDIT.md.
+ */
+let readMarkerSupported: boolean | null = null;
+const readMarkerKey = (conversationId: string) => `read_at_${conversationId}`;
+
 export const useChatMessages = (conversationId: string, initialLimit: number = 20) => {
   const [messages, setMessages] = useState<any[]>(() => {
     if (conversationId) {
@@ -232,18 +243,49 @@ export const useChatMessages = (conversationId: string, initialLimit: number = 2
     }
 
     const executeUpdate = async () => {
+      const now = new Date().toISOString();
+
+      // Preferred path: move ONE row — this participant's read marker. Every
+      // other client derives "unread" by comparing it with
+      // `conversations.last_message_at`, so a read receipt is a single realtime
+      // event instead of one per unread message.
+      if (readMarkerSupported !== false) {
+        try {
+          const { error } = await supabase
+            .from('conversation_participants')
+            .update({ last_read_at: now } as any)
+            .eq('conversation_id', conversationId)
+            .eq('user_id', user.id);
+
+          if (!error) {
+            readMarkerSupported = true;
+            LocalDataCache.set(readMarkerKey(conversationId), now);
+            return;
+          }
+          // Column not there yet — remember and fall back for this session.
+          readMarkerSupported = false;
+        } catch (err) {
+          readMarkerSupported = false;
+        }
+      }
+
+      // Legacy path: mark the message rows. Bounded to messages newer than the
+      // last marker so re-opening a chat never rewrites its whole history.
       try {
-        const { error } = await supabase
+        const since = LocalDataCache.get<string>(readMarkerKey(conversationId));
+        let query: any = supabase
           .from('messages')
           .update({ is_read: true } as any)
           .eq('conversation_id', conversationId)
           .neq('sender_id', user.id)
           .eq('is_read', false);
-        
+        if (since) query = query.gt('created_at', since);
+
+        const { error } = await query;
         if (error) {
           console.error('Error marking messages as read:', error);
         } else {
-          console.log('Successfully marked messages as read for conv (debounced):', conversationId);
+          LocalDataCache.set(readMarkerKey(conversationId), now);
         }
       } catch (err) {
         console.error('Failed to mark messages as read:', err);

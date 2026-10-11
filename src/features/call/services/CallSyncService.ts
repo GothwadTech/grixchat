@@ -55,6 +55,10 @@ class CallSyncServiceImpl {
           receiver:users!calls_receiver_id_fkey (id, username, photo_url, full_name)
         `)
         .or(`caller_id.eq.${userId},receiver_id.eq.${userId}`)
+        // Finished calls only: a row that is still `ringing`/`accepted` is not
+        // history yet, and a `rejected`/`error` one is (declined calls used to
+        // be invisible here).
+        .in('status', ['ended', 'rejected', 'error'])
         .order('created_at', { ascending: false })
         .limit(limit + 1);
 

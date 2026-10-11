@@ -9,6 +9,9 @@ import { useLayout } from '../../../contexts/LayoutContext';
 import Avatar from '../../../components/common/Avatar';
 import { storage } from '../../../services/StorageService';
 import { LocalDataCache } from '../../../services/LocalDataCache';
+import { useTypingUsers } from '../hooks/useTypingStatus';
+import { useIsUserOnline } from '../../../providers/PresenceProvider';
+import { resolveOnline } from '../../../utils/presence';
 
 interface ChatItem {
   id: string;
@@ -21,6 +24,8 @@ interface ChatItem {
   unread: boolean;
   unreadCount?: number;
   isOnline: boolean;
+  /** `users.last_seen` — the fallback when live presence is not ready yet. */
+  lastSeen?: string | null;
   otherUserId: string;
   type?: 'direct' | 'group';
   lastMsgStatus?: 'Sent' | 'Received';
@@ -56,8 +61,13 @@ const ChatItemRow: React.FC<{
   const startXRef = React.useRef<number>(0);
   const startYRef = React.useRef<number>(0);
   const isLongPressActiveRef = React.useRef<boolean>(false);
-  const [isTyping, setIsTyping] = React.useState(false);
   const [draft, setDraft] = React.useState<any>(null);
+  const { user: authUser } = useAuth();
+  const typingUserIds = useTypingUsers(chat.id, authUser?.id);
+  const isTyping = typingUserIds.length > 0;
+  // Live presence first, `users.is_online` as the fallback.
+  const livePresence = useIsUserOnline(chat.otherUserId);
+  const isOnline = chat.type === 'group' ? false : resolveOnline(livePresence, chat.isOnline, chat.lastSeen);
 
   React.useEffect(() => {
     if (!chat.otherUserId) return;
@@ -87,33 +97,6 @@ const ChatItemRow: React.FC<{
     }
     return { isDraft: false, displayLastMsg: chat.lastMsg };
   }, [draft, chat.lastMsg]);
-
-  React.useEffect(() => {
-    if (!supabase || !chat.id || !chat.otherUserId) return;
-    
-    const channel = supabase.channel(`typing:${chat.id}`);
-    let timeoutId: any = null;
-
-    channel
-      .on('broadcast', { event: 'typing' }, ({ payload }) => {
-        if (payload && payload.userId === chat.otherUserId) {
-          setIsTyping(payload.isTyping);
-          
-          if (timeoutId) clearTimeout(timeoutId);
-          if (payload.isTyping) {
-            timeoutId = setTimeout(() => {
-              setIsTyping(false);
-            }, 6000);
-          }
-        }
-      })
-      .subscribe();
-
-    return () => {
-      if (timeoutId) clearTimeout(timeoutId);
-      supabase.removeChannel(channel);
-    };
-  }, [chat.id, chat.otherUserId]);
 
   const startPress = (e: any) => {
     isLongPressActiveRef.current = false;
@@ -181,7 +164,7 @@ const ChatItemRow: React.FC<{
       }`}
     >
       <div className="relative shrink-0">
-        <Avatar url={chat.avatar} type={chat.type} name={chat.user} isOnline={chat.isOnline} />
+        <Avatar url={chat.avatar} type={chat.type} name={chat.user} isOnline={isOnline} />
         {isSelected && (
           <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-[var(--primary)] border-2 border-[var(--bg-card)] flex items-center justify-center shadow-md z-20 animate-scale-in">
             <svg 
@@ -326,6 +309,42 @@ const GrixAIRow: React.FC = () => {
         </div>
       </div>
     </div>
+  );
+};
+
+/** A suggested contact, rendered with its own live-presence subscription. */
+const SuggestedUserRow: React.FC<{
+  user: OtherUser;
+  nickname?: string;
+  customPhotoUrl?: string;
+}> = ({ user, nickname, customPhotoUrl }) => {
+  const livePresence = useIsUserOnline(user.uid);
+  const isOnline = resolveOnline(livePresence, user.isOnline, undefined);
+  const finalName = nickname || user.fullName || user.username;
+  const finalPhoto = customPhotoUrl || user.photoURL;
+
+  return (
+    <Link
+      to={`/chat/${user.uid}`}
+      className="flex items-center gap-3 px-3 py-2.5 hover:bg-[var(--border-color)]/5 active:bg-[var(--border-color)]/10 transition-all duration-205 border-b border-[var(--border-color)]/5 last:border-b-0 group border-l-[4px] border-l-transparent select-none"
+    >
+      <Avatar url={finalPhoto} type="direct" name={finalName} isOnline={isOnline} />
+      <div className="flex-1 min-w-0 flex flex-col justify-center">
+        <div className="flex justify-between items-baseline mb-0.5">
+          <h3 className="text-[14.5px] truncate font-semibold text-[var(--text-primary)] group-hover:text-[var(--primary)] transition-colors">
+            {finalName}
+          </h3>
+          <span className="text-[10px] whitespace-nowrap text-[var(--text-secondary)] uppercase font-semibold tracking-tight opacity-40">
+            Suggested
+          </span>
+        </div>
+        <div className="flex justify-between items-center">
+          <p className="text-[13px] truncate text-[var(--text-secondary)] opacity-70 italic">
+            Say hi 👋
+          </p>
+        </div>
+      </div>
+    </Link>
   );
 };
 
@@ -484,32 +503,13 @@ export const ChatUserList: React.FC<ChatUserListProps> = ({
 
   const renderOtherUser = (user: OtherUser) => {
     const customSetts = settingsMap[user.uid];
-    const finalName = customSetts?.nickname || user.fullName || user.username;
-    const finalPhoto = customSetts?.customPhotoUrl || user.photoURL;
-
     return (
-      <Link 
-        to={`/chat/${user.uid}`} 
-        key={user.uid} 
-        className="flex items-center gap-3 px-3 py-2.5 hover:bg-[var(--border-color)]/5 active:bg-[var(--border-color)]/10 transition-all duration-205 border-b border-[var(--border-color)]/5 last:border-b-0 group border-l-[4px] border-l-transparent select-none"
-      >
-        <Avatar url={finalPhoto} type="direct" name={finalName} isOnline={user.isOnline} />
-        <div className="flex-1 min-w-0 flex flex-col justify-center">
-          <div className="flex justify-between items-baseline mb-0.5">
-            <h3 className="text-[14.5px] truncate font-semibold text-[var(--text-primary)] group-hover:text-[var(--primary)] transition-colors">
-              {finalName}
-            </h3>
-            <span className="text-[10px] whitespace-nowrap text-[var(--text-secondary)] uppercase font-semibold tracking-tight opacity-40">
-              Suggested
-            </span>
-          </div>
-          <div className="flex justify-between items-center">
-            <p className="text-[13px] truncate text-[var(--text-secondary)] opacity-70 italic">
-              Say hi 👋
-            </p>
-          </div>
-        </div>
-      </Link>
+      <SuggestedUserRow
+        key={user.uid}
+        user={user}
+        nickname={customSetts?.nickname}
+        customPhotoUrl={customSetts?.customPhotoUrl}
+      />
     );
   };
 

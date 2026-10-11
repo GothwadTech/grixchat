@@ -64,7 +64,6 @@ export function buildSeed() {
       archived_chats: [],
       hidden_chat_settings: { secretCode: null, showMenuEntry: true },
       fcm_tokens: [],
-      saved_posts: [],
     },
     {
       id: SEED.aarav,
@@ -88,7 +87,6 @@ export function buildSeed() {
       archived_chats: [],
       hidden_chat_settings: { secretCode: null, showMenuEntry: true },
       fcm_tokens: [],
-      saved_posts: [],
     },
     {
       id: SEED.sanya,
@@ -112,7 +110,6 @@ export function buildSeed() {
       archived_chats: [],
       hidden_chat_settings: { secretCode: null, showMenuEntry: true },
       fcm_tokens: [],
-      saved_posts: [],
     },
     {
       id: SEED.rohit,
@@ -136,7 +133,6 @@ export function buildSeed() {
       archived_chats: [],
       hidden_chat_settings: { secretCode: null, showMenuEntry: true },
       fcm_tokens: [],
-      saved_posts: [],
     },
     {
       id: SEED.priya,
@@ -160,7 +156,6 @@ export function buildSeed() {
       archived_chats: [],
       hidden_chat_settings: { secretCode: null, showMenuEntry: true },
       fcm_tokens: [],
-      saved_posts: [],
     },
     {
       id: SEED.kabir,
@@ -184,7 +179,6 @@ export function buildSeed() {
       archived_chats: [],
       hidden_chat_settings: { secretCode: null, showMenuEntry: true },
       fcm_tokens: [],
-      saved_posts: [],
     },
     {
       id: SEED.meera,
@@ -208,7 +202,6 @@ export function buildSeed() {
       archived_chats: [],
       hidden_chat_settings: { secretCode: null, showMenuEntry: true },
       fcm_tokens: [],
-      saved_posts: [],
     },
     {
       id: SEED.official,
@@ -232,7 +225,6 @@ export function buildSeed() {
       archived_chats: [],
       hidden_chat_settings: { secretCode: null, showMenuEntry: true },
       fcm_tokens: [],
-      saved_posts: [],
     },
   ];
 
@@ -368,6 +360,9 @@ export function buildSeed() {
         id: `p${String(pIdx++).padStart(35, '0')}`,
         conversation_id,
         user_id,
+        // Read marker (sql/02_functions_realtime_storage.sql). Unread is derived from
+        // `last_read_at` instead of scanning every unread message row.
+        last_read_at: daysAgo(1),
         created_at: daysAgo(28),
         joined_at: daysAgo(28),
       });

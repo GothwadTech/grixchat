@@ -13,11 +13,8 @@ import {
   UserPlus,
   RotateCw,
   Sparkles,
-  Zap,
   Check,
-  ShieldAlert,
   Sliders,
-  AudioLines,
   ScreenShare
 } from 'lucide-react';
 import { CallType } from '../types/callTypes';
@@ -32,7 +29,13 @@ interface CallControlPanelProps {
   onToggleVideo: () => void;
   onToggleSpeaker: () => void;
   onToggleScreenShare: () => void;
+  onFlipCamera: () => void;
   onEndCall: () => void;
+  /**
+   * `false` on a peer-to-peer voice call: without a video m-line there is
+   * nothing to turn on, and a button that pretends otherwise is a lie.
+   */
+  videoToggleAvailable?: boolean;
 }
 
 export const CallControlPanel: React.FC<CallControlPanelProps> = ({
@@ -45,12 +48,11 @@ export const CallControlPanel: React.FC<CallControlPanelProps> = ({
   onToggleVideo,
   onToggleSpeaker,
   onToggleScreenShare,
+  onFlipCamera,
   onEndCall,
+  videoToggleAvailable = true,
 }) => {
   const [showMoreMenu, setShowMoreMenu] = useState(false);
-  const [hdActive, setHdActive] = useState(false);
-  const [vocalFilter, setVocalFilter] = useState('Default Voice');
-  const [cameraFlipped, setCameraFlipped] = useState(false);
   const [statusNotification, setStatusNotification] = useState<string | null>(null);
 
   const displayNotification = (text: string) => {
@@ -60,19 +62,9 @@ export const CallControlPanel: React.FC<CallControlPanelProps> = ({
     }, 2000);
   };
 
-  const handleToggleHD = () => {
-    setHdActive(prev => !prev);
-    displayNotification(!hdActive ? "HD High-Fidelity Audio Active" : "Standard Audio Active");
-  };
-
   const handleFlipCamera = () => {
-    setCameraFlipped(prev => !prev);
-    displayNotification(cameraFlipped ? "Switched to Front Camera" : "Switched to Rear Camera");
-  };
-
-  const handleSetVocalFilter = (filter: string) => {
-    setVocalFilter(filter);
-    displayNotification(`Voice filter set to: ${filter}`);
+    onFlipCamera();
+    displayNotification("Camera switched");
   };
 
   return (
@@ -110,11 +102,11 @@ export const CallControlPanel: React.FC<CallControlPanelProps> = ({
                 : 'bg-[#0494f4] text-white shadow-lg shadow-[#0494f4]/20 border-none'
           }`}
           title={
-            speakerState === 0 
-              ? "Speaker: Muted" 
-              : speakerState === 1 
-                ? "Speaker: Earpiece mode" 
-                : "Speaker: Loudspeaker mode"
+            speakerState === 0
+              ? "Remote audio muted — tap for low volume"
+              : speakerState === 1
+                ? "Low volume — tap for full volume"
+                : "Full volume — tap to mute"
           }
         >
           {speakerState === 0 ? (
@@ -126,18 +118,22 @@ export const CallControlPanel: React.FC<CallControlPanelProps> = ({
 
         {/* 2. VIDEO toggle */}
         <button 
+          disabled={!videoToggleAvailable}
           onClick={() => {
+            if (!videoToggleAvailable) return;
             if (typeof navigator !== 'undefined' && navigator.vibrate) {
               try { navigator.vibrate(15); } catch (e) {}
             }
             onToggleVideo();
           }}
-          className={`w-[52px] h-[52px] rounded-full flex items-center justify-center transition-all active:scale-95 cursor-pointer ${
-            !isVideoOff 
-              ? 'bg-[#0494f4] text-white shadow-lg shadow-[#0494f4]/20 border-none' 
-              : 'border border-[#ff3b30]/40 bg-[var(--bg-card)] text-[#ff3b30] hover:bg-[#ff3b30]/5'
+          className={`w-[52px] h-[52px] rounded-full flex items-center justify-center transition-all ${
+            !videoToggleAvailable
+              ? 'opacity-40 cursor-not-allowed border border-[var(--border-color)]/30 bg-[var(--bg-card)] text-[var(--text-secondary)]'
+              : !isVideoOff
+                ? 'bg-[#0494f4] text-white shadow-lg shadow-[#0494f4]/20 border-none active:scale-95 cursor-pointer'
+                : 'border border-[#ff3b30]/40 bg-[var(--bg-card)] text-[#ff3b30] hover:bg-[#ff3b30]/5 active:scale-95 cursor-pointer'
           }`}
-          title={!isVideoOff ? "Turn Video Off" : "Turn Video On"}
+          title={!videoToggleAvailable ? "Video is available on video calls" : !isVideoOff ? "Turn Video Off" : "Turn Video On"}
         >
           {!isVideoOff ? <Video size={20} strokeWidth={2.2} /> : <VideoOff size={20} strokeWidth={2.2} />}
         </button>
@@ -229,35 +225,26 @@ export const CallControlPanel: React.FC<CallControlPanelProps> = ({
 
               {/* Grid of Interactive Actions */}
               <div className="grid grid-cols-2 gap-3.5">
-                {/* Switch Camera */}
-                <div 
-                  onClick={handleFlipCamera}
-                  className="bg-[var(--box-bg)] hover:bg-[var(--border-color)]/20 p-4 rounded-2xl cursor-pointer transition-all flex flex-col justify-between h-[90px] border border-[var(--border-color)]/10 active:scale-[0.98]"
-                >
-                  <RotateCw size={18} className="text-[#0494f4]" />
-                  <div>
-                    <h4 className="text-[13px] font-extrabold text-[var(--text-primary)] leading-tight">Switch Camera</h4>
-                    <p className="text-[10px] text-[var(--text-secondary)] font-bold mt-0.5">Flip feed orientation</p>
-                  </div>
-                </div>
-
-                {/* HD Stream */}
-                <div 
-                  onClick={handleToggleHD}
-                  className={`p-4 rounded-2xl cursor-pointer transition-all flex flex-col justify-between h-[90px] border active:scale-[0.98] ${
-                    hdActive 
-                      ? 'bg-[#0494f4]/15 border-[#0494f4] text-[#0494f4]' 
-                      : 'bg-[var(--box-bg)] hover:bg-[var(--border-color)]/20 border-[var(--border-color)]/10 text-[var(--text-primary)]'
+                {/* Switch Camera (only meaningful for video calls with >1 camera) */}
+                <div
+                  onClick={() => {
+                    if (type !== 'video') {
+                      displayNotification("Camera switching needs a video call");
+                      return;
+                    }
+                    handleFlipCamera();
+                  }}
+                  className={`p-4 rounded-2xl transition-all flex flex-col justify-between h-[90px] border border-[var(--border-color)]/10 ${
+                    type === 'video'
+                      ? 'bg-[var(--box-bg)] hover:bg-[var(--border-color)]/20 cursor-pointer active:scale-[0.98]'
+                      : 'bg-[var(--box-bg)] opacity-50 cursor-not-allowed'
                   }`}
                 >
-                  <div className="flex justify-between items-start">
-                    <Zap size={18} className={hdActive ? 'text-[#0494f4]' : 'text-[var(--text-secondary)]'} />
-                    {hdActive && <Check size={14} className="text-[#0494f4] stroke-[3]" />}
-                  </div>
+                  <RotateCw size={18} className={type === 'video' ? 'text-[#0494f4]' : 'text-[var(--text-secondary)]'} />
                   <div>
-                    <h4 className="text-[13px] font-extrabold leading-tight">HD Video Calling</h4>
-                    <p className={`text-[10px] font-bold mt-0.5 ${hdActive ? 'text-[#0494f4]' : 'text-[var(--text-secondary)]'}`}>
-                      {hdActive ? 'Premium HD Active' : 'Toggle extra bandwidth'}
+                    <h4 className="text-[13px] font-extrabold text-[var(--text-primary)] leading-tight">Switch Camera</h4>
+                    <p className="text-[10px] text-[var(--text-secondary)] font-bold mt-0.5">
+                      {type === 'video' ? 'Flip feed orientation' : 'Available on video calls'}
                     </p>
                   </div>
                 </div>
@@ -265,6 +252,10 @@ export const CallControlPanel: React.FC<CallControlPanelProps> = ({
                 {/* Share Screen */}
                 <div 
                   onClick={() => {
+                    if (type !== 'video') {
+                      displayNotification("Screen sharing needs a video call");
+                      return;
+                    }
                     onToggleScreenShare();
                     displayNotification(!isScreenSharing ? "Screen sharing initiated" : "Screen sharing stopped");
                   }}
@@ -281,35 +272,15 @@ export const CallControlPanel: React.FC<CallControlPanelProps> = ({
                   <div>
                     <h4 className="text-[13px] font-extrabold leading-tight">Share Your Screen</h4>
                     <p className={`text-[10px] font-bold mt-0.5 ${isScreenSharing ? 'text-amber-500' : 'text-[var(--text-secondary)]'}`}>
-                      {isScreenSharing ? 'Screen sharing is currently active' : 'Cast your desktop or select screen'}
+                      {type !== 'video'
+                        ? 'Available on video calls'
+                        : isScreenSharing
+                          ? 'Screen sharing is currently active'
+                          : 'Cast your desktop or select screen'}
                     </p>
                   </div>
                 </div>
 
-                {/* Voice Effects */}
-                <div 
-                  className="bg-[var(--box-bg)] col-span-2 p-4 rounded-2xl border border-[var(--border-color)]/10"
-                >
-                  <div className="flex items-center gap-2 mb-3">
-                    <AudioLines size={18} className="text-[#0494f4]" />
-                    <h4 className="text-[13px] font-extrabold text-[var(--text-primary)]">Active Vocal Equalizer</h4>
-                  </div>
-                  <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1">
-                    {['Default Voice', 'Studio Filter', 'Ambient Clear', 'Vocal Boost'].map((filterName) => (
-                      <button
-                        key={filterName}
-                        onClick={() => handleSetVocalFilter(filterName)}
-                        className={`px-3 py-1.5 rounded-xl text-[10px] font-extrabold uppercase tracking-wider shrink-0 transition-all border-none ${
-                          vocalFilter === filterName
-                            ? 'bg-[#0494f4] text-white shadow-md'
-                            : 'bg-[var(--bg-card)] text-[var(--text-secondary)] hover:bg-[var(--border-color)]/25 hover:text-[var(--text-primary)]'
-                        }`}
-                      >
-                        {filterName}
-                      </button>
-                    ))}
-                  </div>
-                </div>
               </div>
 
               {/* Safety Encrypted Label */}

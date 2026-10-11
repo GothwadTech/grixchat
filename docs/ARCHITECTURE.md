@@ -15,18 +15,58 @@ actually reachable.
               Supabase JS   │                    │  fetch('/api/…')
                             ▼                    ▼
               ┌──────────────────┐    ┌──────────────────────────┐
-              │     Supabase     │    │  Express (server.ts)     │
-              │  Postgres        │    │  /api/grix-ai    → Gemini│
-              │  Realtime (WS)   │    │  /api/send-notif → FCM   │
-              │  Auth            │    │  /api/livekit-token      │
-              │  Storage         │    │  /api/upload-file→catbox │
-              └──────────────────┘    │  /api/github/*   → proxy │
+              │     Supabase     │    │  Cloudflare Pages        │
+              │  Postgres        │    │  Functions (functions/)  │
+              │  Realtime (WS)   │    │  /api/grix-ai    → Gemini│
+              │  Auth            │    │  /api/send-notif → FCM   │
+              │  Storage         │    │  /api/livekit-token      │
+              └──────────────────┘    │  /api/upload-file→catbox │
+                                      │  /api/github/*   → proxy │
                                       └──────────────────────────┘
 ```
 
-The Express server exists only for things a browser cannot do: holding secret
-API keys, OAuth code exchange, and FCM's service-account auth. **It holds no
+The API layer exists only for things a browser cannot do: holding secret API
+keys, OAuth code exchange, and FCM's service-account auth. **It holds no
 application data.** All state lives in Supabase.
+
+### One API, two runtimes
+
+`server/api.ts` is the whole API and is written against the Web
+`Request`/`Response` API. Two thin adapters reach it:
+
+```
+functions/api/[[path]].ts ─┐
+functions/auth/[[path]].ts ─┤→ server/api.ts  (routing, auth, limits, routes)
+server.ts ─────────────────┘
+```
+
+- **Cloudflare Pages Functions** run it in production
+  (<https://grixchat.gothwadtech.com>) — `dist/` is the static site, `functions/`
+  is the API, and both deploy from this repo on every push.
+- **Express** (`server.ts`) runs it for `npm run dev` / `npm run dev:mock` and
+  for optional self-hosting. It converts the incoming Express request into a
+  Fetch `Request` and streams the Fetch `Response` back — nothing else.
+
+Because the edge has no filesystem, the repository-browser's "Sync Tool"
+(`/api/github/list-files`, `/api/github/get-file-content`) needs a capability the
+Node adapter injects (`REPO_FS`) and answers `501` on Cloudflare. Everything
+else — including multipart uploads, FCM's service-account JWT and LiveKit token
+signing — runs on both. Pushing secrets into the browser to make the edge happy
+was not an option.
+
+Every `/api` route runs the same security chain, in `handleApiRequest`:
+
+```
+security headers → cors(allowlist) → origin guard (403 on cross-origin writes)
+   → rate limit (per IP, per route family) → size-capped body parse
+   → authenticate (Supabase JWT) → route-specific authorisation
+```
+
+Routes that fan out or cost money add their own limiter, and the two routes
+that used to trust the client — `send-notification` and `livekit-token` — derive
+their recipients/grant from the database instead. The browser side of that
+contract lives in `src/lib/apiClient.ts` (`apiFetch` / `apiPostJson`), which
+attaches the session token.
 
 ---
 
@@ -218,10 +258,12 @@ lock/            AppLock, GlobalLock, SetupLock, VerifyLock
 
 | Target | Entry | Status |
 |---|---|---|
-| `npm run dev` | `server.ts` → Vite middleware on :3000 | ✅ works |
-| `npm run build` | `vite build` + esbuild → `dist/server.cjs` | ✅ works |
-| Vercel | `vercel.json` → `server.ts` | ✅ fixed — the duplicate server was deleted |
-| GitHub Pages | `.github/workflows/deploy.yml` | ⚠️ needs `VITE_BASE_URL=/grixchat/` |
+| **Cloudflare Pages** (production) | `dist/` + `functions/` | ✅ <https://grixchat.gothwadtech.com> |
+| `npm run dev` / `dev:mock` | `server.ts` → Vite middleware on :3000 | ✅ works |
+| `npm run build` | `vite build` → `dist/` (this is what Pages builds) | ✅ works |
+| `npm run build:server` | esbuild → `dist/server.cjs` for self-hosting | ✅ works |
+| `wrangler pages dev dist` | Local workerd runtime on :8788 | ✅ same code as production |
+| `.github/workflows/ci.yml` | typecheck + test + bundle check | ✅ no deploy step, by design |
 | Android TWA/WebView | external wrapper, not in this repo | — |
 
-Details and fixes: **[DEV_SETUP.md](./DEV_SETUP.md#deploy-targets)**.
+Details: **[DEV_SETUP.md](./DEV_SETUP.md#deploy--cloudflare-pages)**.

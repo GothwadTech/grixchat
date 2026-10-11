@@ -10,7 +10,9 @@
   "scripts": {
     "dev": "tsx server.ts",
     "dev:mock": "MOCK_SUPABASE=1 tsx server.ts",
-    "build": "vite build && esbuild server.ts --bundle --platform=node --format=cjs --packages=external --sourcemap --outfile=dist/server.cjs",
+    "build": "vite build",
+    "build:all": "npm run build && npm run build:server",
+    "build:server": "esbuild server.ts --bundle --platform=node --format=cjs --packages=external --sourcemap --outfile=dist/server.cjs",
     "build:mock": "MOCK_SUPABASE=1 vite build",
     "start": "node dist/server.cjs",
     "preview": "vite preview",
@@ -18,11 +20,10 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:ui": "vitest --ui",
-    "clean": "rm -rf dist",
-    "lint": "tsc --noEmit"
+    "lint": "tsc --noEmit",
+    "clean": "rm -rf dist"
   },
   "dependencies": {
-    "@google/genai": "^2.7.0",
     "@livekit/components-react": "^2.9.21",
     "@supabase/supabase-js": "^2.105.4",
     "@tailwindcss/vite": "^4.1.14",
@@ -38,14 +39,11 @@
     "esbuild": "^0.28.0",
     "express": "^4.21.2",
     "firebase": "^12.14.0",
-    "form-data": "^4.0.5",
-    "google-auth-library": "^10.6.2",
+    "jose": "^6.2.12",
     "jszip": "^3.10.1",
     "livekit-client": "^2.19.2",
-    "livekit-server-sdk": "^2.15.4",
     "lucide-react": "^0.546.0",
     "motion": "^12.23.24",
-    "multer": "^2.1.1",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-error-boundary": "^6.1.1",
@@ -60,6 +58,7 @@
     "@testing-library/react": "^16.3.0",
     "@testing-library/user-event": "^14.6.1",
     "jsdom": "^25.0.1",
-    "vitest": "^3.2.4"
+    "vitest": "^3.2.4",
+    "wrangler": "^4.149.0"
   }
 }

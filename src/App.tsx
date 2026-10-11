@@ -5,7 +5,6 @@ import { LockService } from './services/LockService.ts';
 import { CacheService } from './services/CacheService.ts';
 import NotificationHandler from './components/NotificationHandler.tsx';
 import DesktopSidebar from './components/layout/DesktopSidebar';
-import IncomingCallNotification from './components/incoming-call/IncomingCallNotification.tsx';
 import { motion } from 'motion/react';
 import { useAuth } from './providers/AuthProvider';
 import { useTheme } from './contexts/ThemeContext';
@@ -485,7 +484,6 @@ export default function App() {
       <NavProvider>
         <LayoutProvider>
           <div className="app-container">
-            {user && <IncomingCallNotification />}
             <div className="flex-1 flex flex-col h-full relative overflow-hidden">
               {user && <NotificationHandler />}
               <div className="flex-1 h-full relative overflow-hidden">
@@ -563,10 +561,14 @@ export default function App() {
                     <Route path="/stories/create" element={user ? <StoryCreationScreen /> : <Navigate to="/login" />} />
                     <Route path="/login" element={(!user || storage.getItem('grix_adding_account') === 'true') ? <LoginScreen /> : <Navigate to="/chats" replace />} />
                     <Route path="/signup" element={(!user || storage.getItem('grix_adding_account') === 'true') ? <SignupScreen /> : <Navigate to="/chats" replace />} />
-                    <Route path="/forgot-password" element={<Navigate to="/login" replace />} />
+                    {/* Renders the login screen straight into its reset mode — the
+                        dedicated route used to bounce back to /login (KNOWN_ISSUES #8). */}
+                    <Route path="/forgot-password" element={(!user || storage.getItem('grix_adding_account') === 'true') ? <LoginScreen /> : <Navigate to="/chats" replace />} />
                     <Route path="/privacy-policy" element={<PrivacyPolicyScreen />} />
                     <Route path="/terms" element={<TermsAndConditionsScreen />} />
-                    <Route path="/search-user" element={<Navigate to="/profile" replace />} />
+                    {/* Reachable from the notifications empty state — this used to
+                        bounce straight back to /profile, making the CTA a no-op. */}
+                    <Route path="/search-user" element={user ? <SearchUserScreen /> : <Navigate to="/login" />} />
                     <Route path="*" element={<Navigate to="/chats" replace />} />
                   </Routes>
                 </React.Suspense>

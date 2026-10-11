@@ -17,7 +17,7 @@ Verification after the deletion:
 | Reachability re-scan | **0 dead files** (189/189 reachable from entry points) |
 | Broken relative imports | **0** |
 | `npm run lint` (`tsc --noEmit`) | **exit 0, 0 errors** — was 11 |
-| `npm test` | **78/78 pass** |
+| `npm test` | **99/99 pass** |
 | `npm run build` | **exit 0** |
 | Dev server module graph | **55 modules walked, 0 failures** |
 | `npm install` | 103 packages removed (7 unused deps) |
@@ -94,12 +94,34 @@ part of the 5-tab app.
 
 ### ⚠️ `src/server/server.ts` — this also fixed a deploy bug
 
-Two Express servers existed. `vercel.json` deployed `src/server/server.ts`,
-which was **missing `/api/grix-ai` and `/api/livekit-token`** — so GrixAI and
-calling would have 404'd on Vercel while working locally.
+Two Express servers existed. The deploy config of the day pointed at
+`src/server/server.ts`, which was **missing `/api/grix-ai` and
+`/api/livekit-token`** — so GrixAI and calling would have 404'd in production
+while working locally.
 
-Deleting it and repointing `vercel.json` at the root `server.ts` removes the
-divergence entirely. `vercel.json` was updated in the same change.
+Deleting it and repointing the deploy config at the root `server.ts` removed the
+divergence.
+
+### ⚠️ `vercel.json` and `.github/workflows/deploy.yml`
+
+Both were deploy targets for hosts that are not used any more, and both were
+broken in ways that only showed up after a deploy:
+
+- `vercel.json` described a Node server that no longer held the only copy of the
+  API. Keeping it meant maintaining a route table for a platform nothing ships
+  to.
+- The GitHub Pages workflow could never serve the app: `functions/` — the API —
+  only exists on Cloudflare, so a `github.io` build would have had a dead
+  backend. Its build step also required `VITE_BASE_URL=/grixchat/` because Pages
+  serves from a sub-path.
+
+Deployment is now **Cloudflare Pages** (static `dist/` + `functions/`), and the
+API itself moved into `server/api.ts` so the edge and the Node dev server run
+the same code. `.github/workflows/ci.yml` replaced the deploy workflow and only
+verifies — Cloudflare builds from the repository.
+
+Removed alongside: `vercel.json` (2 build entries + 9 route rules),
+`.github/workflows/deploy.yml`.
 
 ## Deleted — non-source files
 
@@ -182,3 +204,91 @@ procedure is:
 3. Anything under `src/` not reached is dead.
 
 `npm test` + `npm run lint` + `npm run build` are the regression gate.
+
+---
+
+## 2026-10-11 — SQL consolidation
+
+| Moved | From | Why |
+|---|---|---|
+| `grixchat_latest_db_updates.sql` | `sql/` | Older patch file with duplicate, differently-named policies — running it next to `01_schema.sql` created conflicting RLS |
+| `supabase_schema.sql` | `sql/` | Superseded by `01_schema.sql` |
+| `supabase_posts_schema.sql` | `sql/` | Superseded by `01_schema.sql` |
+| `supabase_support_tickets_schema.sql` | `sql/` | Superseded by `01_schema.sql` |
+| `db/1_complete_schema.sql` | `db/` | Early divergent design: `users.email UNIQUE NOT NULL`, `users.status`, `group_call_participants` — **would break a current project if run** |
+| `db/2_realtime_and_security.sql` | `db/` | The matching RLS pass for that design |
+| `db/3_webrtc_signaling_architecture.md` | `db/` → `docs/legacy/` | Design note for signalling that was never adopted (calling uses Broadcast) |
+
+All seven now live in [`sql/legacy/`](../sql/legacy/README.md) — parked, not
+deleted, with a README explaining that they must not be run.
+
+Also fixed in the same pass: `01_schema.sql`, `02_…` and `03_…` began with
+`DROP TABLE … CASCADE`. Re-running the documented setup on a live project
+therefore **deleted every user, message and post while reporting zero errors**.
+The drops are gone; the files are idempotent now, and
+`src/__tests__/sqlMigrations.test.ts` fails if anyone adds one back.
+
+## 2026-10-11 (later) — SQL files consolidated from 9 files into 2
+
+The setup had grown to nine files of very different sizes (9 to 832 lines), which
+made the run order fragile for anyone forking the repo. They were merged into two
+files that each sit in the 600–1000 line band the project now uses:
+
+| Was | Now |
+|---|---|
+| `01_core_schema.sql`, `02_posts_and_interactions_schema.sql`, `03_support_tickets_schema.sql`, `07_chat_time_scheduling_migration.sql`, `08_stories_expiration_and_views.sql` (tables/policies/indexes parts) | **`01_schema.sql`** — every table, column, constraint, policy and index |
+| `04_triggers_functions_and_rpc.sql`, `05_advanced_optimizations_and_realtime.sql`, `06_storage_configurations.sql`, `08_…` (RPCs), `09_egress_optimizations.sql` | **`02_functions_realtime_storage.sql`** — functions, triggers, realtime, storage, read marker |
+| `grixchat_full_setup.sql` (generated bundle) + `scripts/build-sql-bundle.mjs` | deleted — with only two files the bundle added a sync surface for no benefit |
+
+Two things got better on the way, not just smaller:
+
+* `05`'s insert-only `trg_update_conversation_on_message` and `09`'s
+  `trg_sync_conversation_last_message` both fired on every message INSERT and both
+  wrote `conversations` — double work and double realtime traffic per message. Only
+  the surviving trigger is created now, `02` explicitly drops the old one, and it
+  also keeps `conversations.updated_at` current (which the old one did).
+* The `last_message` picks are now tie-broken by `id`, so a conversation with two
+  messages sharing a timestamp always resolves to the same preview.
+
+`src/__tests__/sqlMigrations.test.ts` now also enforces the new house rules: every
+file between 600 and 1000 lines (the newest one may still be filling up), and a
+short `COVERS:` header at the top of each file instead of long prose.
+
+## 2026-10-11 (later) — the second incoming-call card, and two fake call features
+
+**`src/components/incoming-call/IncomingCallNotification.tsx`** — deleted.
+`App.tsx` mounted it *and* `CallProvider` rendered its own incoming-call card
+for the very same event, so a ring produced two cards and two ringtones. Worse,
+the App-level one only navigated to `/call/:id` without calling `acceptCall()`
+(the call never actually started for the receiver) and declined with
+`status: 'denied'`, which the `calls.status` CHECK constraint rejects
+(`ringing | accepted | rejected | ended | error`). The provider card is the one
+that works; the duplicate was routed around by nothing.
+
+**`useChatSync().receiverActiveChatId`** — deleted. It was state that nothing
+ever set, and the chat header used it to render `online - for you` /
+`online - for other` in place of a real presence label. The header now says
+`online`, or `last seen …`, or `typing…`.
+
+**Two call-screen controls that did nothing** — removed from
+`CallControlPanel`: `HD Video Calling` (toggled local state and printed
+"Premium HD Active"; no track was touched) and `Active Vocal Equalizer`
+(four filters that changed a label). `Switch Camera` was fake too and is now
+wired to the real `flipCamera()`; `Share Your Screen` is real (LiveKit
+`setScreenShareEnabled`, or `replaceTrack(getDisplayMedia())` on the P2P
+transport) and is disabled with an explanation on voice calls, where there is no
+video m-line to carry a shared screen.
+
+**The "Simulated Private Terminal" overlay** in `VideoFeed` was rendered
+unconditionally *on top of* the remote video (z-1 over z-0), so a live video
+call was hidden behind a blurred placeholder that said the call was still
+connecting. It now renders only while there is no remote video track.
+
+## 2026-10-11 — the call simulator gave way to real WebRTC
+
+| Removed | Why |
+|---|---|
+| `isSandboxSimulated` (state, context field, `setIsSandboxSimulated` calls) | It described the **fake** transport: a 1.8 s timer that flipped both phones to "connected" with no media. Calling now runs on either a real LiveKit room (when `LIVEKIT_*` + `VITE_LIVEKIT_URL` exist) or a real peer-to-peer `RTCPeerConnection` over `call-rtc:<callId>` (`src/features/call/services/WebRtcCallService.ts`), so there is no simulation left to flag. `CallScreen` keys the `LiveKitRoom` wrapper on `transport === 'livekit'` instead. |
+| The "Simulated Private Terminal" overlay branch in `VideoFeed` | It was keyed on that flag, so a real P2P video call showed a fake "waiting" panel *over* the live stream. The hairline-glass placeholder is now tied to `hasRemoteVideo` (a live remote video track) — wait vs. real. |
+| The caller's blind `connected` transition on the database's `accepted` row | On the peer-to-peer path nothing may report `connected` before ICE does; the media path now owns that transition and the `accepted` row only stops the ringtone. Without this, an answered-but-dead call started its duration counter on a silent line. |
+

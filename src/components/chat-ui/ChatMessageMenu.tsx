@@ -15,7 +15,7 @@ import {
   Info
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import EmojiPicker, { Theme as EmojiTheme } from 'emoji-picker-react';
+import { LazyEmojiPicker } from './LazyEmojiPicker';
 import { useTheme } from '../../contexts/ThemeContext';
 
 export interface ChatMessageMenuProps {
@@ -343,7 +343,7 @@ export const ChatMessageMenu: React.FC<ChatMessageMenuProps> = ({
 
                   {/* The actual inline emoji picker */}
                   <div className="rounded-[20px] overflow-hidden shadow-2xl bg-[var(--bg-card)] border border-[var(--border-color)]/60 w-[300px]">
-                    <EmojiPicker 
+                    <LazyEmojiPicker 
                       onEmojiClick={(emojiData) => {
                         if (performReactToMessage) {
                           performReactToMessage(activeMessageMenu.id, emojiData.emoji);
@@ -353,7 +353,7 @@ export const ChatMessageMenu: React.FC<ChatMessageMenuProps> = ({
                         setShowFullEmojiPicker(false);
                         setActiveMessageMenu(null);
                       }}
-                      theme={isDark ? EmojiTheme.DARK : EmojiTheme.LIGHT}
+                      theme={isDark ? 'dark' : 'light'}
                       lazyLoadEmojis={true}
                       searchPlaceholder="Search emojis..."
                       width={300}

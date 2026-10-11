@@ -12,8 +12,9 @@
 npm install
 npm run dev:mock      # full app, no credentials → http://localhost:3000
                       # login: demo@grixchat.app / grixchat
-npm test              # 78 tests, ~9s
+npm test              # 99 tests, ~14s
 npm run lint          # tsc --noEmit → 0 errors
+npx wrangler pages dev dist   # optional: the API in the real Cloudflare runtime
 ```
 
 `npm run dev:mock` runs the real app against an in-memory Supabase mock
@@ -33,9 +34,17 @@ code path your change exercised.
 - **Firebase is FCM-only.** No Firestore, no Firebase Auth, no Firebase
   Storage. (`firestore.rules` and `firebase-blueprint.json` at the repo root
   are historical leftovers — ignore them.)
-- **The Express server holds no application data.** It exists only to keep
-  secrets server-side: Gemini, FCM service account, LiveKit tokens, GitHub
-  OAuth. See `server.ts`.
+- **Production is Cloudflare Pages.** The static site is `dist/`, the API is
+  `functions/` (Pages Functions), and both deploy from this repo to
+  <https://grixchat.gothwadtech.com>. There is no other deploy target to keep in
+  sync.
+- **The API holds no application data.** It exists only to keep secrets
+  server-side: Gemini, FCM service account, LiveKit tokens, GitHub OAuth. All of
+  it is `server/api.ts`, written against the Web `Request`/`Response` API so the
+  exact same file runs on Cloudflare *and* under Express (`server.ts`, used for
+  `npm run dev`). **Add a route there — never in an adapter.** Nothing in
+  `server/api.ts` may import a Node built-in (`fs`, `path`, `crypto`, `Buffer`);
+  Node-only abilities are injected as capabilities (`REPO_FS`).
 - **Calling:** WebRTC, signalled over Supabase channels, state in
   `providers/CallProvider.tsx` so a call survives navigation.
 - **Platform target:** PWA + an Android WebView (TWA) wrapper with an
@@ -75,6 +84,40 @@ list screens.
 
 Initial loads are 20–30 rows. `ChatService.getMessages(id, limit = 50)`.
 
+**Every list query gets a `limit`.** No exceptions — an unbounded `.select()`
+is a full table download billed as egress.
+
+### E. A Realtime event patches state — it never triggers a list-wide query
+
+**A Realtime event may patch state. It may never trigger a list-wide query.**
+
+The payload is the data. One incoming message updates one row in the
+conversation list, in place, from the event itself:
+
+```ts
+// ❌ banned — every message re-downloads the whole conversation list
+.on('postgres_changes', {event: 'INSERT', schema: 'public', table: 'messages'}, () => fetchConversations())
+
+// ✅ required — the payload is enough (useConversations.patchConversationFromMessage)
+.on('postgres_changes', {event: 'INSERT', ...}, (payload) => patchConversationFromMessage(payload.new))
+```
+
+Refetching a whole list on individual events is what burned 5 GB/month with
+three active users. Mount, focus and *structural* changes (a chat added, a
+participant changed) may refetch — traffic may not. Full analysis and the
+measurements: **[EGRESS_AUDIT.md](./EGRESS_AUDIT.md)**. The two rules are
+machine-checked by `src/__tests__/egressBudget.test.ts` (the list query stays
+narrow and message-free) and `src/__tests__/egressRealtime.test.tsx` (an
+incoming message causes zero `conversations` /
+`conversation_participants` queries).
+
+### F. Narrow selects, always
+
+Never `select('*')` on a shared table, and never `users(*)` for other people —
+the row carries `settings`, `lock` (passcode hash), `fcm_tokens` and six
+private arrays. Name the columns: the conversation list needs six of them.
+Response bytes are egress, whether or not you render them.
+
 ---
 
 ## 3. Code structure
@@ -97,7 +140,16 @@ Initial loads are 20–30 rows. `ChatService.getMessages(id, limit = 50)`.
 - **No loose `any`.** There are currently 470 of them — that is technical
   debt to burn down, not a licence to add more.
 - `src/types/database.types.ts` **does not exist yet**. Generate it
-  (`supabase gen types typescript`) and prefer it over hand-written row shapes.
+  (`supabase gen types typescript --project-id <id>`) and prefer it over
+  hand-written row shapes.
+- Browser → `/api` calls go through `src/lib/apiClient.ts`; it attaches the
+  Supabase access token the API verifies. Never call the API routes with a bare
+  `fetch` — you will get a 401.
+- Adding a server route? Put it in `server/api.ts` and make sure it bundles for
+  the edge: `npx wrangler pages functions build`. The CI workflow does this on
+  every push.
+- Notifications: write through `services/db/notificationService.ts` only, and
+  read the `content` column (`sql/01_schema.sql` has no `text`).
 
 ### File size
 
@@ -135,7 +187,7 @@ aliased to `dev/mock/` in `vitest.config.ts` so a test can never reach a real
 project.
 
 ```bash
-npm test             # 78 tests, 5 files
+npm test             # 99 tests, 7 files
 npm run test:watch
 ```
 
@@ -143,6 +195,7 @@ npm run test:watch
 |---|---|---|
 | Mock contract | `dev/mock/__tests__/` | pins PostgREST semantics so the mock cannot silently drift |
 | Real services | `src/__tests__/chatService.test.ts` | the shipped `ChatService` against seeded data |
+| Real API | `src/__tests__/apiRoutes.test.ts` | `handleApiRequest` — auth, CORS/origin guard, body caps, routing |
 | Real UI | `src/__tests__/app.smoke.test.tsx` | renders `<App />`, drives the login form, asserts the chat list |
 
 Rules:
@@ -161,16 +214,20 @@ Rules:
 |---|---|
 | `npm run build` | ✅ passes |
 | `npm run dev` / `dev:mock` | ✅ passes |
-| `npm test` | ✅ 78/78 |
+| `npm test` | ✅ 104/104 |
 | `npm run lint` | ✅ 0 errors |
 | Dead code | ✅ **0 files** — 189/189 reachable. See [`docs/DEAD_CODE.md`](./docs/DEAD_CODE.md) |
+| SQL migrations | ✅ `01_schema.sql` + `02_functions_realtime_storage.sql`, both re-runnable (fresh install + re-run on live data verified), 600–1000 lines each, guarded by `src/__tests__/sqlMigrations.test.ts` |
 | Tables queried but missing from `sql/` | ✅ 0 |
 | RPCs called but missing from `sql/` | ✅ 0 |
-| Vercel deploy | ✅ fixed — duplicate server deleted, `vercel.json` → `server.ts` |
-| GitHub Pages deploy | ⚠️ needs `VITE_BASE_URL=/grixchat/` in the workflow |
-| `/api/send-notification`, `/api/upload-file` | 🔴 **unauthenticated** — fix before any public deploy |
-| `notifications` table | ⚠️ nothing writes to it any more; reader uses `text`, schema says `content` |
-| Test coverage | ⚠️ only the login→chat path is exercised |
+| Cloudflare Pages deploy | ✅ `dist/` + `functions/` → <https://grixchat.gothwadtech.com> |
+| Node self-host path | ✅ `npm run build:all && npm run start` |
+| `/api/send-notification`, `/api/upload-file` | ✅ **authenticated** + rate limited + allowlisted (see `authenticate` in `server/api.ts`) |
+| Notifications inbox | ✅ written by `services/db/notificationService.ts`, read from `content` |
+| CI | ✅ typecheck + test + Functions bundle check + build (no deploy step) |
+| Pages secrets | 🧑 **check they are set in the Cloudflare dashboard** — see KNOWN_ISSUES |
+| Egress | ✅ list query patched from Realtime payloads, 0 bytes per message — see [`docs/EGRESS_AUDIT.md`](./docs/EGRESS_AUDIT.md) |
+| Test coverage | ⚠️ only login→chat, the notification writer, the reset route and the two egress guards are exercised |
 
 Full prioritised list: **[`docs/KNOWN_ISSUES.md`](./docs/KNOWN_ISSUES.md)**.
 
@@ -195,5 +252,7 @@ change.
 | [`docs/DATA_MODEL.md`](./docs/DATA_MODEL.md) | every table and RPC, and what is missing |
 | [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md) | directory map, data flow, what is reachable |
 | [`docs/KNOWN_ISSUES.md`](./docs/KNOWN_ISSUES.md) | prioritised bug/fix list |
+| [`docs/EGRESS_AUDIT.md`](./docs/EGRESS_AUDIT.md) | Supabase egress, Realtime traffic, list-query rules |
+| [`sql/00_master_instructions.md`](./sql/00_master_instructions.md) | database setup, schema updates, verification |
 | [`docs/DEAD_CODE.md`](./docs/DEAD_CODE.md) | the deletion record — what was removed and why |
 | [`docs/legacy/`](./docs/legacy/) | historical — **not current guidance** |

@@ -5,6 +5,8 @@ import { supabase } from '../../lib/supabase';
 import { LocalDataCache } from '../../services/LocalDataCache';
 import { useTheme } from '../../contexts/ThemeContext';
 import Avatar from '../common/Avatar';
+import { isUserOnline } from '../../utils/presence';
+import { useLivePresence } from '../../providers/PresenceProvider';
 
 interface ChatForwardOverlayProps {
   isOpen: boolean;
@@ -21,6 +23,7 @@ export const ChatForwardOverlay: React.FC<ChatForwardOverlayProps> = ({
   currentUserId,
   onForwardComplete
 }) => {
+  const liveOf = useLivePresence();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
@@ -50,7 +53,7 @@ export const ChatForwardOverlay: React.FC<ChatForwardOverlayProps> = ({
         if (supabase) {
           const { data: usersData } = await supabase
             .from('users')
-            .select('id, username, full_name, photo_url, is_online')
+            .select('id, username, full_name, photo_url, is_online, last_seen')
             .neq('id', currentUserId)
             .limit(30);
 
@@ -64,7 +67,7 @@ export const ChatForwardOverlay: React.FC<ChatForwardOverlayProps> = ({
                 name: u.full_name || u.username || 'Grix User',
                 username: u.username || '',
                 photoURL: u.photo_url || '',
-                isOnline: u.is_online === true,
+                isOnline: isUserOnline(u.is_online, u.last_seen),
               }));
 
             setItems([...convoItems, ...userItems]);
@@ -190,7 +193,7 @@ export const ChatForwardOverlay: React.FC<ChatForwardOverlayProps> = ({
                       url={item.photoURL} 
                       type={item.isGroup ? 'group' : 'direct'} 
                       name={item.name} 
-                      isOnline={item.isOnline}
+                      isOnline={item.isConversation ? item.isOnline : (liveOf(item.id) ?? item.isOnline)}
                     />
                     {isSelected && (
                       <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-[var(--primary)] border-2 border-[var(--bg-card)] flex items-center justify-center shadow-md z-20 animate-scale-in">

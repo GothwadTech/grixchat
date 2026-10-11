@@ -89,7 +89,8 @@ export default function StoryCreationScreen() {
       });
 
       if (error) throw error;
-      navigate('/chats');
+      // Straight back to the status list, where the new story is now on top.
+      navigate('/stories');
     } catch (err) {
       console.error('Failed to create story:', err);
       alert('Failed to publish story. Please try again.');
@@ -104,7 +105,7 @@ export default function StoryCreationScreen() {
       <div className="h-16 border-b border-white/5 bg-black/40 backdrop-blur-md flex items-center justify-between px-4 shrink-0 z-15">
         <div className="flex items-center gap-2">
           <button 
-            onClick={() => navigate('/chats')}
+            onClick={() => navigate('/stories')}
             className="p-1.5 hover:bg-white/5 rounded-full transition-colors cursor-pointer"
           >
             <ArrowLeft size={22} className="text-zinc-300" />

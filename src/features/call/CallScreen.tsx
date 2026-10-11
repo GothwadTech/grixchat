@@ -35,7 +35,7 @@ export default function CallScreen() {
     flipCamera,
     stopSounds,
     room,
-    isSandboxSimulated
+    transport
   } = useCall();
   
   const queryParams = new URLSearchParams(location.search);
@@ -61,11 +61,21 @@ export default function CallScreen() {
       .catch(e => console.warn("Error fetching calling recipient details:", e));
   }, [otherUserId]);
 
-  // Initiate call if we are the caller and no active call exists
+  // Ring exactly once per visit to this screen. The guard matters: without it
+  // the effect re-fired the instant a call ended (`activeCall` → null), so the
+  // moment the other side hung up we re-dialled them — the "call keeps coming
+  // back on its own" bug.
+  const ringStartedRef = useRef(false);
   useEffect(() => {
-    if (!isReceiver && otherUserId && !activeCall) {
-      initiateCall(otherUserId, type);
+    if (isReceiver || !otherUserId || ringStartedRef.current) return;
+    // A call that is already up (the user navigated back into the screen) is
+    // adopted, not re-dialled.
+    if (activeCall) {
+      ringStartedRef.current = true;
+      return;
     }
+    ringStartedRef.current = true;
+    initiateCall(otherUserId, type);
   }, [isReceiver, otherUserId, activeCall, initiateCall, type]);
 
   // Ultra-reliable continuous polling and synchronization safeguard to bypass React parent/child mount delays
@@ -174,6 +184,10 @@ export default function CallScreen() {
   }, [activeCall, navigate]);
 
   const currentStatus = activeCall?.status || 'connecting';
+  // The placeholder overlay may only cover the wait, never a live stream.
+  const hasRemoteVideo = Boolean(
+    remoteStream && remoteStream.getVideoTracks().some((track) => track.readyState === 'live'),
+  );
   const partnerUser = activeCall?.receiver || receiver;
 
   // Volume controls are now consolidated under the remote stream handler above
@@ -189,6 +203,7 @@ export default function CallScreen() {
           callStatus={currentStatus}
           timer={timer}
           receiver={partnerUser}
+          hasRemoteVideo={hasRemoteVideo}
         />
       )}
 
@@ -223,12 +238,15 @@ export default function CallScreen() {
         onToggleVideo={toggleVideo}
         onToggleSpeaker={toggleSpeaker}
         onToggleScreenShare={toggleScreenShare}
+        onFlipCamera={flipCamera}
+        // LiveKit can add a camera mid-call; the P2P transport cannot.
+        videoToggleAvailable={type === 'video' || transport === 'livekit'}
         onEndCall={handleEndCall}
       />
     </div>
   );
 
-  if (room && !isSandboxSimulated) {
+  if (room && transport === 'livekit') {
     return (
       <LiveKitRoom room={room} token="" serverUrl="">
         {innerUI}

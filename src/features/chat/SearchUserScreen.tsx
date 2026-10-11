@@ -2,10 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../providers/AuthProvider.tsx';
-import { Search, X, ArrowLeft, Loader2, Play, MessageSquare } from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
+import { Search, X, ArrowLeft, Loader2, MessageSquare } from 'lucide-react';
 import { isUserOnline } from '../../utils/presence';
 import Avatar from '../../components/common/Avatar';
+import { useLivePresence } from '../../providers/PresenceProvider';
 
 interface UserProfile {
   uid: string;
@@ -15,20 +15,20 @@ interface UserProfile {
   isOnline?: boolean;
 }
 
-type SearchTab = 'users' | 'videos' | 'reels';
-
 const UserItem = ({ 
   user, 
   navigate
 }: { 
   user: UserProfile; 
   navigate: any; 
-}) => (
+}) => {
+  const liveOf = useLivePresence();
+  return (
   <div 
     onClick={() => navigate(`/user/${user.uid}`)}
     className="flex items-center gap-3 p-4 hover:bg-[var(--bg-main)] transition-colors cursor-pointer group"
   >
-    <Avatar url={user.photoURL} type="direct" size="md" name={user.username} isOnline={user.isOnline} />
+    <Avatar url={user.photoURL} type="direct" size="md" name={user.username} isOnline={liveOf(user.uid) ?? user.isOnline} />
     <div className="flex-1 min-w-0">
       <h4 className="text-sm font-bold text-[var(--text-primary)] truncate">{user.fullName || user.username}</h4>
       <p className="text-xs text-[var(--text-secondary)] truncate">@{user.username}</p>
@@ -44,37 +44,8 @@ const UserItem = ({
       <span>Message</span>
     </button>
   </div>
-);
-
-const VideoGridItem = ({ video, onClick }: { video: any, onClick: () => void }) => (
-  <div onClick={onClick} className="relative aspect-video bg-black rounded-xl overflow-hidden shadow-md group cursor-pointer border border-[var(--border-color)]/20">
-    <img src={video.thumbnail_url || video.thumbnail} className="w-full h-full object-cover transition-transform group-hover:scale-110" alt={video.title} />
-    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent flex flex-col justify-end p-3">
-      <h4 className="text-[11px] font-bold text-white line-clamp-1">{video.title}</h4>
-      <p className="text-[9px] text-white/70 line-clamp-1">{video.user?.full_name || video.userName}</p>
-    </div>
-    <div className="absolute top-2 right-2 px-1 py-0.5 bg-black/60 text-white text-[9px] font-bold rounded">
-      {video.duration || '0:00'}
-    </div>
-    <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-      <div className="w-10 h-10 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center border border-white/30">
-        <Play className="text-white fill-current" size={20} />
-      </div>
-    </div>
-  </div>
-);
-
-const ReelGridItem = ({ reel, onClick }: { reel: any, onClick: () => void }) => (
-  <div onClick={onClick} className="relative aspect-[9/16] bg-black rounded-xl overflow-hidden shadow-md group cursor-pointer border border-[var(--border-color)]/20">
-    <img src={reel.thumbnail_url || reel.video_url || reel.videoUrl} className="w-full h-full object-cover transition-transform group-hover:scale-110" alt={reel.caption} />
-    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent flex items-end p-2">
-      <div className="flex items-center gap-1.5 overflow-hidden">
-        <Play size={10} className="text-white fill-current" />
-        <span className="text-[10px] font-bold text-white truncate">{reel.likes_count || reel.likes || 0}</span>
-      </div>
-    </div>
-  </div>
-);
+  );
+};
 
 export default function SearchUserScreen() {
   const navigate = useNavigate();

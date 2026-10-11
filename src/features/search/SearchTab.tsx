@@ -16,6 +16,7 @@ import Avatar from '../../components/common/Avatar';
 import { CommonSearchBar } from '../../components/common/CommonSearchBar';
 import { LocalDataCache } from '../../services/LocalDataCache';
 import { useCall } from '../../providers/CallProvider';
+import { useLivePresence } from '../../providers/PresenceProvider';
 
 interface UserProfile {
   uid: string;
@@ -26,6 +27,8 @@ interface UserProfile {
 }
 
 export default function SearchTab() {
+  // Live roster overlay — the DB columns are only the fallback.
+  const liveOf = useLivePresence();
   const navigate = useNavigate();
   const { user: authUser, userData } = useAuth();
   const { initiateCall } = useCall();
@@ -121,7 +124,10 @@ export default function SearchTab() {
         if (friendsData) {
           const formatted = friendsData.map(f => {
             const lastSeen = f.last_seen;
-            const isOnline = !!(f.is_online && lastSeen && (new Date().getTime() - new Date(lastSeen).getTime()) < 65000);
+            // Same window as everywhere else (`utils/presence.ts`) — this used
+            // to be a private 65-second rule, so the same user was "online" in
+            // the search list and "offline" in the chat list.
+            const isOnline = isUserOnline(f.is_online, lastSeen);
             return {
               uid: f.id,
               username: f.username,
@@ -230,7 +236,7 @@ export default function SearchTab() {
           url={profile.photoURL} 
           type="direct" 
           name={profile.fullName || profile.username || 'GrixUser'} 
-          isOnline={profile.isOnline}
+          isOnline={liveOf(profile.uid) ?? profile.isOnline}
         />
         
         <div className="flex-1 min-w-0 flex flex-col justify-center">

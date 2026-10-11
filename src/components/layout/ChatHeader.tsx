@@ -34,7 +34,6 @@ interface ChatHeaderProps {
   optionsRef: React.RefObject<HTMLDivElement | null>;
   isTyping?: boolean;
   receiverStatus?: 'online' | 'offline';
-  receiverActiveChatId?: string | null;
   currentUserId?: string;
   type?: 'direct' | 'group';
 
@@ -73,7 +72,6 @@ export default function ChatHeader({
   optionsRef,
   isTyping,
   receiverStatus,
-  receiverActiveChatId,
   currentUserId,
   type = 'direct',
 
@@ -109,15 +107,10 @@ export default function ChatHeader({
 
   const getStatusText = () => {
     if (isGroup) return 'tap here for group info';
-    if (isTyping) return 'online - typing';
+    if (isTyping) return 'typing…';
+    // Live presence drives `isOnline`; when it says nobody is there we show the
+    // durable "last seen …" string instead.
     if (!isOnline) return formatLastSeen(receiver?.lastSeen);
-    
-    if (receiverActiveChatId === currentUserId) {
-      return 'online - for you';
-    } else if (receiverActiveChatId) {
-      return 'online - for other';
-    }
-    
     return 'online';
   };
   

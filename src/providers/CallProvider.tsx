@@ -1,11 +1,35 @@
 import React, { createContext, useContext, useEffect, useState, useRef } from 'react';
 import { supabase } from '../lib/supabase';
+import { apiFetch } from '../lib/apiClient';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from './AuthProvider';
 import { Phone, PhoneOff, Video, Volume2, ShieldAlert } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { CallStatus, CallType } from '../features/call/types/callTypes';
 import { Room, RoomEvent, Track } from 'livekit-client';
+import { webRtcCallService } from '../features/call/services/WebRtcCallService';
+
+/**
+ * How long the caller rings before the call is written off as missed. Every
+ * other timeout in the file is derived from it, so the two sides can never
+ * disagree about when a call is over.
+ */
+const RING_TIMEOUT_MS = 45_000;
+/**
+ * A ringing row may only be force-closed by the periodic sweep *after* the
+ * caller's own timeout has had time to fire — otherwise the receiver's sweep
+ * kills calls the caller is still legitimately ringing (the old 40 s sweep
+ * raced the 45 s give-up).
+ */
+const ZOMBIE_THRESHOLD_MS = RING_TIMEOUT_MS + 8_000;
+/**
+ * Once the receiver has picked up, the media path has this long to come up.
+ * Without it, a peer that accepts and then fails to produce media (permission
+ * denied, dead tab) left the other side ringing forever: the database said
+ * `accepted`, so the ring timeout no longer applied.
+ */
+const CONNECT_WATCHDOG_MS = 20_000;
+const ZOMBIE_SWEEP_MS = 20_000;
 
 // Highly-polished Web Audio API sound designer for native-like offline-resilient calling sounds
 class PhoneRingtones {
@@ -112,6 +136,24 @@ class PhoneRingtones {
     }
   }
 
+  /**
+   * Mobile browsers only allow audio after a user gesture. The ringtone must
+   * not be silently swallowed just because nobody has tapped on this tab yet,
+   * so the first interaction anywhere unlocks the shared AudioContext.
+   */
+  static unlock() {
+    try {
+      if (!this.audioCtx) {
+        this.audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      }
+      if (this.audioCtx.state === 'suspended') {
+        this.audioCtx.resume().catch(() => {});
+      }
+    } catch (_) {
+      /* no Web Audio — the vibration + visual card still work */
+    }
+  }
+
   static stop() {
     if (this.ringInterval) {
       clearInterval(this.ringInterval);
@@ -153,7 +195,8 @@ interface CallContextType {
   playOutgoingBeep: () => void;
   stopSounds: () => void;
   room: Room | null;
-  isSandboxSimulated: boolean;
+  /** `livekit` = SFU room, `p2p` = direct WebRTC, `none` = no media path. */
+  transport: 'none' | 'livekit' | 'p2p';
 }
 
 const CallContext = createContext<CallContextType | undefined>(undefined);
@@ -177,7 +220,8 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isScreenSharing, setIsScreenSharing] = useState(false);
   const [facingMode, setFacingMode] = useState<'user' | 'environment'>('user');
   const [room, setRoom] = useState<Room | null>(null);
-  const [isSandboxSimulated, setIsSandboxSimulated] = useState<boolean>(true);
+  /** Which media path is carrying this call: LiveKit, direct WebRTC, or none. */
+  const [transport, setTransport] = useState<'none' | 'livekit' | 'p2p'>('none');
 
   // LiveKit internal refs
   const roomRef = useRef<Room | null>(null);
@@ -185,13 +229,63 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const remoteStreamRef = useRef<MediaStream | null>(null);
   const activeCallChannelRef = useRef<any>(null);
   const initiatingCallRef = useRef<boolean>(false);
+  /** Mirror of `activeCall` for async callbacks that must not read stale state. */
+  const activeCallRef = useRef<ActiveCallState | null>(null);
+  /** The 45 s "nobody answered" timer, cleared as soon as the call resolves. */
+  const ringTimeoutRef = useRef<any>(null);
+  /** Repeating haptic pattern while an incoming call is ringing. */
+  const vibrateTimerRef = useRef<any>(null);
+  /** Fires if an answered call's media path never comes up. */
+  const connectWatchdogRef = useRef<any>(null);
 
-  // Reset sounds on status change
+  // Keep the async-callback mirror in sync
+  useEffect(() => {
+    activeCallRef.current = activeCall;
+  }, [activeCall]);
+
+  // Reset sounds / haptics on status change
   useEffect(() => {
     if (activeCall && ['connected', 'ended', 'denied', 'error', 'offline'].includes(activeCall.status)) {
       PhoneRingtones.stop();
+      stopVibration();
+    }
+    if (activeCall && ['connected', 'ended', 'denied', 'error', 'offline', 'rejected'].includes(activeCall.status)) {
+      if (ringTimeoutRef.current) {
+        clearTimeout(ringTimeoutRef.current);
+        ringTimeoutRef.current = null;
+      }
     }
   }, [activeCall?.status]);
+
+  /** Telegram-style: keep buzzing until somebody picks up or the ring dies. */
+  const startVibration = () => {
+    if (typeof navigator === 'undefined' || !navigator.vibrate) return;
+    stopVibration();
+    const buzz = () => {
+      try { navigator.vibrate([400, 300, 400]); } catch (_) {}
+    };
+    buzz();
+    vibrateTimerRef.current = setInterval(buzz, 2500);
+  };
+
+  const stopVibration = () => {
+    if (vibrateTimerRef.current) {
+      clearInterval(vibrateTimerRef.current);
+      vibrateTimerRef.current = null;
+    }
+    try { navigator?.vibrate?.(0); } catch (_) {}
+  };
+
+  // Unlock Web Audio on the first gesture of the session (see PhoneRingtones.unlock)
+  useEffect(() => {
+    const unlock = () => PhoneRingtones.unlock();
+    window.addEventListener('pointerdown', unlock, { once: true });
+    window.addEventListener('keydown', unlock, { once: true });
+    return () => {
+      window.removeEventListener('pointerdown', unlock);
+      window.removeEventListener('keydown', unlock);
+    };
+  }, []);
 
   // Defensive Auto-reconciliation of stale zombie calls matching current user
   useEffect(() => {
@@ -199,7 +293,7 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const cleanupStaleZombieCalls = async () => {
       try {
-        const thresholdDate = new Date(Date.now() - 40000).toISOString();
+        const thresholdDate = new Date(Date.now() - ZOMBIE_THRESHOLD_MS).toISOString();
         
         // Find existing ringing calls where the user was a caller/receiver and they have timed out
         const { data: staleCalls } = await supabase
@@ -214,7 +308,7 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
           console.log("[Call System] Auto-cleaning stale zombie calls: ", ids);
           await supabase
             .from('calls')
-            .update({ status: 'ended' } as any)
+            .update({ status: 'ended', is_missed: true } as any)
             .in('id', ids);
         }
       } catch (err) {
@@ -224,8 +318,10 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     cleanupStaleZombieCalls();
     
-    // Periodically sweep every 30 seconds to prevent lingering items on this session
-    const interval = setInterval(cleanupStaleZombieCalls, 30000);
+    // Periodic safety net for rows whose caller vanished (closed laptop, killed
+    // tab). It must be slower than the caller's own timeout — see the
+    // ZOMBIE_THRESHOLD_MS comment.
+    const interval = setInterval(cleanupStaleZombieCalls, ZOMBIE_SWEEP_MS);
     return () => clearInterval(interval);
   }, [authUser?.id]);
 
@@ -280,6 +376,14 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Helper local shutdown
   const handleEndCallLocally = async () => {
+    // 0. Close the peer-to-peer session (no-op when LiveKit is carrying it)
+    try {
+      webRtcCallService.stop();
+    } catch (err) {
+      console.warn('[P2P] teardown failed:', err);
+    }
+    setTransport('none');
+
     // 1. Terminate and disconnect LiveKit Room
     if (roomRef.current) {
       try {
@@ -290,7 +394,6 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
       roomRef.current = null;
     }
     setRoom(null);
-    setIsSandboxSimulated(true);
 
     // 2. Tear down streams
     if (localStreamRef.current) {
@@ -322,6 +425,12 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     PhoneRingtones.stop();
+    stopVibration();
+    if (ringTimeoutRef.current) {
+      clearTimeout(ringTimeoutRef.current);
+      ringTimeoutRef.current = null;
+    }
+    clearConnectWatchdog();
     setActiveCall(null);
     setIncomingCall(null);
     setCaller(null);
@@ -347,9 +456,9 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (!error && data && data.length > 0) {
         const callData = data[0];
-        // Ensure call is created within last 30 seconds to avoid stale rings
+        // A ring older than the ringing window is a zombie: do not resurrect it.
         const callAgeMs = new Date().getTime() - new Date(callData.created_at).getTime();
-        if (callAgeMs < 30000) {
+        if (callAgeMs < RING_TIMEOUT_MS) {
           setIncomingCall(callData);
           setCaller({
             id: callData.caller_id,
@@ -359,19 +468,19 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
           });
           
           PhoneRingtones.playRingtone();
-          if (navigator.vibrate) {
-            navigator.vibrate([400, 300, 400, 300, 400]);
-          }
+          startVibration();
         } else {
           // Explicit cleanup for stale, unanswered rings fetched from database
           setIncomingCall(null);
           setCaller(null);
           PhoneRingtones.stop();
+          stopVibration();
         }
       } else {
         setIncomingCall(null);
         setCaller(null);
         PhoneRingtones.stop();
+        stopVibration();
       }
     };
 
@@ -392,6 +501,7 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setIncomingCall(null);
           setCaller(null);
           PhoneRingtones.stop();
+          stopVibration();
           return;
         }
 
@@ -400,6 +510,7 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setIncomingCall(null);
             setCaller(null);
             PhoneRingtones.stop();
+            stopVibration();
           } else if (currentData.status === 'ringing') {
             fetchIncomingCall();
           }
@@ -449,15 +560,19 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setRemoteStream(mediaStream);
   };
 
-  // Helper connection logic
-  const connectToLiveKitSession = async (roomName: string, participantIdentity: string, callType: CallType) => {
+  /**
+   * LiveKit transport. Returns `false` when the project has no LiveKit
+   * credentials (or no `VITE_LIVEKIT_URL`), which means the caller should use
+   * the peer-to-peer transport instead. Returns `true` once a real room is up.
+   */
+  const connectViaLiveKit = async (roomName: string, participantIdentity: string, callType: CallType): Promise<boolean> => {
     try {
       console.log(`[Calling] Fetching secure token from backend for room_id: ${roomName}...`);
       
       let payload = { success: false, token: "mock-livekit-token-sandbox", error: "" };
       
       try {
-        const res = await fetch("/api/livekit-token", {
+        const res = await apiFetch("/api/livekit-token", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ roomName, participantIdentity })
@@ -468,13 +583,13 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
           if (contentType && contentType.includes("application/json")) {
             payload = await res.json();
           } else {
-            console.warn("[Calling] Received non-JSON response from backend. Defaulting to sandbox mode.");
+            console.warn('[Calling] The token endpoint answered with something other than JSON — falling back to peer-to-peer.');
           }
         } else {
-          console.warn(`[Calling] Backend token generation returned status ${res.status}. Defaulting to sandbox mode.`);
+          console.warn(`[Calling] The token endpoint returned status ${res.status} — falling back to peer-to-peer.`);
         }
       } catch (fetchErr) {
-        console.warn("[Calling] Failed to communicate with livekit-token API or parse JSON. Defaulting to sandbox mode:", fetchErr);
+        console.warn('[Calling] Could not reach the LiveKit token endpoint — falling back to peer-to-peer:', fetchErr);
       }
       
       // Fallback or explicit cloud address
@@ -482,47 +597,20 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       let token = payload.token;
       
-      // Check if we are running in simulator/sandbox without active LiveKit credentials.
-      const isSandboxSimulatedVal = !payload.success || !livekitUrl || token === "mock-livekit-token-sandbox";
-      setIsSandboxSimulated(isSandboxSimulatedVal);
+      // No LiveKit on this deployment (no credentials, no URL, or the API
+      // answered with the sandbox marker) → the caller uses real WebRTC.
+      const liveKitUnavailable = !payload.success || !livekitUrl || token === "mock-livekit-token-sandbox";
 
-      if (isSandboxSimulatedVal) {
-        console.warn(`[Grix Peer Simulator] Running high-fidelity local peer calling simulator for sandboxed/demo preview.`);
-        
-        // Try to capture user's real camera & microphone so they see themselves live
-        try {
-          const stream = await navigator.mediaDevices.getUserMedia({
-            video: callType === 'video',
-            audio: true
-          });
-          localStreamRef.current = stream;
-          setLocalStream(stream);
-          console.log("[Grix Peer Simulator] Successfully captured local user webcam track!");
-        } catch (mediaErr) {
-          console.warn("[Grix Peer Simulator] Media permission denied, setting clean avatar fallback:", mediaErr);
-        }
-
-        // Auto-answer scenario after a very short latency delay to connect callers/receivers
-        setTimeout(() => {
-          setActiveCall(prev => {
-            if (prev) {
-              const updated = { ...prev, status: 'connected' as CallStatus };
-              console.log("[Grix Peer Simulator] Call fully connected! Syncing state.");
-              return updated;
-            }
-            return prev;
-          });
-          PhoneRingtones.stop();
-        }, 1800);
-
-        return;
+      if (liveKitUnavailable) {
+        console.warn('[Calling] LiveKit is not configured; using the peer-to-peer transport.');
+        return false;
       }
 
       if (!token) {
         throw new Error(payload.error || "Failed to generate LiveKit endpoint credentials.");
       }
 
-      setIsSandboxSimulated(false);
+      setTransport('livekit');
 
       // Establish Room Client
       const roomInstance = new Room({
@@ -561,6 +649,7 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       roomInstance.on(RoomEvent.ParticipantConnected, (p) => {
         console.log(`[LiveKit] Peer Participant online:`, p.identity);
+        clearConnectWatchdog();
         setActiveCall(prev => {
           if (prev && prev.status !== 'connected') {
             return { ...prev, status: 'connected' };
@@ -592,10 +681,159 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       updateLocalStreamFromRoom(roomInstance);
+      return true;
 
     } catch (error: any) {
       console.error("[LiveKit Initialization Error]", error);
-      setActiveCall(prev => prev ? { ...prev, status: 'error' } : null);
+      // A half-open room would steal the media toggles from the P2P fallback.
+      if (roomRef.current) {
+        try {
+          roomRef.current.disconnect();
+        } catch (_) {
+          /* ignore */
+        }
+        roomRef.current = null;
+      }
+      setRoom(null);
+      return false;
+    }
+  };
+
+  const clearConnectWatchdog = () => {
+    if (connectWatchdogRef.current) {
+      clearTimeout(connectWatchdogRef.current);
+      connectWatchdogRef.current = null;
+    }
+  };
+
+  /**
+   * The receiver answered but no media path appeared (they denied the camera
+   * permission, their tab died, …). Give the handshake a window, then end the
+   * call honestly instead of ringing into the void.
+   */
+  const armConnectWatchdog = () => {
+    clearConnectWatchdog();
+    connectWatchdogRef.current = setTimeout(() => {
+      connectWatchdogRef.current = null;
+      const call = activeCallRef.current;
+      if (!call || call.status === 'connected') return;
+      console.warn('[Calling] the answered call never produced a media path');
+      void endCallFromTransport('error');
+    }, CONNECT_WATCHDOG_MS);
+  };
+
+  /**
+   * Closes the `calls` row and writes exactly one chat log entry for it.
+   *
+   * Idempotent on purpose: when a call ends, both sides notice at the same
+   * instant (one hangs up, the other sees the media path close), and the first
+   * writer wins. The status filter makes the second write a no-op *and* tells
+   * us whether we were the first — which is what decides who logs the message.
+   */
+  const closeCallRow = async (
+    callId: string,
+    otherUserId: string,
+    callType: CallType,
+    opts: { status: 'ended' | 'rejected' | 'error'; missed: boolean },
+  ) => {
+    if (!supabase || !callId || callId.startsWith('temp-')) return;
+    try {
+      const { data } = await supabase
+        .from('calls')
+        .update({ status: opts.status, is_missed: opts.missed } as any)
+        .eq('id', callId)
+        .in('status', ['ringing', 'accepted'])
+        .select('id');
+
+      if (data && data.length > 0) {
+        await addLoggingMessage(opts.missed ? 'missed' : 'ended', callId, otherUserId, callType);
+      }
+    } catch (err) {
+      console.warn('[Calling] failed to close the call row:', err);
+    }
+  };
+
+  /**
+   * The media path died on its own — the peer closed the tab, ICE failed, or
+   * they sent `bye`. The database row must not be left claiming an active call.
+   */
+  const endCallFromTransport = async (uiStatus: CallStatus) => {
+    const call = activeCallRef.current;
+    if (!call) {
+      await handleEndCallLocally();
+      return;
+    }
+
+    const neverConnected = call.status === 'ringing' || call.status === 'connecting';
+    setActiveCall((prev) => (prev ? { ...prev, status: uiStatus } : prev));
+    await closeCallRow(call.id, call.otherUserId, call.type, {
+      status: 'ended',
+      missed: neverConnected,
+    });
+    await handleEndCallLocally();
+  };
+
+  /**
+   * Opens the media path for a call. LiveKit first (when the deployment has it
+   * configured), otherwise a real peer-to-peer WebRTC session signalled over
+   * Supabase Realtime.
+   */
+  const connectCallSession = async (
+    callId: string,
+    callType: CallType,
+    role: 'caller' | 'receiver',
+    peerId: string,
+  ) => {
+    if (!authUser?.id) return;
+
+    const viaLiveKit = await connectViaLiveKit(callId, authUser.id, callType);
+    if (viaLiveKit) return;
+
+    try {
+      console.log('[Calling] Establishing a peer-to-peer WebRTC session...');
+      setTransport('p2p');
+
+      await webRtcCallService.start({
+        callId,
+        selfId: authUser.id,
+        peerId,
+        callType,
+        role,
+        handlers: {
+          onLocalStream: (stream) => {
+            localStreamRef.current = stream;
+            setLocalStream(stream);
+          },
+          onRemoteStream: (stream) => {
+            remoteStreamRef.current = stream;
+            setRemoteStream(stream);
+          },
+          onScreenShareEnded: () => setIsScreenSharing(false),
+          onStatus: (status) => {
+            if (status === 'connected') {
+              PhoneRingtones.stop();
+              stopVibration();
+              if (ringTimeoutRef.current) {
+                clearTimeout(ringTimeoutRef.current);
+                ringTimeoutRef.current = null;
+              }
+              clearConnectWatchdog();
+              // A connected media path outranks a slower database event.
+              setActiveCall(prev => (prev ? { ...prev, status: 'connected' as CallStatus } : prev));
+            } else if (status === 'failed') {
+              // ICE never came up (or died): end the call everywhere, do not
+              // leave the row as `accepted` with two frozen avatars.
+              void endCallFromTransport('error');
+            } else if (status === 'closed') {
+              // The peer hung up (or the connection died for good).
+              void endCallFromTransport('ended');
+            }
+          },
+        },
+      });
+    } catch (err) {
+      console.error('[Calling] peer-to-peer session failed:', err);
+      setActiveCall(prev => (prev ? { ...prev, status: 'error' as CallStatus } : prev));
     }
   };
 
@@ -604,6 +842,7 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (!incomingCall || !authUser || !supabase) return;
 
     PhoneRingtones.stop();
+    stopVibration();
     const cid = incomingCall.id;
     const otherUserId = incomingCall.caller_id;
     const callType = (incomingCall.type === 'audio' ? 'voice' : incomingCall.type) as CallType;
@@ -636,11 +875,20 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     // Update call status database-wise to notify the caller
     try {
+      // The caller may have hung up while this phone was still ringing.
+      const { data: fresh } = await supabase.from('calls').select('status').eq('id', cid).single();
+      if (fresh && fresh.status !== 'ringing') {
+        console.log('[Calling] Call is no longer ringing, not answering:', fresh.status);
+        setActiveCall(null);
+        navigate('/chats', { replace: true });
+        return;
+      }
+
       await supabase.from('calls').update({ status: 'accepted' } as any).eq('id', cid);
       await addLoggingMessage('started', cid, otherUserId, callType);
       
-      // Connect to LiveKit Room
-      await connectToLiveKitSession(cid, authUser.id, callType);
+      // Open the media path (LiveKit if configured, otherwise P2P WebRTC)
+      await connectCallSession(cid, callType, 'receiver', otherUserId);
 
       // Establish real-time listen triggers for termination updates
       const callChannel = supabase
@@ -649,6 +897,8 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
           const data = payload.new as any;
           if (!data) return;
 
+          // 'denied' is a legacy value (the CHECK constraint only allows
+          // rejected) — treat it exactly like a rejection.
           if (data.status === 'ended' || data.status === 'denied' || data.status === 'rejected') {
             setActiveCall(prev => prev ? { ...prev, status: data.status as any } : null);
             handleEndCallLocally();
@@ -660,6 +910,8 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch (err) {
       console.error("[Calling Receiver Accept Fail]", err);
       setActiveCall(prev => prev ? { ...prev, status: 'error' } : null);
+      // Never leave a row claiming an answered call that has no media.
+      await closeCallRow(cid, otherUserId, callType, { status: 'error', missed: true });
     }
   };
 
@@ -667,17 +919,13 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const rejectCall = async () => {
     if (incomingCall && supabase) {
       PhoneRingtones.stop();
+      stopVibration();
       const cid = incomingCall.id;
       const otherUserId = incomingCall.caller_id;
       const callType = (incomingCall.type === 'audio' ? 'voice' : incomingCall.type) as CallType;
 
       try {
-        await supabase
-          .from('calls')
-          .update({ status: 'rejected', is_missed: true } as any)
-          .eq('id', cid);
-
-        await addLoggingMessage('missed', cid, otherUserId, callType);
+        await closeCallRow(cid, otherUserId, callType, { status: 'rejected', missed: true });
       } catch (e) {
         console.warn('Error rejecting call in database:', e);
       }
@@ -740,8 +988,9 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const realCallId = callData.id;
       setActiveCall(prev => prev ? { ...prev, id: realCallId, status: 'ringing' } : null);
 
-      // Join the LiveKit Room immediately
-      await connectToLiveKitSession(realCallId, authUser.id, callType);
+      // Open the media path right away: the peer answers the incoming offer,
+      // and for LiveKit the room is already warm when they pick up.
+      await connectCallSession(realCallId, callType, 'caller', otherUserId);
 
       // Listen for remote partner changes (like acceptance or ends)
       const callChannel = supabase
@@ -750,14 +999,30 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
           const data = payload.new as any;
           if (!data) return;
 
+          // 'denied' is a legacy value (the CHECK constraint only allows
+          // rejected) — treat it exactly like a rejection.
           if (data.status === 'ended' || data.status === 'denied' || data.status === 'rejected') {
             setActiveCall(prev => prev ? { ...prev, status: data.status as any } : null);
             handleEndCallLocally();
           }
 
           if (data.status === 'accepted') {
-            setActiveCall(prev => prev ? { ...prev, status: 'connected' } : null);
             PhoneRingtones.stop();
+            stopVibration();
+            if (ringTimeoutRef.current) {
+              clearTimeout(ringTimeoutRef.current);
+              ringTimeoutRef.current = null;
+            }
+            // The receiver picked up. On LiveKit that is our cue to start the
+            // timer; on the peer-to-peer path the media session reports the
+            // truth (`connected` only once ICE is up), and claiming otherwise
+            // would start the duration counter on a silent line.
+            if (roomRef.current) {
+              setActiveCall(prev => prev ? { ...prev, status: 'connected' } : null);
+            } else {
+              setActiveCall(prev => prev ? { ...prev, status: 'connecting' } : null);
+              armConnectWatchdog();
+            }
           }
         })
         .subscribe();
@@ -777,18 +1042,19 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }, 2200);
       }
 
-      // STAGE 45-second Calling timeout
-      setTimeout(async () => {
+      // Nobody answered in time → the call is over (and it is a missed call).
+      if (ringTimeoutRef.current) clearTimeout(ringTimeoutRef.current);
+      ringTimeoutRef.current = setTimeout(async () => {
+        ringTimeoutRef.current = null;
         if (!supabase) return;
         const { data: snap } = await supabase.from('calls').select('status').eq('id', realCallId).single();
         if (snap && snap.status === 'ringing') {
-          console.log("[Call Timeout] No answer after 45 seconds, marking as ended/missed...");
-          await supabase.from('calls').update({ status: 'ended', is_missed: true } as any).eq('id', realCallId);
-          await addLoggingMessage('missed', realCallId, otherUserId, callType);
+          console.log(`[Call Timeout] No answer after ${RING_TIMEOUT_MS / 1000} s, marking as ended/missed...`);
+          await closeCallRow(realCallId, otherUserId, callType, { status: 'ended', missed: true });
           setActiveCall(prev => prev ? { ...prev, status: 'ended' } : null);
           await handleEndCallLocally();
         }
-      }, 45000);
+      }, RING_TIMEOUT_MS);
 
     } catch (e) {
       console.error("[LiveKit Caller] Setup exception:", e);
@@ -810,9 +1076,10 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const callType = activeCall.type;
 
     try {
+      const neverConnected = activeCall.status === 'ringing' || activeCall.status === 'connecting';
+      // Declining an incoming call is a rejection; hanging up mid-call is not.
       const endStatus = (activeCall.status === 'ringing' && activeCall.role === 'receiver') ? 'rejected' : 'ended';
-      await supabase.from('calls').update({ status: endStatus } as any).eq('id', cid);
-      await addLoggingMessage(activeCall.status === 'ringing' ? 'missed' : 'ended', cid, otherUserId, callType);
+      await closeCallRow(cid, otherUserId, callType, { status: endStatus, missed: neverConnected });
     } catch (e) {
       console.warn("Error updating active call status to ended in DB:", e);
     }
@@ -826,6 +1093,10 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (roomRef.current) {
         roomRef.current.localParticipant.setMicrophoneEnabled(!nextMuted)
           .catch(err => console.warn("LiveKit mic toggle failed:", err));
+      } else if (webRtcCallService.active) {
+        webRtcCallService.setMicEnabled(!nextMuted);
+      } else if (localStreamRef.current) {
+        localStreamRef.current.getAudioTracks().forEach(track => { track.enabled = !nextMuted; });
       }
       return nextMuted;
     });
@@ -837,6 +1108,10 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (roomRef.current) {
         roomRef.current.localParticipant.setCameraEnabled(!nextVideoOff)
           .catch(err => console.warn("LiveKit video toggle failed:", err));
+      } else if (webRtcCallService.active) {
+        webRtcCallService.setCameraEnabled(!nextVideoOff);
+      } else if (localStreamRef.current) {
+        localStreamRef.current.getVideoTracks().forEach(track => { track.enabled = !nextVideoOff; });
       }
       return nextVideoOff;
     });
@@ -847,29 +1122,47 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const toggleScreenShare = async () => {
-    if (!roomRef.current) return;
     try {
       const nextScreenShare = !isScreenSharing;
-      await roomRef.current.localParticipant.setScreenShareEnabled(nextScreenShare);
+      if (roomRef.current) {
+        await roomRef.current.localParticipant.setScreenShareEnabled(nextScreenShare);
+        updateLocalStreamFromRoom(roomRef.current);
+      } else if (webRtcCallService.active) {
+        await webRtcCallService.setScreenShareEnabled(nextScreenShare);
+        const stream = webRtcCallService.stream;
+        if (stream) {
+          localStreamRef.current = stream;
+          setLocalStream(stream);
+        }
+      } else {
+        return;
+      }
       setIsScreenSharing(nextScreenShare);
-      updateLocalStreamFromRoom(roomRef.current);
     } catch (e) {
-      console.warn("LiveKit screen share toggle failed:", e);
+      console.warn("Screen share toggle failed:", e);
     }
   };
 
   const flipCamera = async () => {
-    if (!roomRef.current) return;
     const nextFacing = facingMode === 'user' ? 'environment' : 'user';
-    setFacingMode(nextFacing);
     try {
-      const videoTrackPubs = Array.from(roomRef.current.localParticipant.videoTrackPublications.values());
-      const videoTrackPub = videoTrackPubs[0];
-      if (videoTrackPub && videoTrackPub.videoTrack) {
-        await (videoTrackPub.videoTrack as any).restart({ facingMode: nextFacing });
+      if (roomRef.current) {
+        const videoTrackPubs = Array.from(roomRef.current.localParticipant.videoTrackPublications.values());
+        const videoTrackPub = videoTrackPubs[0];
+        if (videoTrackPub && videoTrackPub.videoTrack) {
+          await (videoTrackPub.videoTrack as any).restart({ facingMode: nextFacing });
+        }
+      } else if (webRtcCallService.active) {
+        await webRtcCallService.flipCamera();
+        const stream = webRtcCallService.stream;
+        if (stream) {
+          localStreamRef.current = stream;
+          setLocalStream(stream);
+        }
       }
+      setFacingMode(nextFacing);
     } catch (e) {
-      console.warn("Failed to flip camera device in LiveKit:", e);
+      console.warn("Failed to flip camera:", e);
     }
   };
 
@@ -906,7 +1199,7 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
       playOutgoingBeep, 
       stopSounds,
       room,
-      isSandboxSimulated
+      transport
     }}>
       {children}
       

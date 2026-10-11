@@ -49,7 +49,10 @@ export const useCalls = (activeFilter: string) => {
             receiver:users!calls_receiver_id_fkey (id, full_name, username, photo_url)
           `)
           .or(`caller_id.eq.${user.id},receiver_id.eq.${user.id}`)
-          .eq('status', 'ended')
+          // Finished calls only — but *all* of them: a declined call is stored
+          // as `rejected` and an interrupted one as `error`. Filtering on
+          // `ended` alone silently hid both from the history.
+          .in('status', ['ended', 'rejected', 'error'])
           .order('created_at', { ascending: false })
           .limit(limit + 1);
 
