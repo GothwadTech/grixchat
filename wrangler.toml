@@ -1,10 +1,12 @@
 # Cloudflare Pages project configuration.
 #
-# The site is served by Cloudflare Pages at https://grixchat.gothwadtech.com:
+# The site is served by Cloudflare Pages at https://grixchat.gothwadtech.com
+# (project: `gtwdchat`):
 #   - `dist/` is uploaded as static assets
 #   - `functions/` is compiled into Pages Functions and serves the API
 #
-# Build settings (Cloudflare dashboard → Workers & Pages → grixchat → Settings):
+# The Cloudflare Pages project is named `gtwdchat` (Workers & Pages → gtwdchat).
+# Build settings (dashboard → Workers & Pages → gtwdchat → Settings):
 #   Build command:       npm run build
 #   Build output dir:    dist
 #   Root directory:      /            (repo root)
@@ -14,7 +16,7 @@
 # Preview). Every VITE_* value is inlined into the bundle at build time, so
 # changing one requires a redeploy. See docs/DEV_SETUP.md.
 
-name = "grixchat"
+name = "gtwdchat"
 pages_build_output_dir = "./dist"
 compatibility_date = "2025-09-01"
 

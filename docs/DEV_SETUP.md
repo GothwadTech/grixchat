@@ -162,6 +162,8 @@ exception is authentication: without `VITE_SUPABASE_URL` +
 ## Deploy — Cloudflare Pages
 
 **Production lives on Cloudflare Pages: <https://grixchat.gothwadtech.com>**
+(Cloudflare project name: **`gtwdchat`** — that is what the dashboard calls it,
+and what `wrangler.toml` declares.)
 
 A deployment is two halves that ship together from this one repository:
 
@@ -177,7 +179,7 @@ needs porting between environments, and there is no second server to drift.
 
 ### Project settings
 
-Cloudflare dashboard → **Workers & Pages → grixchat → Settings**:
+Cloudflare dashboard → **Workers & Pages → gtwdchat → Settings**:
 
 | Setting | Value |
 |---|---|
@@ -198,7 +200,7 @@ triggers the Pages build; the Node server bundle is not part of it (see
 
 | File | Purpose |
 |---|---|
-| `wrangler.toml` | Pages project config (output dir, compatibility date) |
+| `wrangler.toml` | Pages project config — `name = "gtwdchat"`, output dir, compatibility date |
 | `functions/api/[[path]].ts` | Every `/api/*` request → `server/api.ts` |
 | `functions/auth/[[path]].ts` | `/auth/github/callback` → the same router |
 | `public/_routes.json` | Scopes Functions to `/api/*` and `/auth/*` — everything else stays on the CDN and never spins up a Function |
@@ -241,8 +243,9 @@ server side, `/api/*` answers `503` on purpose.
 
 ### Custom domain
 
-Pages → **Custom domains** → add `grixchat.gothwadtech.com`. Cloudflare issues
-the certificate automatically; keep `APP_URL` in sync with whatever you set.
+Pages (project `gtwdchat`) → **Custom domains** → `grixchat.gothwadtech.com` is
+already attached. Cloudflare issues the certificate automatically; keep `APP_URL`
+in sync with whatever you set there.
 
 ### Testing the edge build locally
 

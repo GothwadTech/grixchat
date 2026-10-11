@@ -9,7 +9,7 @@
 # ones are baked into the bundle by `npm run build/`vite already.
 #
 # In production these live in the Cloudflare dashboard:
-#   Workers & Pages → grixchat → Settings → Environment variables
+#   Workers & Pages → gtwdchat → Settings → Environment variables
 # ─────────────────────────────────────────────────────────────────────────────
 
 # Optional: run the API without any credentials at all.
