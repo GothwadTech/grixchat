@@ -204,3 +204,26 @@ procedure is:
 3. Anything under `src/` not reached is dead.
 
 `npm test` + `npm run lint` + `npm run build` are the regression gate.
+
+---
+
+## 2026-10-11 — SQL consolidation
+
+| Moved | From | Why |
+|---|---|---|
+| `grixchat_latest_db_updates.sql` | `sql/` | Older patch file with duplicate, differently-named policies — running it next to `01_core_schema.sql` created conflicting RLS |
+| `supabase_schema.sql` | `sql/` | Superseded by `01_core_schema.sql` |
+| `supabase_posts_schema.sql` | `sql/` | Superseded by `02_posts_and_interactions_schema.sql` |
+| `supabase_support_tickets_schema.sql` | `sql/` | Superseded by `03_support_tickets_schema.sql` |
+| `db/1_complete_schema.sql` | `db/` | Early divergent design: `users.email UNIQUE NOT NULL`, `users.status`, `group_call_participants` — **would break a current project if run** |
+| `db/2_realtime_and_security.sql` | `db/` | The matching RLS pass for that design |
+| `db/3_webrtc_signaling_architecture.md` | `db/` → `docs/legacy/` | Design note for signalling that was never adopted (calling uses Broadcast) |
+
+All seven now live in [`sql/legacy/`](../sql/legacy/README.md) — parked, not
+deleted, with a README explaining that they must not be run.
+
+Also fixed in the same pass: `01_core_schema.sql`, `02_…` and `03_…` began with
+`DROP TABLE … CASCADE`. Re-running the documented setup on a live project
+therefore **deleted every user, message and post while reporting zero errors**.
+The drops are gone; the files are idempotent now, and
+`src/__tests__/sqlMigrations.test.ts` fails if anyone adds one back.

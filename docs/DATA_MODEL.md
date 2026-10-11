@@ -1,7 +1,15 @@
 # Data Model
 
-> `sql/` is the **only** authoritative schema. The five stale `.sql` files that
-> used to sit at the repository root have been deleted.
+> `sql/` is the **only** authoritative schema: numbered migrations `01_` … `09_`,
+> run in that order. Old copies are parked in [`sql/legacy/`](../sql/legacy/README.md)
+> (never run them — they define the same tables differently).
+>
+> **Every file is re-runnable.** A new project can paste
+> [`sql/grixchat_full_setup.sql`](../sql/grixchat_full_setup.sql); an existing
+> project can run the same set again to pick up missing columns, indexes,
+> constraints, buckets and updated policies. Nothing is ever dropped. Runbook +
+> verification queries: [`sql/00_master_instructions.md`](../sql/00_master_instructions.md).
+> The rule is enforced by `src/__tests__/sqlMigrations.test.ts`.
 
 ---
 
@@ -86,7 +94,7 @@ Profile row, 1:1 with `auth.users`.
 ### `call_candidates` — `:135` ⚠️ defined, never queried
 WebRTC ICE signalling. The live calling path (`providers/CallProvider.tsx`)
 signals over Broadcast channels instead. Either adopt it or drop it.
-`db/3_webrtc_signaling_architecture.md` describes the design that was not taken.
+[`docs/legacy/3_webrtc_signaling_architecture.md`](./legacy/3_webrtc_signaling_architecture.md) describes the design that was not taken.
 
 ### `chat_settings` — `:145`
 Per-user chat customisation. `id`, `user_id`, `receiver_id`, `nickname`,

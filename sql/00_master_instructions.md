@@ -1,76 +1,170 @@
-# GrixChat Supabase Setup & Verification Guide 🚀
+# GrixChat — Supabase setup (read this first)
 
-This master guide ensures a 100% successful, zero-error database configuration on your Supabase project. All previous updates and schema files has been compiled and ordered sequentially inside this folder to match Supabase's schema dependencies perfectly.
+Everything the app needs in the database lives in this folder. There are two
+supported ways to run it, and **both are safe to run on a project that already
+has data** — nothing here drops a table, truncates a row, or overwrites a
+column. Re-running the whole set is the supported way to pick up a schema
+update.
 
----
+| You are… | Run | Time |
+|---|---|---|
+| **starting fresh** (new fork, new Supabase project) | [`grixchat_full_setup.sql`](./grixchat_full_setup.sql) — everything in one paste | ~30 s |
+| **updating an existing project** | the same file, again. Or `01` … `09` one by one if you prefer to see each step | ~30 s |
+| **verifying after a deploy** | the checklist at the bottom of this file | ~2 min |
 
-## 📌 Order of Execution Checklist
-
-Always execute the SQL files in the exact order below. Copy the contents of each file and run them in the **SQL Editor** of your Supabase dashboard:
-
-1. **`01_core_schema.sql`**  
-   - 🛠️ Creates the primary `users`, `follows`, `conversations`, `messages`, `stories`, `calls`, `call_candidates`, `chat_settings`, and `notifications` tables.
-   - 🔒 Configures Row-Level Security (RLS) policies for secure client-side database querying.
-   - ⚡ Registers optimized b-tree database search indexes.
-
-2. **`02_posts_and_interactions_schema.sql`**  
-   - 📊 Creates tables for Social Feeds: `posts`, `post_likes`, and `post_comments`.
-   - 🔐 Sets up full public-read & user-write RLS policies and performance indexes.
-
-3. **`03_support_tickets_schema.sql`**  
-   - 🎫 Creates the `support_tickets` table for in-app contact forms, support lines, and system complaints.
-   - 🛡️ Adds anonymous/authenticated insert policies.
-
-4. **`04_triggers_functions_and_rpc.sql`**  
-   - 🔗 Registers the `get_direct_conversation_id` database RPC function (used for lightweight, high-performance instant chat room matching instead of manual join queries).
-   - 👤 Provisions the native `auth.users` trigger that automatically replicates newly registered users (via email, Google or GitHub OAuth) into your public `users` table with standard defaults and safe length check values.
-
-5. **`05_advanced_optimizations_and_realtime.sql`**  
-   - ⚡ Sets up efficient real-time subscription pipelines (`supabase_realtime` publication group).
-   - 🔋 Registers auto-pruning triggers to cap active chat messages and voice/video records at 60 active events, automatically sweeping old historical data as the table expands. This completely bypasses table bloat, maintaining a lightweight database footprint, and keeps your project 100% under Supabase's free plan threshold!
-
-6. **`06_storage_configurations.sql`**  
-   - 📂 Seeds the required Supabase Storage buckets: `chat-media` (for pictures, videos, and custom voice memos) and `profiles` (for user profiles and circular thumbnails).
-   - 🛡️ Configures secure upload policies on `storage.objects` to ensure media files are publicly visible while restricting modifications strictly to their authenticated owners.
+> Prefer the individual files? Run them **in numerical order**:
+> `01_core_schema.sql` → `02_posts_and_interactions_schema.sql` → … →
+> `09_egress_optimizations.sql`. The bundle is generated from exactly those
+> files in that order, so the result is identical.
+>
+> `npm run sql:bundle` regenerates the bundle after you edit a numbered file.
+> `src/__tests__/sqlMigrations.test.ts` fails if the bundle is stale — or if
+> anyone reintroduces a `DROP TABLE` or a non-idempotent `CREATE`.
 
 ---
 
-## 🔍 Post-Setup Verification Checklist
+## 1. New project (fork → deploy)
 
-After running the scripts, you can verify they are functional with the following tests:
+1. Create the Supabase project, then **SQL Editor → New query**.
+2. Paste **all** of [`grixchat_full_setup.sql`](./grixchat_full_setup.sql) and
+   press **RUN**. It is one transaction-free script: every statement is
+   idempotent, so a partial run just means "run it again".
+3. Copy **Project URL** + **anon key** (Settings → API) into the frontend env:
+   `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`. On Cloudflare Pages these are
+   build-time variables — see [`../docs/DEV_SETUP.md`](../docs/DEV_SETUP.md).
+4. Turn on **Authentication → Providers** (email, Google/GitHub if you use
+   them) and add your site URL to **Authentication → URL configuration**.
+5. Run the verification checklist below.
 
-### 1. Verification of Tables
-Navigate to your Supabase **Table Editor**. You should see the following tables populated under the `public` schema:
-- [ ] `users`
-- [ ] `follows`
-- [ ] `conversations`
-- [ ] `conversation_participants`
-- [ ] `messages`
-- [ ] `stories`
-- [ ] `calls`
-- [ ] `call_candidates`
-- [ ] `chat_settings`
-- [ ] `notifications`
-- [ ] `posts`
-- [ ] `post_likes`
-- [ ] `post_comments`
-- [ ] `support_tickets`
+## 2. Existing project (schema update)
 
-### 2. Verify Storage Buckets
-Navigate to the **Storage** section in your Supabase dashboard. You should see two public buckets:
-- [ ] `chat-media`
-- [ ] `profiles`
+Paste the same file again. What it does on a live database:
 
-### 3. Verify Triggers and Database Functions
-Navigate to **Database** -> **Triggers** & **Database** -> **Functions** to check if:
-- [ ] Function `get_direct_conversation_id` is registered successfully.
-- [ ] Trigger `on_auth_user_created` exists under `auth.users` referencing `handle_new_auth_user`.
-- [ ] Live pruning triggers like `trg_prune_past_messages` exist on `public.messages`.
+* **creates** anything missing — tables, columns (`last_read_at`,
+  `last_message_sender_id`, `chat_time_restrictions`, `stories.views`,
+  `profile_type`, …), indexes, constraints, storage buckets;
+* **re-creates** policies and functions, so an updated definition replaces the
+  old one (that is how the SQL "update" reaches a project that was set up
+  earlier);
+* **never touches** existing rows, and never drops a table or a column.
 
----
+Two deliberate exceptions, both about *message history*, and both parts of the
+app's existing design — read them before you run:
+`05_advanced_optimizations_and_realtime.sql` caps every chat at the newest
+**40 messages** (sections 1 and 6). If you want history kept instead, skip
+those two sections and use the time-based `prune_old_messages(days)` from `09`.
 
-## 🛠️ Troubleshooting & Support Tips
+## 3. What each file does
 
-* **Foreign Key Errors:** Run the scripts in the specified numerical order. `02_posts_and_interactions_schema.sql` depends on tables generated in `01_core_schema.sql`, and so on.
-* **Storage Upload Failures:** If user uploads fail on the client-side, ensure storage policies are active and that the `chat-media` and `profiles` buckets are set to **"Public"** in the Storage configuration dashboard.
-* **Realtime Sync Issues:** In some cases, Supabase Realtime requires a manual toggle check. Go to **Database** -> **Replication**, search for `supabase_realtime`, and ensure replication is toggled **Active** for the desired tables (`messages`, `conversations`, `users`, etc.).
+| File | Creates | Notes |
+|---|---|---|
+| `01_core_schema.sql` | `users`, `follows`, `conversations`, `conversation_participants`, `messages`, `stories`, `calls`, `call_candidates`, `chat_settings`, `notifications` + RLS + indexes | column upgrades for older installs, constraints added only when missing |
+| `02_posts_and_interactions_schema.sql` | `posts`, `post_likes`, `post_comments` + RLS + indexes | |
+| `03_support_tickets_schema.sql` | `support_tickets` + RLS | |
+| `04_triggers_functions_and_rpc.sql` | `get_direct_conversation_id()`, `handle_new_auth_user()` + the `auth.users` → `public.users` trigger | this is what creates a profile on signup/OAuth |
+| `05_advanced_optimizations_and_realtime.sql` | realtime publication membership, preview triggers, replica identity, **40-message cap** | see the warning above |
+| `06_storage_configurations.sql` | `chat-media` + `profiles` buckets and their storage policies | buckets are public-read on purpose |
+| `07_chat_time_scheduling_migration.sql` | `conversations.chat_time_restrictions` | |
+| `08_stories_expiration_and_views.sql` | `stories.views`, `view_story()`, `cleanup_expired_stories()` | |
+| `09_egress_optimizations.sql` | `conversation_participants.last_read_at` **+ its RLS UPDATE policy**, the `last_message*` trigger, replica-identity fixes, indexes, `get_unread_counts()`, `prune_old_messages()` | ends with a self-check query — see below. Full reasoning: [`../docs/EGRESS_AUDIT.md`](../docs/EGRESS_AUDIT.md) |
+
+## 4. Verification checklist
+
+Run this in the SQL editor. Every line must read `OK` (it is also the self-check
+at the end of `09`):
+
+```sql
+SELECT 'tables' AS what,
+       CASE WHEN COUNT(*) >= 14 THEN 'OK (' || COUNT(*) || ')' ELSE 'MISSING ' || COUNT(*) END AS state
+  FROM information_schema.tables
+ WHERE table_schema = 'public' AND table_type = 'BASE TABLE'
+   AND table_name IN ('users','follows','conversations','conversation_participants','messages',
+                      'stories','calls','call_candidates','chat_settings','notifications',
+                      'posts','post_likes','post_comments','support_tickets')
+UNION ALL
+SELECT 'columns added by later migrations',
+       CASE WHEN COUNT(*) = 4 THEN 'OK' ELSE 'MISSING ' || COUNT(*) END
+  FROM information_schema.columns
+ WHERE table_schema = 'public'
+   AND (table_name, column_name) IN (
+        ('conversation_participants','last_read_at'),
+        ('conversations','last_message_sender_id'),
+        ('conversations','chat_time_restrictions'),
+        ('stories','views'))
+UNION ALL
+SELECT 'RLS policies (expect 43+)',
+       CASE WHEN COUNT(*) >= 43 THEN 'OK (' || COUNT(*) || ')' ELSE 'LOW ' || COUNT(*) END
+  FROM pg_policies WHERE schemaname = 'public'
+UNION ALL
+SELECT 'UPDATE policy on conversation_participants',
+       CASE WHEN COUNT(*) > 0 THEN 'OK' ELSE 'MISSING' END
+  FROM pg_policies WHERE schemaname='public' AND tablename='conversation_participants' AND cmd='UPDATE'
+UNION ALL
+SELECT 'storage buckets',
+       CASE WHEN COUNT(*) = 2 THEN 'OK' ELSE 'MISSING ' || COUNT(*) END
+  FROM storage.buckets WHERE id IN ('chat-media','profiles')
+UNION ALL
+SELECT 'realtime publication',
+       CASE WHEN COUNT(*) >= 5 THEN 'OK (' || COUNT(*) || ')' ELSE 'LOW ' || COUNT(*) END
+  FROM pg_publication_tables WHERE pubname = 'supabase_realtime' AND schemaname = 'public'
+UNION ALL
+SELECT 'replica identity (messages must be FULL)',
+       COALESCE((SELECT CASE WHEN relreplident = 'f' THEN 'OK' ELSE 'WRONG' END
+                   FROM pg_class WHERE oid = 'public.messages'::regclass), 'MISSING')
+UNION ALL
+SELECT 'signup trigger',
+       CASE WHEN COUNT(*) > 0 THEN 'OK' ELSE 'MISSING' END
+  FROM pg_trigger WHERE tgname = 'on_auth_user_created';
+```
+
+Then, in the dashboard:
+
+* **Table Editor** — the 14 tables above exist.
+* **Storage** — buckets `chat-media` (50 MB limit) and `profiles` (5 MB).
+* **Database → Replication** — `supabase_realtime` is enabled for
+  `messages`, `conversations`, `users`, `calls`, `conversation_participants`.
+  (The SQL registers the tables; the dashboard toggle is what actually streams.)
+* **Authentication → Policies** — no duplicate policy names from an older file.
+  If you ever ran one of the files in [`legacy/`](./legacy/), read
+  [`legacy/README.md`](./legacy/README.md) and drop the leftovers it lists.
+
+### Prove it is re-runnable
+
+```sql
+SELECT (SELECT COUNT(*) FROM public.users) AS users,
+       (SELECT COUNT(*) FROM public.messages) AS messages,
+       (SELECT COUNT(*) FROM pg_policies WHERE schemaname='public') AS policies;
+```
+
+Run the setup again, then run this again: `users` and `messages` must be
+**identical**, `policies` must not grow (policies are replaced, never stacked).
+That is exactly what `npm test` checks in `src/__tests__/sqlMigrations.test.ts`.
+
+## 5. Troubleshooting
+
+| Symptom | Cause / fix |
+|---|---|
+| `relation "public.users" does not exist` | files ran out of order — always `01` first |
+| Foreign-key error while running `02`/`03` | same: `01` must be applied first |
+| `permission denied for table storage.objects` | run `06` as the project owner (the SQL editor is fine); a non-owner role cannot create storage policies |
+| Realtime updates never arrive | dashboard → Database → Replication → `supabase_realtime`; also check that the table is listed in `pg_publication_tables` (the checklist above) |
+| Uploads fail with 403 | buckets exist but storage policies were not applied — re-run `06` |
+| Chat history looks short | that is `05`'s 40-message cap, by design. Skip its sections 1 and 6 to keep history (see §2) |
+| A policy name appears twice in the dashboard | an old file from [`legacy/`](./legacy/) was run; drop the duplicates as described there |
+| `function public.get_unread_counts() does not exist` | `09` has not been applied yet |
+| Everything works but egress is still high | check `last_read_at` exists (the client falls back to the old per-message read path without it) and re-read [`../docs/EGRESS_AUDIT.md`](../docs/EGRESS_AUDIT.md) |
+
+## 6. Rules for changing this folder
+
+1. **Never add a `DROP TABLE`.** Use `CREATE TABLE IF NOT EXISTS` plus
+   `ALTER TABLE … ADD COLUMN IF NOT EXISTS` for anything new.
+2. **Never add a `CREATE` that is not idempotent** — `CREATE OR REPLACE` for
+   functions, `DROP POLICY IF EXISTS` + `CREATE POLICY` for policies,
+   `CREATE INDEX IF NOT EXISTS` for indexes, `DROP TRIGGER IF EXISTS` +
+   `CREATE TRIGGER` for triggers.
+3. **New migrations get the next number** (`10_…`) and are appended to the file
+   list in `scripts/build-sql-bundle.mjs`; then run `npm run sql:bundle`.
+4. **Test before committing.** The suite enforces rules 1–3; a real Postgres run
+   (fresh + re-run on populated data) is how the 2026-10-11 review was done.
+5. Superseded files go to [`legacy/`](./legacy/) — never leave two files that
+   create the same table next to each other.

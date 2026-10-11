@@ -217,6 +217,7 @@ Rules:
 | `npm test` | ✅ 104/104 |
 | `npm run lint` | ✅ 0 errors |
 | Dead code | ✅ **0 files** — 189/189 reachable. See [`docs/DEAD_CODE.md`](./docs/DEAD_CODE.md) |
+| SQL migrations | ✅ re-runnable (fresh install + re-run on live data verified); `npm run sql:bundle` in sync, guarded by `src/__tests__/sqlMigrations.test.ts` |
 | Tables queried but missing from `sql/` | ✅ 0 |
 | RPCs called but missing from `sql/` | ✅ 0 |
 | Cloudflare Pages deploy | ✅ `dist/` + `functions/` → <https://grixchat.gothwadtech.com> |
@@ -252,5 +253,6 @@ change.
 | [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md) | directory map, data flow, what is reachable |
 | [`docs/KNOWN_ISSUES.md`](./docs/KNOWN_ISSUES.md) | prioritised bug/fix list |
 | [`docs/EGRESS_AUDIT.md`](./docs/EGRESS_AUDIT.md) | Supabase egress, Realtime traffic, list-query rules |
+| [`sql/00_master_instructions.md`](./sql/00_master_instructions.md) | database setup, schema updates, verification |
 | [`docs/DEAD_CODE.md`](./docs/DEAD_CODE.md) | the deletion record — what was removed and why |
 | [`docs/legacy/`](./docs/legacy/) | historical — **not current guidance** |

@@ -169,8 +169,12 @@ The long version is in **[../AGENTS.md](../AGENTS.md)**. Short version:
    ticks, call signalling, presence → `channel().send()`, 0 bytes of egress.
 3. **Don't import across sibling features.** `features/chat/` must not reach
    into `features/call/`. Go through `services/` or a provider.
-4. **SQL changes go in `/sql/`, numbered.** The root-level `.sql` duplicates
-   have been deleted — do not recreate them.
+4. **SQL changes go in `/sql/`, numbered** (`10_…`, appended to
+   `scripts/build-sql-bundle.mjs`, then `npm run sql:bundle`). Migrations must be
+   re-runnable: no `DROP TABLE`, `CREATE … IF NOT EXISTS`, `CREATE OR REPLACE`,
+   `DROP POLICY IF EXISTS` before every policy. Superseded files go to
+   `sql/legacy/` — never recreate root-level duplicates. Runbook:
+   [../sql/00_master_instructions.md](../sql/00_master_instructions.md).
 5. **Don't reintroduce dead code.** If you add a file, wire it to a route or an
    importer in the same change. The scan procedure is in
    [DEAD_CODE.md](./DEAD_CODE.md#reproducing-the-scan).
@@ -189,5 +193,6 @@ The long version is in **[../AGENTS.md](../AGENTS.md)**. Short version:
 | [ARCHITECTURE.md](./ARCHITECTURE.md) | you need to find where something lives |
 | [KNOWN_ISSUES.md](./KNOWN_ISSUES.md) | you want the prioritised bug/fix list |
 | [EGRESS_AUDIT.md](./EGRESS_AUDIT.md) | egress is high, or you touch Realtime / list queries |
+| [../sql/00_master_instructions.md](../sql/00_master_instructions.md) | you are setting up or updating the database |
 | [DEAD_CODE.md](./DEAD_CODE.md) | the deletion record — what was removed and why |
 | [legacy/](./legacy/) | historical docs — **not current guidance** |

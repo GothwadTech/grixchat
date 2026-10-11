@@ -90,8 +90,20 @@ BEGIN
         END IF;
     END IF;
 
-    -- Slow path: a delete, a soft delete, or an edit of an older message. The
-    -- preview has to be re-derived from what is left.
+    -- Fast skip for DELETEs: if the conversation already shows something newer,
+    -- removing an older row cannot change the preview. This is the common case
+    -- for the 40-message history cap in 05, which deletes a batch per insert.
+    IF TG_OP = 'DELETE' AND EXISTS (
+        SELECT 1 FROM public.conversations
+         WHERE id = target_conversation
+           AND last_message_at IS NOT NULL
+           AND last_message_at > OLD.created_at
+    ) THEN
+        RETURN NULL;
+    END IF;
+
+    -- Slow path: a delete of the newest row, a soft delete, or an edit of an
+    -- older message. The preview has to be re-derived from what is left.
     SELECT m.text, m.media_type, m.created_at, m.sender_id, m.is_deleted
       INTO newest
       FROM public.messages m
@@ -167,10 +179,11 @@ DECLARE
 BEGIN
     FOR target IN
         SELECT * FROM (VALUES
-            ('users',                   'DEFAULT'),
-            ('conversations',           'DEFAULT'),
-            ('calls',                   'DEFAULT'),
-            ('messages',                'FULL'),
+            ('users',                    'DEFAULT'),
+            ('conversations',            'DEFAULT'),
+            ('calls',                    'DEFAULT'),
+            ('call_candidates',          'DEFAULT'),
+            ('messages',                 'FULL'),
             ('conversation_participants','FULL')
         ) AS t(tbl, identity)
     LOOP

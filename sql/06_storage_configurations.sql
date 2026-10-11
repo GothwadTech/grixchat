@@ -1,11 +1,15 @@
 -- =========================================================================
--- STEP 6: SUPABASE STORAGE BUCKETS SETUP AND SECURITY POLICIES
+-- STEP 6/9: STORAGE BUCKETS (chat-media, profiles) AND THEIR POLICIES
 -- =========================================================================
--- Instructions:
--- 1. Execute this file in your Supabase SQL Editor AFTER running Step 5.
--- 2. This step registers 'chat-media' and 'profiles' buckets and sets up
---    Row-Level Security (RLS) on storage.objects, allowing authenticated
---    users to upload and delete media while permitting public access.
+-- Run in the Supabase SQL Editor after 05_advanced_optimizations_and_realtime.sql.
+-- Safe to re-run: buckets are inserted with ON CONFLICT DO NOTHING and every
+-- policy is dropped and re-created, so an updated definition always wins.
+--
+-- ⚠️ These policies are deliberately permissive (public read, any authenticated
+-- user may upload/update/delete in these buckets) because the app uploads to
+-- `chat-media/images/<random>_<timestamp>.<ext>` — paths carry no user id, so
+-- ownership cannot be checked from the path. Hardening notes:
+-- docs/EGRESS_AUDIT.md §6 and the commented block in 09_egress_optimizations.sql.
 -- =========================================================================
 
 -- 1. PROVISION BUCKETS (If they do not already exist)

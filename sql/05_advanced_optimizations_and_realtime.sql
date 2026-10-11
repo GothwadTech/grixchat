@@ -1,10 +1,15 @@
 -- =========================================================================
--- STEP 5: PERFORMANCE OPTIMIZATION, REAL-TIME QUEUES, AND AUTOMATED PRUNING
+-- STEP 5/9: REALTIME PUBLICATION, PREVIEW TRIGGERS, HISTORY CAP
 -- =========================================================================
--- Instructions:
--- 1. Execute this file in your Supabase SQL Editor AFTER running Step 4.
--- 2. This step guarantees that your Supabase databases remain lightweight,
---    enables immediate push updates, and cleans up historical records.
+-- Run in the Supabase SQL Editor after 04_triggers_functions_and_rpc.sql.
+-- Safe to re-run: functions are CREATE OR REPLACE, triggers are dropped first,
+-- replica identity and publication membership are re-asserted.
+--
+-- ⚠️ READ THIS BEFORE RUNNING — sections 1 and 6 DELETE MESSAGE HISTORY:
+--   every chat is capped at 60 rows, pruned back to the newest 40, on every
+--   insert. It keeps a free-tier project small, but it also means chat history
+--   is not kept. To keep history instead: do NOT run sections 1 and 6, and use
+--   the time-based pruner in 09_egress_optimizations.sql (`prune_old_messages`).
 -- =========================================================================
 
 -- 1. MESSAGE CAP PRUNER (LIMITS ROOMS TO LAST 60 MESSAGES - PRUNES TO 40)
@@ -116,73 +121,79 @@ FOR EACH ROW
 EXECUTE FUNCTION prune_past_calls();
 
 
--- 4. REAL-TIME MULTICAST CHANNEL IDENTITY ENABLEMENTS
-ALTER TABLE public.users REPLICA IDENTITY FULL;
-ALTER TABLE public.messages REPLICA IDENTITY FULL;
-ALTER TABLE public.conversations REPLICA IDENTITY FULL;
-ALTER TABLE public.calls REPLICA IDENTITY FULL;
-ALTER TABLE public.call_candidates REPLICA IDENTITY FULL;
-
-
--- 5. SUPABASE WebSocket Realtime Publication Bindings
+-- 4. REPLICA IDENTITY
+-- ---------------------------------------------------------------------------
+-- FULL is only needed where the client filters DELETEs by a non-key column
+-- (`conversation_id=eq.…` on messages and conversation_participants). Everywhere
+-- else DEFAULT keeps UPDATE payloads to "new row + primary key", which stops
+-- whole rows — including `users.lock`, the app-lock passcode hash, and
+-- `fcm_tokens` — from being broadcast to every subscribed client.
+-- 09_egress_optimizations.sql re-asserts the same values, so either file leaves
+-- the database in this state.
+-- ---------------------------------------------------------------------------
 DO $$
+DECLARE
+    target RECORD;
 BEGIN
-    -- Check and drop pre-existing tables from the publication to prevent duplicate key errors
-    IF EXISTS (
-        SELECT 1 FROM pg_publication_tables 
-        WHERE pubname = 'supabase_realtime' 
-          AND schemaname = 'public' 
-          AND tablename = 'messages'
-    ) THEN
-        ALTER PUBLICATION supabase_realtime DROP TABLE public.messages;
+    FOR target IN
+        SELECT * FROM (VALUES
+            ('users',                    'DEFAULT'),
+            ('conversations',            'DEFAULT'),
+            ('calls',                    'DEFAULT'),
+            ('call_candidates',          'DEFAULT'),
+            ('messages',                 'FULL'),
+            ('conversation_participants','FULL')
+        ) AS t(tbl, identity)
+    LOOP
+        IF EXISTS (SELECT 1 FROM pg_class c
+                     JOIN pg_namespace n ON n.oid = c.relnamespace
+                    WHERE n.nspname = 'public' AND c.relname = target.tbl) THEN
+            EXECUTE format('ALTER TABLE public.%I REPLICA IDENTITY %s', target.tbl, target.identity);
+        END IF;
+    END LOOP;
+END;
+$$;
+
+
+-- 5. SUPABASE REALTIME PUBLICATION MEMBERSHIP
+-- ---------------------------------------------------------------------------
+-- Only the tables the client actually subscribes to. Membership is idempotent:
+-- a table is added only when it exists and is not already published, so a run
+-- over an existing project changes nothing and a fork that dropped a table
+-- (e.g. call_candidates) does not abort the script.
+-- ---------------------------------------------------------------------------
+DO $$
+DECLARE
+    tbl TEXT;
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_publication WHERE pubname = 'supabase_realtime') THEN
+        CREATE PUBLICATION supabase_realtime;
     END IF;
 
-    IF EXISTS (
-        SELECT 1 FROM pg_publication_tables 
-        WHERE pubname = 'supabase_realtime' 
-          AND schemaname = 'public' 
-          AND tablename = 'conversations'
-    ) THEN
-        ALTER PUBLICATION supabase_realtime DROP TABLE public.conversations;
-    END IF;
+    FOREACH tbl IN ARRAY ARRAY[
+        'messages', 'conversations', 'users', 'calls',
+        'call_candidates', 'conversation_participants'
+    ] LOOP
+        IF to_regclass('public.' || tbl) IS NOT NULL
+           AND NOT EXISTS (SELECT 1 FROM pg_publication_tables
+                            WHERE pubname = 'supabase_realtime'
+                              AND schemaname = 'public'
+                              AND tablename = tbl) THEN
+            EXECUTE format('ALTER PUBLICATION supabase_realtime ADD TABLE public.%I', tbl);
+        END IF;
+    END LOOP;
+END;
+$$;
 
-    IF EXISTS (
-        SELECT 1 FROM pg_publication_tables 
-        WHERE pubname = 'supabase_realtime' 
-          AND schemaname = 'public' 
-          AND tablename = 'users'
-    ) THEN
-        ALTER PUBLICATION supabase_realtime DROP TABLE public.users;
-    END IF;
-
-    IF EXISTS (
-        SELECT 1 FROM pg_publication_tables 
-        WHERE pubname = 'supabase_realtime' 
-          AND schemaname = 'public' 
-          AND tablename = 'calls'
-    ) THEN
-        ALTER PUBLICATION supabase_realtime DROP TABLE public.calls;
-    END IF;
-
-    IF EXISTS (
-        SELECT 1 FROM pg_publication_tables 
-        WHERE pubname = 'supabase_realtime' 
-          AND schemaname = 'public' 
-          AND tablename = 'call_candidates'
-    ) THEN
-        ALTER PUBLICATION supabase_realtime DROP TABLE public.call_candidates;
-    END IF;
-END $$;
-
--- Enable Realtime for key instant replication tables
-ALTER PUBLICATION supabase_realtime ADD TABLE public.messages;
-ALTER PUBLICATION supabase_realtime ADD TABLE public.conversations;
-ALTER PUBLICATION supabase_realtime ADD TABLE public.users;
-ALTER PUBLICATION supabase_realtime ADD TABLE public.calls;
-ALTER PUBLICATION supabase_realtime ADD TABLE public.call_candidates;
+-- Also enable Realtime in the dashboard for these tables:
+--   Database -> Replication -> supabase_realtime
+-- The SQL above registers the tables; the dashboard toggle is what actually
+-- streams them.
 
 
--- 6. RETROACTIVE SWEEP (Instantly trims pre-existing high-volume tables down to 40 records)
+-- 6. RETROACTIVE SWEEP (trims pre-existing high-volume tables down to 40 rows)
+-- Same policy as section 1: it keeps the newest 40 messages per chat and the
+-- newest 40 calls per user. Skip this section if you skipped section 1.
 DO $$
 DECLARE
     u_rec RECORD;

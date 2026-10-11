@@ -1,8 +1,11 @@
 -- =========================================================================
--- STEP 4: DATABASE SYSTEMS - RPC FUNCTIONS, TRIGGERS & PROFILES AUTO-SYNC
+-- STEP 4/9: RPC FUNCTIONS, TRIGGERS & AUTH -> PROFILE AUTO-SYNC
 -- =========================================================================
--- Instructions:
--- 1. Execute this file in your Supabase SQL Editor AFTER running Step 3.
+-- Run in the Supabase SQL Editor after 03_support_tickets_schema.sql.
+-- Safe to re-run: the trigger and the functions are dropped and re-created, so
+-- an updated definition always replaces the old one. No row is ever deleted.
+-- (`DROP FUNCTION` cannot lose the trigger's target: the trigger is dropped
+-- first, in the same run.)
 -- =========================================================================
 
 -- Clear existing Triggers & Functions
@@ -29,7 +32,7 @@ BEGIN
 
     RETURN conv_id;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
 
 -- 2. Auth to Public user profiles sync (Essential for Signup and OAuth sign-in)
@@ -84,7 +87,7 @@ BEGIN
 
     RETURN NEW;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
 -- Bind trigger on auth.users (Runs completely on auth signup)
 CREATE TRIGGER on_auth_user_created
