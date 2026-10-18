@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../providers/AuthProvider.tsx';
 import { Bell, UserPlus, ArrowLeft, Search } from 'lucide-react';
@@ -83,7 +83,7 @@ export default function NotificationsScreen() {
   return (
     <div className="flex flex-col h-full bg-[var(--bg-main)] font-sans">
       <div className="h-14 flex items-center px-4 border-b border-[var(--border-color)]/30 shrink-0 sticky top-0 bg-[var(--bg-main)] z-10">
-        <button onClick={() => navigate(-1)} className="p-2 -ml-2 rounded-full hover:bg-[var(--text-primary)]/5">
+        <button aria-label="Back" onClick={() => navigate(-1)} className="p-2 -ml-2 rounded-full hover:bg-[var(--text-primary)]/5">
           <ArrowLeft size={24} />
         </button>
         <div className="ml-4 flex items-center gap-2">
@@ -111,6 +111,7 @@ export default function NotificationsScreen() {
                 <div className="relative shrink-0">
                   <img 
                     src={notif.fromUserAvatar || DEFAULT_LOGO} 
+alt={`${notif.fromUserName || 'User'}'s avatar`}
                     className="w-11 h-11 rounded-full object-cover border border-[var(--border-color)]/20" 
                   />
                   <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-blue-500 flex items-center justify-center shadow-md border-2 border-[var(--bg-card)]">

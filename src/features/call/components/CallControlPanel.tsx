@@ -1,13 +1,11 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
-  Phone,
-  PhoneOff, 
+  Phone, 
   Mic, 
   MicOff, 
   Video, 
-  VideoOff, 
-  Volume1,
+  VideoOff,
   Volume2, 
   VolumeX,
   UserPlus,
@@ -90,7 +88,7 @@ export const CallControlPanel: React.FC<CallControlPanelProps> = ({
         <button 
           onClick={() => {
             if (typeof navigator !== 'undefined' && navigator.vibrate) {
-              try { navigator.vibrate(15); } catch (e) {}
+              try { navigator.vibrate(15); } catch (_e) { /* intentionally ignored: best-effort, failure is non-fatal */ }
             }
             onToggleSpeaker();
           }}
@@ -122,7 +120,7 @@ export const CallControlPanel: React.FC<CallControlPanelProps> = ({
           onClick={() => {
             if (!videoToggleAvailable) return;
             if (typeof navigator !== 'undefined' && navigator.vibrate) {
-              try { navigator.vibrate(15); } catch (e) {}
+              try { navigator.vibrate(15); } catch (_e) { /* intentionally ignored: best-effort, failure is non-fatal */ }
             }
             onToggleVideo();
           }}
@@ -142,7 +140,7 @@ export const CallControlPanel: React.FC<CallControlPanelProps> = ({
         <button 
           onClick={() => {
             if (typeof navigator !== 'undefined' && navigator.vibrate) {
-              try { navigator.vibrate(15); } catch (e) {}
+              try { navigator.vibrate(15); } catch (_e) { /* intentionally ignored: best-effort, failure is non-fatal */ }
             }
             onToggleMute();
           }}
@@ -160,7 +158,7 @@ export const CallControlPanel: React.FC<CallControlPanelProps> = ({
         <button 
           onClick={() => {
             if (typeof navigator !== 'undefined' && navigator.vibrate) {
-              try { navigator.vibrate([40, 30, 40]); } catch (e) {}
+              try { navigator.vibrate([40, 30, 40]); } catch (_e) { /* intentionally ignored: best-effort, failure is non-fatal */ }
             }
             onEndCall();
           }}
@@ -174,7 +172,7 @@ export const CallControlPanel: React.FC<CallControlPanelProps> = ({
         <button 
           onClick={() => {
             if (typeof navigator !== 'undefined' && navigator.vibrate) {
-              try { navigator.vibrate(12); } catch (e) {}
+              try { navigator.vibrate(12); } catch (_e) { /* intentionally ignored: best-effort, failure is non-fatal */ }
             }
             setShowMoreMenu(prev => !prev);
           }}

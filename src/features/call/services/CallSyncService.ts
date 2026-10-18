@@ -1,6 +1,7 @@
 import { supabase } from '../../../lib/supabase';
 import { LocalDataCache } from '../../../services/LocalDataCache';
 
+import { logger } from '../../../utils/logger';
 export interface CallRecord {
   id: string;
   otherUserId: string;
@@ -127,7 +128,7 @@ class CallSyncServiceImpl {
           filter: `caller_id=eq.${userId}`,
         },
         () => {
-          console.log('[CallSyncService] Realtime update detected (caller activity)');
+          logger.info('[CallSyncService] Realtime update detected (caller activity)');
           onUpdate();
         }
       )
@@ -140,7 +141,7 @@ class CallSyncServiceImpl {
           filter: `receiver_id=eq.${userId}`,
         },
         () => {
-          console.log('[CallSyncService] Realtime update detected (receiver activity)');
+          logger.info('[CallSyncService] Realtime update detected (receiver activity)');
           onUpdate();
         }
       )

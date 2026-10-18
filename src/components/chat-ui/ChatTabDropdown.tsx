@@ -2,13 +2,11 @@ import React, { useState } from 'react';
 import { 
   Users, 
   Radio, 
-  EyeOff, 
   Settings, 
   ChevronRight, 
   ChevronLeft,
   MessageCircle,
   Check,
-  User,
   UserPlus,
   CheckSquare
 } from 'lucide-react';
@@ -28,8 +26,7 @@ export const ChatTabDropdown: React.FC<ChatTabDropdownProps> = ({
   isOpen,
   onClose,
   chatListFilter,
-  setChatListFilter,
-  showHiddenChatsEntry
+  setChatListFilter
 }) => {
   const navigate = useNavigate();
   const [page, setPage] = useState<1 | 2>(1);
@@ -69,7 +66,7 @@ export const ChatTabDropdown: React.FC<ChatTabDropdownProps> = ({
   return (
     <>
       {/* Fallback backdrop to dismiss on click/tap */}
-      <div 
+      <div role="presentation" 
         className="fixed inset-0 z-[100] bg-transparent cursor-default" 
         onClick={onClose} 
       />

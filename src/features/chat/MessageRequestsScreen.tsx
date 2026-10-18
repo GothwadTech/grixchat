@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Check, X, Loader2, Users, Flame, Send, ArrowDownLeft, ArrowUpRight } from 'lucide-react';
+import { ArrowLeft, Check, X, Loader2, Users, Send, ArrowDownLeft, ArrowUpRight } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../providers/AuthProvider';
-import { getAcceptedChats, acceptChat, declineChat } from '../../utils/acceptedChats';
+import { acceptChat } from '../../utils/acceptedChats';
 import { chatService } from './services/chatService';
 import { notificationService } from '../../services/db/notificationService';
 import { LocalDataCache } from '../../services/LocalDataCache';
@@ -193,7 +193,7 @@ export default function MessageRequestsScreen() {
       {/* Header */}
       <div className="shrink-0 flex items-center justify-between px-4 min-h-[56px] pt-safe pb-1.5 bg-[var(--header-bg)] z-55 shadow-sm border-b border-[var(--border-color)]/35 rounded-b-2xl">
         <div className="flex items-center gap-3">
-          <button onClick={() => navigate(-1)} className="hover:bg-white/10 p-2 rounded-full transition-colors cursor-pointer text-[var(--header-text)]">
+          <button aria-label="Back" onClick={() => navigate(-1)} className="hover:bg-white/10 p-2 rounded-full transition-colors cursor-pointer text-[var(--header-text)]">
             <ArrowLeft size={22} />
           </button>
           <h1 className="text-xl font-black text-[var(--header-text)] tracking-tight">

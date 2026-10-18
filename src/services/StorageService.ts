@@ -1,3 +1,4 @@
+import { logger } from '../utils/logger';
 /**
  * StorageService provides a safe interface for localStorage and sessionStorage.
  * It checks for availability and handles security policy restrictions in iframes.
@@ -26,8 +27,8 @@ class StorageService {
         keysToRemove.forEach((key) => {
           try {
             window.localStorage.removeItem(key);
-            console.log(`[Cache Control] Pruned persistent local key: ${key}`);
-          } catch (_) {}
+            logger.info(`[Cache Control] Pruned persistent local key: ${key}`);
+          } catch (_) { /* intentionally ignored: best-effort, failure is non-fatal */ }
         });
       } catch (e) {
         console.warn('Silent localstorage reading prepopulation warning:', e);
@@ -90,7 +91,7 @@ class StorageService {
         this.memoryStorage[key] = val;
       }
       return val;
-    } catch (e) {
+    } catch (_e) {
       return null;
     }
   }
@@ -134,7 +135,7 @@ class StorageService {
         }
       }
       keysToRemove.forEach((key) => {
-        try { window.localStorage.removeItem(key); } catch(_) {}
+        try { window.localStorage.removeItem(key); } catch(_) { /* intentionally ignored: best-effort, failure is non-fatal */ }
       });
     } catch (e) {
       console.warn('Failed clearing localstorage, keeping in-memory only:', e);
@@ -190,7 +191,7 @@ class SessionStorageService {
         this.memoryStorage[key] = val;
       }
       return val;
-    } catch (e) {
+    } catch (_e) {
       return null;
     }
   }

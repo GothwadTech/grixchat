@@ -4,11 +4,12 @@ import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { LockService } from './services/LockService.ts';
 import { CacheService } from './services/CacheService.ts';
 import NotificationHandler from './components/NotificationHandler.tsx';
-import DesktopSidebar from './components/layout/DesktopSidebar';
+
 import { motion } from 'motion/react';
 import { useAuth } from './providers/AuthProvider';
 import { useTheme } from './contexts/ThemeContext';
 import { ErrorBoundary } from 'react-error-boundary';
+import { RouteErrorFallback } from './components/common/RouteErrorFallback';
 import SplashScreen from './components/SplashScreen';
 import DeveloperConsole from './features/console/DeveloperConsole';
 import { LocalDataCache } from './services/LocalDataCache';
@@ -100,6 +101,7 @@ import MainLayout from './components/layout/MainLayout.tsx';
 import { LayoutProvider } from './contexts/LayoutContext.tsx';
 import { NavProvider } from './contexts/NavContext.tsx';
 
+import { logger } from './utils/logger';
 const ImagePreviewScreen = React.lazy(() => import('./features/chat/ImagePreviewScreen'));
 
 export default function App() {
@@ -354,9 +356,9 @@ export default function App() {
   useEffect(() => {
     const loadCount = parseInt(storage.getItem('loadCount') || '0');
     storage.setItem('loadCount', (loadCount + 1).toString());
-    console.log(`App Load Count: ${loadCount + 1}`);
-    console.log(`Current Auth State: ${user ? 'Logged In' : 'Logged Out'}`);
-    console.log(`Auth Ready: ${isAuthReady}`);
+    logger.info(`App Load Count: ${loadCount + 1}`);
+    logger.info(`Current Auth State: ${user ? 'Logged In' : 'Logged Out'}`);
+    logger.info(`Auth Ready: ${isAuthReady}`);
     
     CacheService.clearOldCache();
   }, [user]);
@@ -469,7 +471,7 @@ export default function App() {
 
   // Guard Logic
   const needsVerification = user && !user.email_confirmed_at && !(user.app_metadata?.providers || []).some((p: string) => ['google', 'github'].includes(p));
-  const isLocalStorageOffline = !navigator.onLine;
+  const _isLocalStorageOffline = !navigator.onLine;
 
   if (user && isAuthReady) {
     const isPublicRoute = ['/login', '/signup', '/forgot-password', '/privacy-policy', '/terms', '/verify-email'].includes(location.pathname);
@@ -487,6 +489,13 @@ export default function App() {
             <div className="flex-1 flex flex-col h-full relative overflow-hidden">
               {user && <NotificationHandler />}
               <div className="flex-1 h-full relative overflow-hidden">
+              {/* Per-screen boundary: a crash in one screen keeps the shell alive, and
+                  navigating elsewhere resets it (resetKeys). */}
+              <ErrorBoundary
+                resetKeys={[location.pathname]}
+                FallbackComponent={RouteErrorFallback}
+                onError={(err, info) => logger.error('[RouteBoundary] screen crashed', err, info.componentStack)}
+              >
               <React.Suspense fallback={
                   <div className="h-full flex items-center justify-center bg-[var(--bg-main)]">
                     <div className="w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
@@ -572,6 +581,7 @@ export default function App() {
                     <Route path="*" element={<Navigate to="/chats" replace />} />
                   </Routes>
                 </React.Suspense>
+              </ErrorBoundary>
               </div>
             </div>
           </div>

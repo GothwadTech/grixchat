@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Check, MessageSquare, Type } from 'lucide-react';
+import { useState } from 'react';
+import { Check, Type } from 'lucide-react';
 import { storage } from '../../../services/StorageService.ts';
 
 interface BubbleCustomizerProps {

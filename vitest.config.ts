@@ -32,5 +32,19 @@ export default defineConfig({
     include: ['src/**/*.{test,spec}.{ts,tsx}', 'dev/**/*.{test,spec}.{ts,tsx}'],
     css: false,
     restoreMocks: true,
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'html', 'json-summary'],
+      // Measured on the shipped code, minus the mock backend and tests. Thresholds
+      // sit just under today's numbers so coverage can only go up.
+      include: ['src/**/*.{ts,tsx}', 'server/**/*.ts'],
+      exclude: ['src/**/__tests__/**', 'src/**/*.d.ts', 'src/main.tsx'],
+      thresholds: {
+        lines: 15,
+        functions: 40,
+        statements: 15,
+        branches: 50,
+      },
+    },
   },
 });

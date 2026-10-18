@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   Users, 
   Shield, 
@@ -9,13 +9,11 @@ import {
   VolumeX, 
   UserMinus, 
   HelpCircle, 
-  Lock, 
-  ChevronRight,
+  Lock,
   Info as InfoIcon,
   ChevronRight as ChevronRightIcon
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { motion, AnimatePresence } from 'motion/react';
 import { useAuth } from '../../../providers/AuthProvider';
 import { CommonSearchBar } from '../../../components/common/CommonSearchBar';
 import Avatar from '../../../components/common/Avatar';

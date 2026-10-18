@@ -14,7 +14,7 @@ export const EmojiPickerMenu: React.FC<{
   
   return (
     <div className="relative" ref={emojiPickerRef}>
-      <button 
+      <button aria-label="Add emoji" 
         type="button" 
         onClick={() => setShowEmojiPicker(!showEmojiPicker)} 
         className="p-2 text-[var(--text-primary)] hover:bg-[var(--bg-main)] rounded-full transition-colors shrink-0"

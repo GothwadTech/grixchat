@@ -34,7 +34,7 @@ export const GroupsTabDropdown: React.FC<GroupsTabDropdownProps> = ({
   return (
     <>
       {/* Fallback backdrop to dismiss on click/tap */}
-      <div 
+      <div role="presentation" 
         className="fixed inset-0 z-[100] bg-transparent cursor-default" 
         onClick={onClose} 
       />

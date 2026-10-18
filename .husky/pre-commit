@@ -1,0 +1,5 @@
+#!/bin/sh
+# Runs before every commit: type errors and ESLint errors block the commit.
+# Warnings do not block (they are the tracked backlog in docs/ROCK_SOLID.md).
+npm run lint || exit 1
+npx eslint --quiet . || exit 1

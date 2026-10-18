@@ -77,7 +77,7 @@ export const MessageList: React.FC<MessageListProps> = ({
       setHighlightedMessageId(messageId);
       
       // Vibrate on jump
-      if (window.navigator.vibrate) try { window.navigator.vibrate(15); } catch(e){}
+      if (window.navigator.vibrate) try { window.navigator.vibrate(15); } catch(_e){ /* intentionally ignored: best-effort, failure is non-fatal */ }
 
       // Clear highlight after animation
       setTimeout(() => {

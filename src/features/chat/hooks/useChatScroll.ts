@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useCallback } from 'react';
+import { useLayoutEffect, useRef, useCallback } from 'react';
 
 export function useChatScroll(
   messages: any[], 

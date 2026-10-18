@@ -42,7 +42,6 @@ export const ChatHeaderDropdown: React.FC<ChatHeaderDropdownProps> = ({
   isOpen,
   onClose,
   receiverId,
-  receiver,
   isGroup,
   isMuted,
   setIsMuted,
@@ -101,7 +100,7 @@ export const ChatHeaderDropdown: React.FC<ChatHeaderDropdownProps> = ({
   return (
     <>
       {/* Absolute fallback backdrop to dismiss on click/tap */}
-      <div 
+      <div role="presentation" 
         className="fixed inset-0 z-[100] bg-transparent cursor-default" 
         onClick={onClose} 
       />

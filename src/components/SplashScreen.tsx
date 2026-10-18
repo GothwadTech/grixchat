@@ -1,10 +1,7 @@
 import React from 'react';
 import { motion } from 'motion/react';
 
-interface SplashScreenProps {
-}
-
-export default function SplashScreen({ }: SplashScreenProps) {
+export default function SplashScreen() {
   return (
     <div className="fixed inset-0 bg-[var(--bg-main)] flex flex-col items-center justify-center z-[9999] font-sans overflow-hidden">
       {/* Center Logo */}

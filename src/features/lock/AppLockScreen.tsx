@@ -1,17 +1,14 @@
-import React, { useState, useEffect } from 'react';
+
 import { 
-  ArrowLeft, 
   Lock, 
   ShieldCheck, 
   ChevronRight, 
   Hash, 
   Type, 
-  ShieldAlert,
-  Shield
+  ShieldAlert
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { LockService } from '../../services/LockService.ts';
-import { motion } from 'motion/react';
 import SettingHeader from '../../components/layout/SettingHeader.tsx';
 import { useAuth } from '../../providers/AuthProvider';
 
@@ -51,7 +48,10 @@ export default function AppLockScreen() {
   ];
 
   const Toggle = ({ active, onClick }: { active: boolean, onClick: () => void }) => (
-    <button 
+    <button
+      type="button"
+      role="switch"
+      aria-checked={active}
       onClick={onClick}
       className={`w-11 h-6 rounded-full transition-all relative cursor-pointer outline-none ${
         active ? 'bg-[var(--primary)]' : 'bg-[#e2e8f0] dark:bg-zinc-700'

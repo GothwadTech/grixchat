@@ -139,7 +139,7 @@ export default function GlobalLockScreen({ onUnlock }: GlobalLockScreenProps) {
                     placeholder="••••••••"
                     autoFocus
                   />
-                  <button 
+                  <button aria-label="More information" 
                     onClick={() => setShowHelp(true)}
                     className="absolute right-4 top-1/2 -translate-y-1/2 text-[var(--text-secondary)] hover:text-primary transition-colors"
                   >
@@ -196,7 +196,7 @@ export default function GlobalLockScreen({ onUnlock }: GlobalLockScreenProps) {
                 <div className="w-12 h-12 bg-amber-500/10 rounded-2xl flex items-center justify-center text-amber-500">
                   <ShieldAlert size={24} />
                 </div>
-                <button onClick={() => setShowHelp(false)} className="p-2 hover:bg-zinc-50/10 rounded-full transition-colors">
+                <button aria-label="Close" onClick={() => setShowHelp(false)} className="p-2 hover:bg-zinc-50/10 rounded-full transition-colors">
                   <X size={24} className="text-[var(--text-secondary)]" />
                 </button>
               </div>

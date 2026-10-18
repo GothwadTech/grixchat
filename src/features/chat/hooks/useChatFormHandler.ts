@@ -1,5 +1,4 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { supabase } from '../../../lib/supabase';
 import { aiService } from '../../../services/AIService';
 import { LocalDataCache } from '../../../services/LocalDataCache';
 
@@ -39,15 +38,13 @@ interface UseChatFormHandlerProps {
 }
 
 export function useChatFormHandler({
-  chatId,
   receiverId,
   user,
   addOptimisticMessage,
   confirmOptimisticMessage,
   performSendMessage,
   performEditMessage,
-  textareaRef,
-  scrollToBottom
+  textareaRef
 }: UseChatFormHandlerProps) {
   const [showOptions, setShowOptions] = useState(false);
   const [showPlusMenu, setShowPlusMenu] = useState(false);
@@ -352,7 +349,7 @@ export function useChatFormHandler({
     
     try {
       if (window.navigator?.vibrate) window.navigator.vibrate(5);
-    } catch (err) {
+    } catch (_err) {
       // Ignore vibration errors
     }
   }, []);

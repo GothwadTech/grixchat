@@ -1,5 +1,5 @@
 import React from 'react';
-import { ArrowLeft, MoreVertical, Edit2, ImageIcon, Play, Trash2 } from 'lucide-react';
+import { ArrowLeft, MoreVertical, Edit2, ImageIcon, Trash2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 interface ChatSettingsHeaderProps {
@@ -26,7 +26,7 @@ export default function ChatSettingsHeader({
   return (
     <div className="w-full bg-[var(--header-bg)] px-4 h-14 flex justify-between items-center z-50 shrink-0 relative border-b border-[var(--border-color)]/35 shadow-sm rounded-b-2xl">
       {/* Back button */}
-      <button 
+      <button aria-label="Back" 
         onClick={onBack} 
         id="btn_chat_settings_back"
         className="w-12 h-12 flex items-center justify-center hover:bg-black/5 dark:hover:bg-white/5 rounded-full transition-colors cursor-pointer active:scale-95"
@@ -46,7 +46,7 @@ export default function ChatSettingsHeader({
 
       {/* 3 dots on the absolute right */}
       <div className="relative flex items-center" ref={dropdownRef}>
-        <button 
+        <button aria-label="More options" 
           onClick={() => setShowDropdown(!showDropdown)} 
           id="btn_chat_settings_menu"
           className="w-12 h-12 flex items-center justify-center hover:bg-black/5 dark:hover:bg-white/5 rounded-full transition-all active:scale-95 text-[var(--header-text)] opacity-90 cursor-pointer"

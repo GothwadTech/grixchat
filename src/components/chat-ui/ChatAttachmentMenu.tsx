@@ -49,7 +49,7 @@ export default function ChatAttachmentMenu({
   return (
     <>
       {/* Absolute fallback backdrop to dismiss on click/tap */}
-      <div 
+      <div role="presentation" 
         className="fixed inset-0 z-[100] bg-transparent cursor-default" 
         onClick={onClose} 
       />

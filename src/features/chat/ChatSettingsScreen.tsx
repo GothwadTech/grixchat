@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { Check, Trash2, Loader2, Clock, CalendarDays, Ban } from 'lucide-react';
@@ -193,7 +193,7 @@ export default function ChatSettingsScreen() {
                   try {
                     const rawName = rawUrl.split('/').pop();
                     if (rawName) fileName = decodeURIComponent(rawName);
-                  } catch (decErr) {
+                  } catch (_decErr) {
                     fileName = rawUrl.split('/').pop() || 'Shared Document';
                   }
 
@@ -282,7 +282,7 @@ export default function ChatSettingsScreen() {
           u2: receiverId 
         });
         if (data) convId = data;
-      } catch (_) {}
+      } catch (_) { /* intentionally ignored: best-effort, failure is non-fatal */ }
 
       if (!convId) {
         const { data: u1Convs } = await supabase

@@ -74,7 +74,7 @@ export default function ReauthSheet({ isOpen, onClose, onSuccess, title = "Confi
 
             <div className="px-6 py-2 flex items-center justify-between">
               <h3 className="text-[20px] leading-[18px] font-black text-[var(--text-primary)] tracking-tight">{title}</h3>
-              <button 
+              <button aria-label="Close" 
                 onClick={onClose}
                 className="p-1.5 hover:bg-[var(--bg-main)] rounded-full transition-colors text-[var(--text-secondary)]"
               >

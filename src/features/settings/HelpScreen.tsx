@@ -5,7 +5,6 @@ import {
   Shield, 
   Mail, 
   ChevronRight,
-  MessageSquare,
   Sparkles,
   HeartHandshake
 } from 'lucide-react';

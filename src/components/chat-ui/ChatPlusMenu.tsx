@@ -8,10 +8,10 @@ export const ChatPlusMenu: React.FC<{
   onMediaClick?: () => void;
   onFileClick?: () => void;
   chatId?: string;
-}> = ({ showPlusMenu, setShowPlusMenu, plusMenuRef, onMediaClick, onFileClick, chatId }) => {
+}> = ({ showPlusMenu, setShowPlusMenu, plusMenuRef, onMediaClick, onFileClick }) => {
   return (
     <div className="relative" ref={plusMenuRef}>
-      <button type="button" onClick={() => setShowPlusMenu(!showPlusMenu)} className="p-2 text-[var(--text-primary)] hover:bg-[var(--bg-main)] rounded-full transition-colors shrink-0">
+      <button aria-label="Add" type="button" onClick={() => setShowPlusMenu(!showPlusMenu)} className="p-2 text-[var(--text-primary)] hover:bg-[var(--bg-main)] rounded-full transition-colors shrink-0">
         <Plus size={24} />
       </button>
       {showPlusMenu && (

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../providers/AuthProvider.tsx';
@@ -7,6 +7,7 @@ import { isUserOnline } from '../../utils/presence';
 import Avatar from '../../components/common/Avatar';
 import { useLivePresence } from '../../providers/PresenceProvider';
 
+import { sanitizeSearchTerm } from '../../utils/searchTerm';
 interface UserProfile {
   uid: string;
   username: string;
@@ -49,7 +50,7 @@ const UserItem = ({
 
 export default function SearchUserScreen() {
   const navigate = useNavigate();
-  const { user: authUser, userData } = useAuth();
+  const { user: authUser } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
   
@@ -102,13 +103,15 @@ export default function SearchUserScreen() {
 
   const handleSearch = async () => {
     const term = searchTerm.toLowerCase();
+    const safeTerm = sanitizeSearchTerm(term);
+    if (!safeTerm) { setLoading(false); return; }
     if (!supabase) return;
     setLoading(true);
     try {
       const { data } = await supabase
         .from('users')
         .select('id, username, full_name, photo_url, is_online, last_seen')
-        .or(`username.ilike.%${term}%,full_name.ilike.%${term}%`)
+        .or(`username.ilike.%${safeTerm}%,full_name.ilike.%${safeTerm}%`)
         .neq('id', authUser?.id)
         .limit(30);
       
@@ -133,7 +136,7 @@ export default function SearchUserScreen() {
       {/* Header (TabHeader style) */}
       <div className="w-full bg-[var(--header-bg)] px-4 h-14 flex items-center z-50 shrink-0 relative border-b border-[var(--border-color)] shadow-sm">
         <div className="flex items-center gap-3">
-          <button 
+          <button aria-label="Back" 
             onClick={() => navigate(-1)}
             className="p-2 hover:bg-black/5 rounded-full transition-colors cursor-pointer"
           >
@@ -158,7 +161,7 @@ export default function SearchUserScreen() {
             className="flex-1 bg-transparent border-none outline-none text-[15px] font-bold text-[var(--text-primary)] placeholder:text-[var(--text-secondary)]/40"
           />
           {searchTerm && (
-            <button 
+            <button aria-label="Close" 
               onClick={() => setSearchTerm('')}
               className="p-1 hover:bg-black/5 rounded-full transition-colors"
             >

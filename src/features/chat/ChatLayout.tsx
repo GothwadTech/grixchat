@@ -1,9 +1,6 @@
 import React from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import ChatsTab from './ChatsTab';
-import { motion } from 'motion/react';
-import { APP_CONFIG } from '../../config/appConfig';
-
 export default function ChatLayout() {
   const location = useLocation();
   const isChatActive = location.pathname.startsWith('/chat/') && location.pathname !== '/chat/';

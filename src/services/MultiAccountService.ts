@@ -2,6 +2,7 @@ import { supabase } from '../lib/supabase';
 import { LocalDataCache } from './LocalDataCache';
 import { storage } from './StorageService';
 
+import { logger } from '../utils/logger';
 export interface StoredAccount {
   userId: string;
   email: string;
@@ -87,7 +88,7 @@ class MultiAccountServiceImpl {
 
       this.saveAccounts(accounts);
       storage.setItem(this.ACTIVE_ID_KEY, userId);
-      console.log(`[MultiAccount] Registered/Updated account successfully: ${fullName} (@${username})`);
+      logger.info(`[MultiAccount] Registered/Updated account successfully: ${fullName} (@${username})`);
     } catch (err) {
       console.error('[MultiAccount] addOrUpdateAccount error:', err);
     }
@@ -111,7 +112,7 @@ class MultiAccountServiceImpl {
             refresh_token: session.refresh_token,
           };
           this.saveAccounts(accounts);
-          console.log(`[MultiAccount] Refreshed/Updated stored session tokens for: ${userId}`);
+          logger.info(`[MultiAccount] Refreshed/Updated stored session tokens for: ${userId}`);
         }
       }
     } catch (err) {
@@ -140,7 +141,7 @@ class MultiAccountServiceImpl {
         return false;
       }
 
-      console.log(`[MultiAccount] Switching session to: ${target.fullName} (${target.email})`);
+      logger.info(`[MultiAccount] Switching session to: ${target.fullName} (${target.email})`);
 
       // 1. Temporarily pause status/heartbeats if active
       // 2. Set the active account ID key first so AuthProvider can sync
@@ -240,7 +241,7 @@ class MultiAccountServiceImpl {
         }
       } else {
         // Logging out another account that is inactive, just save list and reload
-        console.log(`[MultiAccount] Removed secondary account: ${userId}`);
+        logger.info(`[MultiAccount] Removed secondary account: ${userId}`);
       }
     } catch (err) {
       console.error('[MultiAccount] logoutAccount error:', err);

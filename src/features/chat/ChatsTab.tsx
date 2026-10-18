@@ -1,41 +1,24 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useCallback } from 'react';
 import { useSearch } from '../../contexts/SearchContext.tsx';
-import { Link, useNavigate } from 'react-router-dom';
-import { MessageCircle, Phone, Video, ArrowUpRight, ArrowDownLeft, PhoneMissed, Info, Lock, Users, Search, X, Plus, Loader2, Trash, Archive } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Phone, Loader2 } from 'lucide-react';
 import { useLayout } from '../../contexts/LayoutContext.tsx';
-import { motion, AnimatePresence } from 'motion/react';
 import { useConversations } from './hooks/useConversations.ts';
 import { useCalls } from './hooks/useCalls.ts';
 import { useAuth } from '../../providers/AuthProvider.tsx';
 import { ChatUserList } from './components/ChatUserList.tsx';
 import { CallsHistoryList } from '../call/components/CallsHistoryList.tsx';
-import { supabase } from '../../lib/supabase';
-import { getAcceptedChats, initializeAcceptedConversations } from '../../utils/acceptedChats';
+import { initializeAcceptedConversations } from '../../utils/acceptedChats';
 import { storage } from '../../services/StorageService';
-import { ImageService } from '../../services/ImageService';
-import { transactionQueue } from '../../services/db/transactionQueueService';
-import Avatar from '../../components/common/Avatar';
 import CommonSearchBar from '../../components/common/CommonSearchBar';
-
-interface StoryGroup {
-  userId: string;
-  username: string;
-  fullName: string;
-  photoURL: string;
-  hasUnseen: boolean;
-}
 
 export default function ChatsTab() {
   const navigate = useNavigate();
-  const { user: authUser, userData, refreshUserData } = useAuth();
+  const { user: _authUser, userData } = useAuth();
   const { searchTerm, setSearchTerm } = useSearch();
   const { 
     activeFilters, 
-    chatListFilter, 
-    isChatSelectMode, 
-    setChatSelectMode, 
-    selectedChatIds, 
-    setSelectedChatIds 
+    chatListFilter 
   } = useLayout();
   const activeFilter = activeFilters['chats'] || 'Chats';
   

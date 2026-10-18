@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'motion/react';
-import { VideoOff, User, Sparkles, AudioLines } from 'lucide-react';
+import { VideoOff, Sparkles, AudioLines } from 'lucide-react';
 import { CallStatus } from '../types/callTypes';
 
 interface VideoFeedProps {
@@ -23,7 +23,6 @@ export const VideoFeed: React.FC<VideoFeedProps> = ({
   remoteVideoRef,
   isVideoOff,
   callStatus,
-  timer,
   receiver,
   hasRemoteVideo = false,
 }) => {

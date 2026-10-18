@@ -6,6 +6,7 @@ import { X, Loader2, Volume2, VolumeX, Eye } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import Avatar from '../../components/common/Avatar';
 
+import { logger } from '../../utils/logger';
 export default function StoryWatcherScreen() {
   const { userId } = useParams();
   const navigate = useNavigate();
@@ -81,7 +82,7 @@ export default function StoryWatcherScreen() {
       const playPromise = audio.play();
       if (playPromise !== undefined) {
         playPromise.catch(err => {
-          console.log("Audio autoplay was prevented/interrupted: ", err);
+          logger.info("Audio autoplay was prevented/interrupted: ", err);
         });
       }
     }
@@ -294,7 +295,7 @@ export default function StoryWatcherScreen() {
               {isMuted ? <VolumeX size={20} /> : <Volume2 size={20} />}
             </button>
           )}
-          <button onClick={() => navigate('/stories')} className="text-white p-1 hover:bg-white/10 rounded-full transition-all cursor-pointer">
+          <button aria-label="Close" onClick={() => navigate('/stories')} className="text-white p-1 hover:bg-white/10 rounded-full transition-all cursor-pointer">
             <X size={24} />
           </button>
         </div>

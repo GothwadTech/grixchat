@@ -38,7 +38,7 @@ export default function SettingHeader({
             className="flex-1 bg-transparent border-none outline-none text-[15px] font-bold text-[var(--text-primary)] placeholder:text-[var(--text-secondary)]/50"
           />
           {searchTerm && (
-            <button 
+            <button aria-label="Close" 
               onClick={() => setSearchTerm('')}
               className="p-1 hover:bg-black/5 rounded-full transition-colors"
             >
@@ -63,7 +63,7 @@ export default function SettingHeader({
     <div className="w-full bg-[var(--header-bg)] px-4 min-h-[56px] pt-safe pb-1.5 flex justify-between items-center z-50 shrink-0 relative border-b border-[var(--border-color)]/35 shadow-sm rounded-b-2xl">
       <div className="flex items-center gap-3">
         {showBack && (
-          <button 
+          <button aria-label="Back" 
             onClick={onBack || (() => navigate(-1))}
             className="p-2 hover:bg-black/5 rounded-full transition-colors cursor-pointer"
           >
@@ -76,7 +76,7 @@ export default function SettingHeader({
       </div>
       <div className="flex items-center gap-1 text-[var(--header-text)]">
         {showSearch && setSearchTerm && (
-          <button 
+          <button aria-label="Search" 
             onClick={() => setIsSearchActive(true)}
             className="p-2 hover:bg-black/5 rounded-full transition-colors"
           >

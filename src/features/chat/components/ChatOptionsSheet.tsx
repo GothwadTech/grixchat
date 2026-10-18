@@ -11,7 +11,6 @@ import {
   Trash, 
   UserX, 
   AlertTriangle,
-  Play,
   Palette
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
@@ -100,7 +99,7 @@ export const ChatOptionsSheet: React.FC<ChatOptionsSheetProps> = ({
                 />
                 <h3 className="text-[18px] font-black text-[var(--text-primary)] tracking-tight">Chat Options</h3>
               </div>
-              <button 
+              <button aria-label="Close" 
                 onClick={onClose}
                 className="p-2 hover:bg-[var(--bg-main)] rounded-full transition-colors text-[var(--text-secondary)]"
               >

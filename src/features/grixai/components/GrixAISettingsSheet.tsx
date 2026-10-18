@@ -32,7 +32,7 @@ export const GrixAISettingsSheet: React.FC<GrixAISettingsSheetProps> = ({
     >
       <div className="shrink-0 flex items-center justify-between px-4 h-14 bg-[var(--header-bg)] border-b border-[var(--border-color)]/35 shadow-sm rounded-b-2xl">
         <div className="flex items-center gap-3">
-          <button 
+          <button aria-label="Back" 
             onClick={() => setShowOptions(false)} 
             className="p-1.5 hover:bg-white/10 rounded-full cursor-pointer text-[var(--header-text)]"
           >

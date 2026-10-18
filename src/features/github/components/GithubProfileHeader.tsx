@@ -1,5 +1,5 @@
 import React from 'react';
-import { LogOut, User, GitFork, BookOpen } from 'lucide-react';
+import { LogOut, User, BookOpen } from 'lucide-react';
 
 interface GitHubProfile {
   login: string;

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { ImageIcon, FileText, Link as LinkIcon } from 'lucide-react';
 
 type TabType = 'media' | 'files' | 'links';

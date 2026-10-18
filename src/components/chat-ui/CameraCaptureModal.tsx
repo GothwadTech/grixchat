@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { X, Camera, RefreshCw, Trash2, Send, CameraOff, Image as ImageIcon } from 'lucide-react';
+import { X, RefreshCw, Trash2, Send, CameraOff, Image as ImageIcon } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useTheme } from '../../contexts/ThemeContext';
 
@@ -27,7 +27,7 @@ export default function CameraCaptureModal({
   onCapture,
 }: CameraCaptureModalProps) {
   const { resolvedTheme } = useTheme();
-  const isDark = resolvedTheme === 'dark';
+  const _isDark = resolvedTheme === 'dark';
 
   const [facingMode, setFacingMode] = useState<'user' | 'environment'>('user');
   const [stream, setStream] = useState<MediaStream | null>(null);
@@ -37,7 +37,7 @@ export default function CameraCaptureModal({
   const [isReady, setIsReady] = useState(false);
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const _canvasRef = useRef<HTMLCanvasElement | null>(null);
   const galleryInputRef = useRef<HTMLInputElement | null>(null);
 
   const handleGallerySelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -175,7 +175,7 @@ export default function CameraCaptureModal({
       >
         {/* Top Header Controls */}
         <div className="absolute top-0 left-0 right-0 p-4 flex justify-between items-center z-10 bg-gradient-to-b from-black/60 to-transparent">
-          <button
+          <button aria-label="Close"
             type="button"
             onClick={handleClose}
             className="w-10 h-10 flex items-center justify-center rounded-full bg-black/40 hover:bg-black/60 text-white transition-colors"
@@ -254,7 +254,7 @@ export default function CameraCaptureModal({
 
               {/* Action buttons */}
               <div className="flex justify-between items-center w-full px-4">
-                <button
+                <button aria-label="Delete"
                   type="button"
                   onClick={() => {
                     setCapturedImg(null);
@@ -265,7 +265,7 @@ export default function CameraCaptureModal({
                   <Trash2 size={22} className="text-red-400" />
                 </button>
 
-                <button
+                <button aria-label="Send"
                   type="button"
                   onClick={handleSend}
                   className="w-14 h-14 flex items-center justify-center bg-sky-500 hover:bg-sky-600 text-white rounded-full active:scale-95 transition-all shadow-lg"
@@ -300,6 +300,7 @@ export default function CameraCaptureModal({
                 {/* Snapper button */}
                 <button
                   type="button"
+                  aria-label="Take photo"
                   onClick={takePhoto}
                   className="w-18 h-18 rounded-full border-4 border-white flex items-center justify-center p-1 active:scale-90 transition-all cursor-pointer"
                 >

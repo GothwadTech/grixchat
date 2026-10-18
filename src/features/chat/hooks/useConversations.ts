@@ -96,7 +96,7 @@ function buildMutualSet(rows: any[], myId: string): Set<string> {
 }
 
 export const useConversations = (activeFilter: string) => {
-  const { user, isAuthReady, userData } = useAuth();
+  const { user, isAuthReady } = useAuth();
   
   // Use cached data instantly if it exists to prevent loader flickering
   const [conversations, setConversations] = useState<any[]>(() => {
@@ -122,10 +122,10 @@ export const useConversations = (activeFilter: string) => {
     return true;
   });
 
-  const [limit, setLimit] = useState(15);
+  const [_limit, setLimit] = useState(15);
   const [hasMore, setHasMore] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
-  const [isPaginating, setIsPaginating] = useState(false);
+  const [_isPaginating, setIsPaginating] = useState(false);
 
   const chatChannelsRef = useRef<any[]>([]);
   const subscribedIdsRef = useRef<string[]>([]);
@@ -258,7 +258,7 @@ export const useConversations = (activeFilter: string) => {
       }
 
       // ── 4. Per-chat nickname/avatar overrides ──────────────────────────────
-      let settingsMap: Record<string, { nickname?: string; customPhotoUrl?: string }> = {};
+      const settingsMap: Record<string, { nickname?: string; customPhotoUrl?: string }> = {};
       try {
         const { data: cSettings } = await supabase
           .from('chat_settings')
@@ -297,7 +297,7 @@ export const useConversations = (activeFilter: string) => {
           const unreadCount = unreadMap[conv.id] || 0;
 
           let lastMsgVal = conv.last_message || 'New Conversation';
-          let lastMsgAtVal = conv.last_message_at || conv.updated_at || conv.created_at;
+          const lastMsgAtVal = conv.last_message_at || conv.updated_at || conv.created_at;
           let lastMsgSenderId: string | undefined;
 
           // Ticks for the list row come from messages already cached on device.

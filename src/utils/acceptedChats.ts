@@ -4,7 +4,7 @@ export const getAcceptedChats = (): string[] => {
   try {
     const data = storage.getItem('grix_accepted_chats');
     return data ? JSON.parse(data) : [];
-  } catch (e) {
+  } catch (_e) {
     return [];
   }
 };
@@ -16,7 +16,7 @@ export const acceptChat = (conversationId: string) => {
       list.push(conversationId);
       storage.setItem('grix_accepted_chats', JSON.stringify(list));
     }
-  } catch (e) {}
+  } catch (_e) { /* intentionally ignored: best-effort, failure is non-fatal */ }
 };
 
 export const declineChat = (conversationId: string) => {
@@ -27,14 +27,14 @@ export const declineChat = (conversationId: string) => {
       declined.push(conversationId);
       storage.setItem('grix_declined_chats', JSON.stringify(declined));
     }
-  } catch (e) {}
+  } catch (_e) { /* intentionally ignored: best-effort, failure is non-fatal */ }
 };
 
 export const getDeclinedChats = (): string[] => {
   try {
     const data = storage.getItem('grix_declined_chats');
     return data ? JSON.parse(data) : [];
-  } catch (e) {
+  } catch (_e) {
     return [];
   }
 };
@@ -46,5 +46,5 @@ export const initializeAcceptedConversations = (conversationIds: string[]) => {
       storage.setItem('grix_accepted_chats', JSON.stringify(conversationIds));
       storage.setItem('grix_accepted_chats_initialized', 'true');
     }
-  } catch (e) {}
+  } catch (_e) { /* intentionally ignored: best-effort, failure is non-fatal */ }
 };

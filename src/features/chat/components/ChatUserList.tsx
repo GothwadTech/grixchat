@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { MessageCircle, Lock, Archive, Check, Trash, VolumeX, Pin } from 'lucide-react';
-import { motion } from 'motion/react';
+import { MessageCircle, Lock, Archive, Pin } from 'lucide-react';
 import { useAuth } from '../../../providers/AuthProvider.tsx';
 import { supabase } from '../../../lib/supabase';
 import { aiService } from '../../../services/AIService';
@@ -365,7 +364,6 @@ interface ChatUserListProps {
 
 export const ChatUserList: React.FC<ChatUserListProps> = ({
   conversations,
-  otherUsers = [],
   showGrixAI = false,
   archivedCount = 0,
   showSecretHeader = false,
@@ -374,7 +372,6 @@ export const ChatUserList: React.FC<ChatUserListProps> = ({
   emptyMessage = "No messages yet",
   emptySubMessage = "Start a conversation with your friends.",
   loading = false,
-  usersWithStories = [],
   showHiddenChatsEntry = true
 }) => {
   const navigate = useNavigate();
@@ -388,7 +385,7 @@ export const ChatUserList: React.FC<ChatUserListProps> = ({
       try {
         const pinned = JSON.parse(storage.getItem('app-pinned-chats') || '[]');
         setPinnedChatIds(pinned);
-      } catch (_) {}
+      } catch (_) { /* intentionally ignored: best-effort, failure is non-fatal */ }
     };
 
     loadPinned();
@@ -432,7 +429,7 @@ export const ChatUserList: React.FC<ChatUserListProps> = ({
     fetchSettings();
   }, [authUser?.id]);
 
-  const handleSwipeArchive = async (chatId: string) => {
+  const _handleSwipeArchive = async (chatId: string) => {
     if (userData && authUser) {
       try {
         const currentArchived = Array.isArray(userData.archivedChats) ? userData.archivedChats : [];
@@ -455,7 +452,7 @@ export const ChatUserList: React.FC<ChatUserListProps> = ({
     }
   };
 
-  const handleSwipeDelete = async (chatId: string) => {
+  const _handleSwipeDelete = async (chatId: string) => {
     if (userData && authUser) {
       try {
         const currentHidden = Array.isArray(userData.hiddenChats) ? userData.hiddenChats : [];
@@ -501,7 +498,7 @@ export const ChatUserList: React.FC<ChatUserListProps> = ({
     });
   };
 
-  const renderOtherUser = (user: OtherUser) => {
+  const _renderOtherUser = (user: OtherUser) => {
     const customSetts = settingsMap[user.uid];
     return (
       <SuggestedUserRow

@@ -7,12 +7,8 @@ import {
   Copy, 
   Pin, 
   CheckCircle2, 
-  Download, 
-  ChevronRight, 
   ChevronLeft,
-  ChevronDown,
-  Smile,
-  Info
+  ChevronDown
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { LazyEmojiPicker } from './LazyEmojiPicker';
@@ -116,7 +112,7 @@ export const ChatMessageMenu: React.FC<ChatMessageMenuProps> = ({
     setActiveMessageMenu(null);
   };
 
-  const handleDownload = () => {
+  const _handleDownload = () => {
     const url = activeMessageMenu.media_url || activeMessageMenu.imageUrl || activeMessageMenu.fileUrl;
     if (url) {
       const a = document.createElement('a');
@@ -138,7 +134,7 @@ export const ChatMessageMenu: React.FC<ChatMessageMenuProps> = ({
     setActiveMessageMenu(null);
   };
 
-  const formatDetailedDate = (dateString: string) => {
+  const _formatDetailedDate = (dateString: string) => {
     if (!dateString) return 'Pending';
     try {
       const d = new Date(dateString);
@@ -211,7 +207,7 @@ export const ChatMessageMenu: React.FC<ChatMessageMenuProps> = ({
                       </button>
                     ))}
                     {/* 6th item: Dropdown/triangle icon button that triggers full reaction picker */}
-                    <button
+                    <button aria-label="Expand"
                       type="button"
                       onClick={() => setShowFullEmojiPicker(true)}
                       className="w-8 h-8 rounded-full hover:bg-[var(--bg-main)] active:scale-110 transition-all flex items-center justify-center text-[var(--text-secondary)] hover:text-[#0494f4] cursor-pointer bg-transparent border-none"
@@ -373,7 +369,7 @@ export const ChatMessageMenu: React.FC<ChatMessageMenuProps> = ({
           {showConfirmModal && (
             <div className="fixed inset-0 z-[100000] flex items-center justify-center bg-black/60 backdrop-blur-[2px]">
               {/* Tap backdrop to cancel */}
-              <div 
+              <div role="presentation" 
                 className="absolute inset-0" 
                 onClick={() => setShowConfirmModal(false)} 
               />

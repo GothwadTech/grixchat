@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 
+import { logger } from '../../utils/logger';
 export default function ImagePreviewScreen() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -70,7 +71,7 @@ export default function ImagePreviewScreen() {
     }
   };
 
-  const toggleControls = (e: React.MouseEvent) => {
+  const toggleControls = (_e: React.MouseEvent) => {
     if (showSpeedMenu || showContextMenu || showDetailsPanel) {
       setShowSpeedMenu(false);
       setShowContextMenu(false);
@@ -250,7 +251,7 @@ export default function ImagePreviewScreen() {
         title: 'GrixChat Media Share',
         text: 'Shared from GrixChat',
         url: targetUrl
-      }).catch(err => console.log('Share dismissed:', err));
+      }).catch(err => logger.info('Share dismissed:', err));
     } else {
       navigator.clipboard.writeText(targetUrl);
       alert('Media URL copied to clipboard!');
@@ -342,7 +343,7 @@ export default function ImagePreviewScreen() {
       >
         {/* Left Side: Back Arrow & Details text */}
         <div className="flex items-center gap-2.5 min-w-0">
-          <button
+          <button aria-label="Back"
             onClick={() => navigate(-1)}
             type="button"
             className="w-11 h-11 flex items-center justify-center hover:bg-white/10 rounded-full transition-colors shrink-0 text-[var(--header-text)] cursor-pointer"
@@ -568,7 +569,7 @@ export default function ImagePreviewScreen() {
       <AnimatePresence>
         {showDetailsPanel && (
           <div
-            className="fixed inset-0 z-[100] bg-black/75 backdrop-blur-sm flex items-center justify-center p-5"
+role="presentation"             className="fixed inset-0 z-[100] bg-black/75 backdrop-blur-sm flex items-center justify-center p-5"
             onClick={() => setShowDetailsPanel(false)}
           >
             <motion.div
@@ -578,7 +579,7 @@ export default function ImagePreviewScreen() {
               className="bg-[#121318] border border-white/10 rounded-3xl w-full max-w-sm overflow-hidden p-6 text-white text-left shadow-2xl relative"
               onClick={(e) => e.stopPropagation()}
             >
-              <button
+              <button aria-label="Close"
                 onClick={() => setShowDetailsPanel(false)}
                 className="absolute top-4 right-4 p-1.5 hover:bg-white/10 rounded-full text-white/60 hover:text-white"
               >

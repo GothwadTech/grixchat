@@ -2,9 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { 
   UserPlus, 
   LogOut, 
-  User, 
-  Check, 
-  Users,
+  User,
   Shield,
   Github,
   Terminal
@@ -61,12 +59,12 @@ export const ProfileTabDropdown: React.FC<ProfileTabDropdownProps> = ({
   // Filter out the currently active account to list other switchable accounts below
   const otherAccounts = accounts.filter(acc => acc.userId !== authUser?.id);
   const DEFAULT_LOGO = "https://cdn-icons-png.flaticon.com/512/149/149071.png";
-  const profilePic = userData?.photoURL || (userData as any)?.photo_url || authUser?.user_metadata?.avatar_url || DEFAULT_LOGO;
+  const _profilePic = userData?.photoURL || (userData as any)?.photo_url || authUser?.user_metadata?.avatar_url || DEFAULT_LOGO;
 
   return (
     <>
       {/* Backdrop to dismiss on click/tap */}
-      <div 
+      <div role="presentation" 
         className="fixed inset-0 z-[100] bg-transparent cursor-default" 
         onClick={onClose} 
       />

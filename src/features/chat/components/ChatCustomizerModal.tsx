@@ -75,7 +75,7 @@ export const ChatCustomizerModal: React.FC<ChatCustomizerModalProps> = ({
     <AnimatePresence>
       {isOpen && (
         <div className="fixed inset-0 z-[100000] flex items-center justify-center bg-black/75 backdrop-blur-[2px]">
-          <div className="absolute inset-0" onClick={onClose} />
+          <div role="presentation" className="absolute inset-0" onClick={onClose} />
           
           <motion.div 
             initial={{ opacity: 0, scale: 0.9, y: 20 }}

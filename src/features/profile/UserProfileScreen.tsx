@@ -1,37 +1,25 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { 
   ArrowLeft, 
   MessageSquare, 
   ShieldAlert, 
-  UserX, 
-  Info,
-  Calendar,
-  Clock,
+  UserX,
   MoreVertical,
   CheckCircle2,
   Bell,
-  Settings,
-  ChevronRight,
-  Edit3,
-  UserPlus,
-  UserCheck,
-  LockKeyhole,
   X,
   Loader2,
   Check,
-  Plus,
-  Star
+  Plus
 } from 'lucide-react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
-import { profileService } from './services/profileService';
 import { notificationService } from '../../services/db/notificationService';
 import { useAuth } from '../../providers/AuthProvider.tsx';
 import { motion, AnimatePresence } from 'motion/react';
 import { truncateToChars } from '../../utils/bioHelper';
 import { chatService } from '../../services/ChatService';
 import { acceptChat } from '../../utils/acceptedChats';
-import { isUserOnline, formatLastSeen } from '../../utils/presence';
 import { LocalDataCache } from '../../services/LocalDataCache';
 
 export default function UserProfileScreen() {
@@ -94,7 +82,7 @@ export default function UserProfileScreen() {
 
     const fetchUser = async () => {
       try {
-        const { data, error } = await supabase
+        const { data } = await supabase
           .from('users')
           .select('*')
           .eq('id', userId)
@@ -245,7 +233,7 @@ export default function UserProfileScreen() {
       {/* Header */}
       <div className="w-full bg-[var(--header-bg)] px-4 min-h-[56px] pt-safe pb-1.5 flex justify-between items-center z-50 shrink-0 relative border-b border-[var(--border-color)]/35 shadow-sm rounded-b-2xl">
         <div className="flex items-center gap-3">
-          <button onClick={() => navigate(-1)} className="w-12 h-12 flex items-center justify-center hover:bg-white/10 rounded-full transition-colors cursor-pointer">
+          <button aria-label="Back" onClick={() => navigate(-1)} className="w-12 h-12 flex items-center justify-center hover:bg-white/10 rounded-full transition-colors cursor-pointer">
             <ArrowLeft size={22} className="text-[var(--header-text)]" />
           </button>
           <div className="flex flex-col">
@@ -253,10 +241,10 @@ export default function UserProfileScreen() {
           </div>
         </div>
         <div className="flex items-center gap-1">
-          <button className="w-12 h-12 flex items-center justify-center hover:bg-white/10 rounded-full transition-colors cursor-pointer">
+          <button aria-label="Notifications" className="w-12 h-12 flex items-center justify-center hover:bg-white/10 rounded-full transition-colors cursor-pointer">
             <Bell size={22} className="text-[var(--header-text)] opacity-80" />
           </button>
-          <button 
+          <button aria-label="More options" 
             onClick={() => setShowMenu(true)}
             className="w-12 h-12 flex items-center justify-center hover:bg-white/10 rounded-full transition-colors cursor-pointer"
           >
@@ -440,7 +428,7 @@ export default function UserProfileScreen() {
             >
               <div className="flex items-center justify-between mb-6">
                 <h3 className="text-lg font-bold text-[var(--text-primary)]">Options</h3>
-                <button onClick={() => setShowMenu(false)} className="p-2 hover:bg-[var(--bg-main)] rounded-full">
+                <button aria-label="Close" onClick={() => setShowMenu(false)} className="p-2 hover:bg-[var(--bg-main)] rounded-full">
                   <X size={20} className="text-[var(--text-secondary)]" />
                 </button>
               </div>

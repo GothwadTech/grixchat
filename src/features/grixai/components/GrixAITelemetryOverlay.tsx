@@ -5,14 +5,10 @@ import {
   Cpu, 
   Terminal, 
   Activity, 
-  Layers, 
   Gauge, 
-  Database,
-  CheckCircle2, 
+  Database, 
   Server,
-  Zap,
   Globe,
-  Radio,
   Workflow
 } from 'lucide-react';
 
@@ -33,7 +29,6 @@ interface GrixAITelemetryOverlayProps {
 
 export const GrixAITelemetryOverlay: React.FC<GrixAITelemetryOverlayProps> = ({ 
   onClose, 
-  messageId,
   messageText 
 }) => {
   const [activeTab, setActiveTab] = useState<'matrix' | 'flow' | 'system'>('matrix');
@@ -105,7 +100,7 @@ export const GrixAITelemetryOverlay: React.FC<GrixAITelemetryOverlayProps> = ({
               Refined comparison metrics across 10 top-tier AI neural engines
             </p>
           </div>
-          <button 
+          <button aria-label="Close" 
             onClick={onClose}
             className="p-1.5 bg-zinc-90 w-8 h-8 rounded-full border border-zinc-800 hover:bg-zinc-800 flex items-center justify-center transition-all cursor-pointer active:scale-90"
           >

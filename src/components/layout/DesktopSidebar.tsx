@@ -1,12 +1,10 @@
 import React from 'react';
 import { Link, useLocation, useParams } from 'react-router-dom';
 import { MessageCircle, Users, Search, Phone, UserCircle, Settings, Bell } from 'lucide-react';
-import { motion } from 'motion/react';
-
 export default function DesktopSidebar() {
   const location = useLocation();
   const { id } = useParams();
-  const isChatActive = !!id;
+  const _isChatActive = !!id;
 
   const navItems = [
     { icon: MessageCircle, path: '/chats', label: 'Chats' },

@@ -121,7 +121,7 @@ export default function PollBuilderModal({ isOpen, onClose, onCreate }: PollBuil
                       className="flex-1 px-4 py-3 bg-zinc-900/40 border border-white/5 focus:border-[#0494f4] text-sm font-bold rounded-xl focus:outline-none transition-colors placeholder:text-zinc-600 text-white"
                     />
                     {options.length > 2 && (
-                      <button
+                      <button aria-label="Delete"
                         type="button"
                         onClick={() => handleRemoveOption(index)}
                         className="p-2.5 text-zinc-400 hover:text-rose-450 hover:bg-rose-500/10 rounded-xl transition-all border-none bg-transparent cursor-pointer shrink-0 active:scale-90"

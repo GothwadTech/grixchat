@@ -1,9 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { APP_CONFIG } from '../../config/appConfig';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
-import { motion, AnimatePresence } from 'motion/react';
-import { Eye, EyeOff, Mail, Lock, User as UserIcon, ArrowRight, Github, Apple, Twitter, Facebook } from 'lucide-react';
+import { motion } from 'motion/react';
+import { Eye, EyeOff, Mail, Lock, Github, Apple } from 'lucide-react';
 import { authService } from './services/authService.ts';
 import { storage } from '../../services/StorageService';
 
@@ -19,7 +18,7 @@ export default function LoginScreen() {
   const [appleLoading, setAppleLoading] = useState(false);
   const [twitterLoading, setTwitterLoading] = useState(false);
   const [facebookLoading, setFacebookLoading] = useState(false);
-  const [showSocial, setShowSocial] = useState(false);
+  const [_showSocial, _setShowSocial] = useState(false);
   const [success, setSuccess] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
@@ -191,7 +190,7 @@ export default function LoginScreen() {
     }
   };
 
-  const handleTwitterSignIn = async () => {
+  const _handleTwitterSignIn = async () => {
     setTwitterLoading(true);
     setError('');
     try {
@@ -203,7 +202,7 @@ export default function LoginScreen() {
     }
   };
 
-  const handleFacebookSignIn = async () => {
+  const _handleFacebookSignIn = async () => {
     setFacebookLoading(true);
     setError('');
     try {

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { ChevronLeft, ChevronRight, Shield, Smartphone, Mail, Lock, UserX } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../providers/AuthProvider';
@@ -90,7 +90,7 @@ export default function AccountSettingsScreen() {
     <div className="fixed inset-0 bg-[var(--bg-card)] flex flex-col z-[100] animate-fade-in font-sans">
       {/* Header element to perfectly match settings main screen */}
       <div className="flex items-center gap-3 px-4 h-14 bg-[var(--bg-card)] border-b border-[var(--border-color)]/20 text-[var(--text-primary)] shrink-0 shadow-sm">
-        <button 
+        <button aria-label="Back" 
           onClick={() => navigate(-1)} 
           className="p-1.5 hover:bg-[var(--border-color)]/5 rounded-full active:scale-95 transition-transform cursor-pointer text-[var(--text-primary)]"
         >

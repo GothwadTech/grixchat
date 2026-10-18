@@ -6,6 +6,7 @@ import { SupabaseStorageService } from '../../../services/SupabaseStorageService
 import { LocalDataCache } from '../../../services/LocalDataCache';
 import { pushNotificationService } from '../services/pushNotificationService';
 
+import { logger } from '../../../utils/logger';
 export const useChatActions = (conversationId: string, receiverId: string) => {
   const { user, userData } = useAuth();
 
@@ -14,7 +15,6 @@ export const useChatActions = (conversationId: string, receiverId: string) => {
     file,
     localPreviewUrl,
     replyTo,
-    onProgress,
     customMediaType
   }: {
     text: string;
@@ -31,7 +31,7 @@ export const useChatActions = (conversationId: string, receiverId: string) => {
     if (customMediaType) {
       mediaData = { url: '', type: customMediaType };
     } else if (file) {
-      const fileName = (file as File).name || (file.type.startsWith('audio/') ? 'voice_message.webm' : 'file');
+      const _fileName = (file as File).name || (file.type.startsWith('audio/') ? 'voice_message.webm' : 'file');
       const fileType = file.type.startsWith('image/') ? 'image' : 
                        file.type.startsWith('video/') ? 'video' : 
                        file.type.startsWith('audio/') ? 'audio' : 'file';
@@ -136,7 +136,7 @@ export const useChatActions = (conversationId: string, receiverId: string) => {
                     .from('messages')
                     .delete()
                     .in('id', idsToDelete);
-                  console.log(`[Message Pruning] Successfully pruned oldest 20 messages in conversation ${conversationId}.`);
+                  logger.info(`[Message Pruning] Successfully pruned oldest 20 messages in conversation ${conversationId}.`);
                 }
               }
             } catch (e) {

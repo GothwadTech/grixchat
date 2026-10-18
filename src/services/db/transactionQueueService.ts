@@ -2,6 +2,7 @@ import { supabase } from '../../lib/supabase';
 import { notificationService } from './notificationService';
 import { IndexedDBService } from '../IndexedDBService';
 
+import { logger } from '../../utils/logger';
 export interface PendingTransaction {
   id: string;
   type: 
@@ -19,6 +20,7 @@ export interface PendingTransaction {
 }
 
 const QUEUE_STORAGE_KEY = 'grix_pending_transactions';
+const DEAD_LETTER_KEY = 'grix_dead_letter_transactions';
 
 class TransactionQueueService {
   private cachedQueue: PendingTransaction[] = [];
@@ -44,10 +46,10 @@ class TransactionQueueService {
             await IndexedDBService.set('kv_store', QUEUE_STORAGE_KEY, this.cachedQueue);
             localStorage.removeItem(QUEUE_STORAGE_KEY);
           }
-        } catch (_) {}
+        } catch (_) { /* intentionally ignored: best-effort, failure is non-fatal */ }
       }
       this.isLoaded = true;
-      console.log(`[TransactionQueue] Loaded queue model. Active cache contains ${this.cachedQueue.length} transactions pending.`);
+      logger.info(`[TransactionQueue] Loaded queue model. Active cache contains ${this.cachedQueue.length} transactions pending.`);
     } catch (e) {
       console.warn('[TransactionQueue] Prepopulated memory loading crashed, falling back to memory layer.', e);
       this.isLoaded = true;
@@ -55,7 +57,7 @@ class TransactionQueueService {
 
     if (typeof window !== 'undefined') {
       window.addEventListener('online', () => {
-        console.log('Device returned online. Triggering transactional queue process...');
+        logger.info('Device returned online. Triggering transactional queue process...');
         this.processQueue();
       });
 
@@ -104,7 +106,7 @@ class TransactionQueueService {
       console.warn('[TransactionQueue] Background IndexedDB write failed, falling back to in-memory caching.', e);
     });
 
-    console.log(`Saved pending transaction to queue: type=${type}, id=${newTask.id}`);
+    logger.info(`Saved pending transaction to queue: type=${type}, id=${newTask.id}`);
     
     // Attempt processing immediately if online
     if (navigator.onLine) {
@@ -123,10 +125,14 @@ class TransactionQueueService {
         return;
       }
 
-      console.log(`Processing transactional queue: ${this.cachedQueue.length} items pending offline sync.`);
+      // Work on a SNAPSHOT. addTransaction() can push new items while we await
+      // the network below; iterating the live array and then assigning
+      // `this.cachedQueue = remaining` used to silently drop those new items.
+      const batch = [...this.cachedQueue];
+      logger.info(`Processing transactional queue: ${batch.length} items pending offline sync.`);
       const remaining: PendingTransaction[] = [];
 
-      for (const tx of this.cachedQueue) {
+      for (const tx of batch) {
         if (!navigator.onLine) {
           console.warn('Network offline during transaction execution. Yielding queue process.');
           remaining.push(tx);
@@ -171,20 +177,24 @@ class TransactionQueueService {
         }
 
         if (success) {
-          console.log(`Transaction ${tx.id} executed successfully.`);
+          logger.info(`Transaction ${tx.id} executed successfully.`);
         } else {
           tx.retries += 1;
-          // Drop if maximum retries exceeded to prevent blocking (e.g., malformed payload params)
+          // Give up after 8 attempts so a malformed payload cannot block the queue,
+          // but keep the record in a dead-letter bucket so it is never silently lost.
           if (tx.retries > 8) {
-            console.error(`Transaction ${tx.id} exceeded maximum retry attempts (8). Dropping transaction.`);
+            console.error(`Transaction ${tx.id} exceeded maximum retry attempts (8). Moved to dead-letter store.`);
+            await this.recordDeadLetter(tx);
           } else {
-            console.log(`Transaction ${tx.id} marked for retry. Retries: ${tx.retries}`);
+            logger.info(`Transaction ${tx.id} marked for retry. Retries: ${tx.retries}`);
             remaining.push(tx);
           }
         }
       }
 
-      this.cachedQueue = remaining;
+      // Keep: items that still need retrying + anything enqueued during this run.
+      const addedDuringRun = this.cachedQueue.filter((t) => !batch.some((b) => b.id === t.id));
+      this.cachedQueue = [...remaining, ...addedDuringRun];
       await IndexedDBService.set('kv_store', QUEUE_STORAGE_KEY, this.cachedQueue).catch((e) => {
         console.warn('[TransactionQueue] Failed to update Queue inside IndexedDB.', e);
       });
@@ -192,6 +202,17 @@ class TransactionQueueService {
       console.error('Fatal retry queue handler error:', globalErr);
     } finally {
       this.isProcessing = false;
+    }
+  }
+
+  /** Keep the last 50 transactions that exhausted their retries, for diagnosis. */
+  private async recordDeadLetter(tx: PendingTransaction): Promise<void> {
+    try {
+      const existing = (await IndexedDBService.get<PendingTransaction[]>('kv_store', DEAD_LETTER_KEY)) || [];
+      const next = [...existing, tx].slice(-50);
+      await IndexedDBService.set('kv_store', DEAD_LETTER_KEY, next);
+    } catch (e) {
+      console.warn('[TransactionQueue] Could not persist dead-letter entry.', e);
     }
   }
 

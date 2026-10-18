@@ -50,8 +50,16 @@ jobs:
       - name: Typecheck
         run: npm run lint
 
+      # ESLint: zero errors required. Warnings are the tracked backlog
+      # (docs/ROCK_SOLID.md) and are reported, not failing.
+      - name: Lint (ESLint, errors only)
+        run: npm run lint:eslint -- --quiet
+
       - name: Test
         run: npm test
+
+      - name: Coverage gate
+        run: npm run test:coverage
 
       # Verifies the Pages Functions actually bundle for the Workers runtime
       # (no Node built-ins, no accidental `nodejs_compat` dependency).
@@ -69,3 +77,7 @@ jobs:
           VITE_SUPABASE_URL: https://example.supabase.co
           VITE_SUPABASE_ANON_KEY: ci-placeholder-anon-key
         run: npm run build
+
+      # Fails when the shipped JS grows past the gzip budget in scripts/check-bundle.mjs.
+      - name: Bundle budget
+        run: npm run check:bundle

@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Archive, MessageCircle } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { useAuth } from '../../providers/AuthProvider';
 import { useConversations } from './hooks/useConversations';
 import { ChatUserList } from './components/ChatUserList';
@@ -20,7 +20,7 @@ export default function ArchivedChatScreen() {
       {/* Header */}
       <div className="shrink-0 flex items-center justify-between px-4 min-h-[56px] pt-safe pb-1.5 bg-[var(--header-bg)] z-50 shadow-sm border-b border-[var(--border-color)]/35 rounded-b-2xl">
         <div className="flex items-center gap-3">
-          <button onClick={() => navigate(-1)} className="w-12 h-12 flex items-center justify-center hover:bg-white/10 rounded-full transition-colors">
+          <button aria-label="Back" onClick={() => navigate(-1)} className="w-12 h-12 flex items-center justify-center hover:bg-white/10 rounded-full transition-colors">
             <ArrowLeft size={22} className="text-[var(--header-text)]" />
           </button>
           <h1 className="text-xl font-black text-[var(--header-text)] tracking-tight">

@@ -33,11 +33,70 @@ export async function resolveAccessToken(): Promise<string | null> {
  * `fetch` with the Supabase access token attached. Drop-in replacement for the
  * call sites that hit the Express API.
  */
-export async function apiFetch(input: string, init: RequestInit = {}): Promise<Response> {
-  const headers = new Headers(init.headers || {});
+export interface ApiFetchOptions {
+  /** Abort the request after this many ms. Default 20 s. */
+  timeoutMs?: number;
+  /**
+   * Extra attempts for IDEMPOTENT requests (GET/HEAD) that fail with a network
+   * error or a 502/503/504. Non-idempotent calls are never retried, so a retry
+   * can never send a message, follow a user or upload a file twice.
+   */
+  retries?: number;
+}
+
+const DEFAULT_TIMEOUT_MS = 20_000;
+const RETRYABLE_STATUS = new Set([502, 503, 504]);
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/**
+ * `fetch` with the Supabase access token attached, a hard timeout, and safe
+ * retries. Drop-in replacement for the call sites that hit the Express API.
+ */
+export async function apiFetch(
+  input: string,
+  init: RequestInit = {},
+  options: ApiFetchOptions = {},
+): Promise<Response> {
+  const method = (init.method || 'GET').toUpperCase();
+  const idempotent = method === 'GET' || method === 'HEAD';
+  const retries = idempotent ? (options.retries ?? 2) : 0;
+  const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   const token = await resolveAccessToken();
-  if (token) headers.set('Authorization', `Bearer ${token}`);
-  return fetch(input, { ...init, headers });
+
+  let attempt = 0;
+  for (;;) {
+    const headers = new Headers(init.headers || {});
+    if (token) headers.set('Authorization', `Bearer ${token}`);
+
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    // Honour a caller-supplied signal too (e.g. component unmount).
+    const onCallerAbort = () => controller.abort();
+    init.signal?.addEventListener('abort', onCallerAbort);
+
+    try {
+      const response = await fetch(input, { ...init, headers, signal: controller.signal });
+      if (attempt < retries && RETRYABLE_STATUS.has(response.status)) {
+        attempt += 1;
+        await sleep(300 * 3 ** (attempt - 1));
+        continue;
+      }
+      return response;
+    } catch (err) {
+      // Caller cancelled: never retry.
+      if (init.signal?.aborted) throw err;
+      if (attempt < retries) {
+        attempt += 1;
+        await sleep(300 * 3 ** (attempt - 1));
+        continue;
+      }
+      throw err;
+    } finally {
+      clearTimeout(timer);
+      init.signal?.removeEventListener('abort', onCallerAbort);
+    }
+  }
 }
 
 /** JSON POST helper returning the parsed body plus the raw response. */

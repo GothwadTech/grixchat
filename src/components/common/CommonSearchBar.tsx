@@ -28,7 +28,7 @@ export const CommonSearchBar: React.FC<CommonSearchBarProps> = ({
           className="flex-1 bg-transparent border-none outline-none text-[13px] font-extrabold text-[var(--text-primary)] placeholder:text-[var(--text-secondary)]/55 shrink-0"
         />
         {value && (
-          <button 
+          <button aria-label="Close" 
             type="button"
             onClick={onClear}
             className="p-1 hover:bg-black/5 dark:hover:bg-white/10 rounded-full transition-colors cursor-pointer border-none bg-transparent shrink-0 flex items-center justify-center animate-fade-in"

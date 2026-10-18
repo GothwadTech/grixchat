@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   Database, 
   Trash2, 
@@ -7,8 +7,7 @@ import {
   ChevronLeft, 
   Eye, 
   Sparkles,
-  Search,
-  HardDrive
+  Search
 } from 'lucide-react';
 import { LocalDataCache } from '../../services/LocalDataCache';
 import { loggerService } from '../../services/ConsoleLoggerService';
@@ -207,7 +206,7 @@ export default function ConsoleCaches({ showToastNotification }: ConsoleCachesPr
                       const val = LocalDataCache.get<any>(selectedItem.key);
                       navigator.clipboard.writeText(JSON.stringify(val, null, 2) || '');
                       showToastNotification('JSON copied to clipboard');
-                    } catch (_) {}
+                    } catch (_) { /* intentionally ignored: best-effort, failure is non-fatal */ }
                   }}
                   className="px-2 py-1 bg-[var(--box-bg)] border border-[var(--border-color)] text-[#0494f4] hover:text-[var(--text-primary)] rounded-lg transition-all text-[8px] font-mono flex items-center gap-1 cursor-pointer"
                 >

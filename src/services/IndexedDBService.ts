@@ -1,3 +1,4 @@
+import { logger } from '../utils/logger';
 /**
  * GrixChat Native IndexedDB Service
  *
@@ -47,13 +48,13 @@ class IndexedDBServiceImpl {
           if (!db.objectStoreNames.contains('messages')) {
             db.createObjectStore('messages');
           }
-          console.log('[IndexedDB] Upgraded and initialized object stores.');
+          logger.info('[IndexedDB] Upgraded and initialized object stores.');
         };
 
         request.onsuccess = (event: any) => {
           this.db = event.target.result;
           this.isAvailable = true;
-          console.log('[IndexedDB] Connected successfully to GrixChat Offline DB.');
+          logger.info('[IndexedDB] Connected successfully to GrixChat Offline DB.');
           resolve(this.db);
         };
 
@@ -108,7 +109,7 @@ class IndexedDBServiceImpl {
         request.onerror = () => {
           resolve((this.memoryFallback[storeName][key] as T) || null);
         };
-      } catch (e) {
+      } catch (_e) {
         resolve((this.memoryFallback[storeName][key] as T) || null);
       }
     });
@@ -129,7 +130,7 @@ class IndexedDBServiceImpl {
         const request = store.put(value, key);
         request.onsuccess = () => resolve();
         request.onerror = () => resolve();
-      } catch (e) {
+      } catch (_e) {
         resolve();
       }
     });
@@ -149,7 +150,7 @@ class IndexedDBServiceImpl {
         const request = store.delete(key);
         request.onsuccess = () => resolve();
         request.onerror = () => resolve();
-      } catch (e) {
+      } catch (_e) {
         resolve();
       }
     });
@@ -169,7 +170,7 @@ class IndexedDBServiceImpl {
         const request = store.clear();
         request.onsuccess = () => resolve();
         request.onerror = () => resolve();
-      } catch (e) {
+      } catch (_e) {
         resolve();
       }
     });
@@ -201,7 +202,7 @@ class IndexedDBServiceImpl {
         request.onerror = () => {
           resolve((this.memoryFallback[storeName] as Record<string, T>) || {});
         };
-      } catch (e) {
+      } catch (_e) {
         resolve((this.memoryFallback[storeName] as Record<string, T>) || {});
       }
     });

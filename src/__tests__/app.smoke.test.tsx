@@ -10,7 +10,6 @@ import {describe, expect, it} from 'vitest';
 import {MemoryRouter} from 'react-router-dom';
 import App from '../App';
 import {AppProviders} from '../providers/AppProviders';
-import {SEED} from '../../dev/mock/seed';
 import {mockAuth} from '../../dev/mock/auth';
 
 async function renderApp(at = '/login') {

@@ -1,6 +1,7 @@
 import { supabase } from '../../../lib/supabase';
 import { apiPostJson } from '../../../lib/apiClient';
 
+import { logger } from '../../../utils/logger';
 export const pushNotificationService = {
   /**
    * Notifies the other participants of a conversation about a new message.
@@ -13,7 +14,7 @@ export const pushNotificationService = {
   async sendNotificationForMessage(
     conversationId: string,
     senderId: string,
-    senderName: string,
+    _senderName: string,
     messageText: string,
     mediaType?: string
   ) {
@@ -61,7 +62,7 @@ export const pushNotificationService = {
       });
 
       if (allTokens.length === 0) {
-        console.log('FCM: No active registration tokens found for receiver(s).');
+        logger.info('FCM: No active registration tokens found for receiver(s).');
         return;
       }
 
@@ -73,7 +74,7 @@ export const pushNotificationService = {
       // from `conversationId`, and only keeps tokens that belong to the other
       // participants — the local `allTokens` list is a cheap pre-flight check
       // that keeps us from calling the API when nobody can be notified.
-      console.log(`FCM: Dispatching push dispatch for conversation ${conversationId} to ${allTokens.length} tokens.`);
+      logger.info(`FCM: Dispatching push dispatch for conversation ${conversationId} to ${allTokens.length} tokens.`);
       const { ok, status, data: resData } = await apiPostJson('/api/send-notification', {
         conversationId,
         body: bodyText,
@@ -88,7 +89,7 @@ export const pushNotificationService = {
         console.warn(`FCM: Push dispatch rejected by the server (${status}):`, resData);
         return;
       }
-      console.log('FCM: Push notification service response:', resData);
+      logger.info('FCM: Push notification service response:', resData);
     } catch (err) {
       console.warn('FCM: pushNotificationService exception encountered:', err);
     }

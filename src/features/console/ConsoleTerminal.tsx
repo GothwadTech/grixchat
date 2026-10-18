@@ -109,7 +109,7 @@ export default function ConsoleTerminal({
         }
         break;
 
-      case '/auth':
+      case '/auth': {
         const authDat = safeGetLocalStorage('grix_cached_userdata') || safeGetLocalStorage('grix_cached_user');
         if (authDat && authDat !== 'Not found') {
           loggerService.logCustom('success', '🔑 Decoded Token Metadata Found:', authDat);
@@ -117,6 +117,7 @@ export default function ConsoleTerminal({
           loggerService.logCustom('warn', '🔑 Database warning: No active cached sessions decoded inside client localStorage.');
         }
         break;
+      }
 
       case '/accounts':
         try {
@@ -328,7 +329,7 @@ export default function ConsoleTerminal({
                           try {
                             navigator.clipboard.writeText(log.details || '');
                             showToastNotification('JSON payload copied!');
-                          } catch (_) {}
+                          } catch (_) { /* intentionally ignored: best-effort, failure is non-fatal */ }
                         }}
                         className="px-2 py-0.5 bg-[var(--bg-card)] border border-[var(--border-color)] text-[#0494f4] hover:text-[var(--text-primary)] hover:bg-[var(--box-bg)] rounded transition-all text-[8px] font-mono flex items-center gap-0.5 cursor-pointer"
                       >

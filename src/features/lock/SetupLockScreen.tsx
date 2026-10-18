@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { ArrowLeft, CheckCircle2, ShieldCheck, Delete, ArrowRight, Check } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { LockService, LockType } from '../../services/LockService.ts';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAuth } from '../../providers/AuthProvider';
-import { storage, safeSessionStorage } from '../../services/StorageService';
+import { safeSessionStorage } from '../../services/StorageService';
 
 export default function SetupLockScreen() {
   const { type } = useParams<{ type: string }>();
@@ -105,7 +105,7 @@ export default function SetupLockScreen() {
     <div className="h-full flex flex-col bg-[var(--bg-main)] overflow-hidden font-sans">
       {/* Header */}
       <div className="shrink-0 flex items-center gap-3 px-4 h-16 bg-[var(--bg-card)] border-b border-[var(--border-color)]/50 z-50 shadow-sm">
-        <button onClick={() => navigate(-1)} className="hover:bg-black/5 dark:hover:bg-white/5 p-2 rounded-full transition-colors text-[var(--text-primary)]">
+        <button aria-label="Back" onClick={() => navigate(-1)} className="hover:bg-black/5 dark:hover:bg-white/5 p-2 rounded-full transition-colors text-[var(--text-primary)]">
           <ArrowLeft size={24} />
         </button>
         <span className="text-base font-black text-[var(--text-primary)] tracking-tight">

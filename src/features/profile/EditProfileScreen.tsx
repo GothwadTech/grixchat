@@ -217,7 +217,7 @@ export default function EditProfileScreen() {
                 </div>
               )}
             </div>
-            <button 
+            <button aria-label="Take photo" 
               onClick={() => fileInputRef.current?.click()}
               disabled={uploading}
               className="absolute inset-0 flex items-center justify-center bg-black/5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity disabled:cursor-not-allowed"

@@ -3,13 +3,11 @@ import {
   ArrowLeft, 
   MessageSquare, 
   Info,
-  Calendar,
   Clock,
   CheckCircle2,
   ShieldCheck,
   Zap,
-  Globe,
-  Bot
+  Globe
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
@@ -28,7 +26,7 @@ export default function GrixAIProfile() {
       {/* Header */}
       <div className="sticky top-0 z-50 shrink-0 flex items-center justify-between px-4 min-h-[56px] pt-safe bg-[var(--header-bg)] border-b border-[var(--border-color)]/35 shadow-sm rounded-b-2xl w-full min-w-0">
         <div className="flex items-center gap-3 min-w-0">
-          <button 
+          <button aria-label="Back" 
             onClick={() => navigate(-1)}
             className="p-1.5 hover:bg-white/10 rounded-full transition-colors shrink-0 cursor-pointer"
           >

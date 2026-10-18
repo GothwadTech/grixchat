@@ -1,6 +1,7 @@
 import { storage, safeSessionStorage } from './StorageService';
 import { IndexedDBService } from './IndexedDBService';
 
+import { logger } from '../utils/logger';
 export interface LocalCacheConfig {
   maxAge: number; // in milliseconds
 }
@@ -23,7 +24,7 @@ class LocalDataCacheService {
 
   public setCurrentUserId(userId: string | null): void {
     this.currentUserId = userId;
-    console.log(`[Cache Control] Switched active cache partition to: ${userId || 'guest'}`);
+    logger.info(`[Cache Control] Switched active cache partition to: ${userId || 'guest'}`);
   }
 
   public getCurrentUserId(): string | null {
@@ -60,7 +61,7 @@ class LocalDataCacheService {
 
   public async loadAllCachedDataIntoMemory(): Promise<void> {
     try {
-      console.log('[Cache Control] Initializing Dual-Layer Caching (IndexedDB -> Memory Map)...');
+      logger.info('[Cache Control] Initializing Dual-Layer Caching (IndexedDB -> Memory Map)...');
       const [kv, convs, msgs] = await Promise.all([
         IndexedDBService.getAll<{ value: any; timestamp: number }>('kv_store'),
         IndexedDBService.getAll<{ value: any; timestamp: number }>('conversations'),
@@ -78,7 +79,7 @@ class LocalDataCacheService {
         if (item && item.value !== undefined) this.memoryCache[key] = item;
       });
 
-      console.log(`[Cache Control] Prepopulated in-memory layers: ${Object.keys(this.memoryCache).length} active cache streams matched from local disk.`);
+      logger.info(`[Cache Control] Prepopulated in-memory layers: ${Object.keys(this.memoryCache).length} active cache streams matched from local disk.`);
     } catch (err) {
       console.error('[Cache Control] Dual-Layer Prepopulation crash:', err);
     }
@@ -92,7 +93,7 @@ class LocalDataCacheService {
     try {
       this.sessionAccessedKeys.clear();
       safeSessionStorage.setItem('gx_session_initialized', 'true');
-      console.log('[Cache Control] Session initialized. Live-fetch Supabase bypass activated for the first request of all data feeds.');
+      logger.info('[Cache Control] Session initialized. Live-fetch Supabase bypass activated for the first request of all data feeds.');
     } catch (e) {
       console.warn('Session cache initialization warning:', e);
     }
@@ -208,7 +209,7 @@ class LocalDataCacheService {
           }
         }
       }
-      console.log(`[Cache Control] Cleared all partitioned cache contents for user: ${userId}`);
+      logger.info(`[Cache Control] Cleared all partitioned cache contents for user: ${userId}`);
     } catch (err) {
       console.error('[Cache Control] Failed to wipe partitioned user cache:', err);
     }
@@ -226,7 +227,7 @@ class LocalDataCacheService {
         IndexedDBService.clearStore('conversations'),
         IndexedDBService.clearStore('messages'),
       ]);
-      console.log('[Cache Control] Local cache and IndexedDB stores successfully wiped securely.');
+      logger.info('[Cache Control] Local cache and IndexedDB stores successfully wiped securely.');
     } catch (err) {
       console.error('[Cache Control] Error during secure database cache wipe:', err);
     }
@@ -403,7 +404,7 @@ class LocalDataCacheService {
       let size = 0;
       try {
         size = JSON.stringify(item.value).length;
-      } catch (_) {}
+      } catch (_) { /* intentionally ignored: best-effort, failure is non-fatal */ }
       return {
         key,
         size,

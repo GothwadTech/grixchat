@@ -140,7 +140,7 @@ export default function MainLayout() {
   const isMainTab = !!user && MAIN_TABS.includes(location.pathname);
 
   // Determine current tab for ResourcesNav
-  const getTab = (path: string): TabType | null => {
+  const getTab = (_path: string): TabType | null => {
     return null;
   };
 

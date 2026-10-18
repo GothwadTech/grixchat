@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ArrowLeft, Send, Mail, CheckCircle, Shield, AlertCircle, Copy, Check } from 'lucide-react';
+import { Send, Mail, CheckCircle, AlertCircle, Copy, Check } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../providers/AuthProvider';
@@ -7,7 +7,7 @@ import SettingHeader from '../../components/layout/SettingHeader.tsx';
 import { transactionQueue } from '../../services/db/transactionQueueService';
 
 export default function HelpContactScreen() {
-  const navigate = useNavigate();
+  const _navigate = useNavigate();
   const { user, userData } = useAuth();
   
   // Form states
@@ -57,7 +57,7 @@ export default function HelpContactScreen() {
         setIsSuccess(true);
         setSubject('');
         setMessage('');
-      } catch (err) {
+      } catch (_err) {
         setErrorMsg('Offline queue submission failed. Please copy details and mail us directly.');
       } finally {
         setLoading(false);
@@ -98,7 +98,7 @@ export default function HelpContactScreen() {
         setIsSuccess(true);
         setSubject('');
         setMessage('');
-      } catch (backupError) {
+      } catch (_backupError) {
         setErrorMsg('Submission failed. Please email us directly at support@grixchat.com');
       }
     } finally {

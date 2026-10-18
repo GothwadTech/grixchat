@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { X, Check, FileText, Settings, AlertTriangle } from 'lucide-react';
+import { useState } from 'react';
+import { X, Check, FileText, AlertTriangle } from 'lucide-react';
 
 interface ExtractedFile {
   path: string;
@@ -20,7 +20,7 @@ export default function GithubFileEditorModal({ file, onClose, onSave }: GithubF
   const [textContent, setTextContent] = useState(() => {
     try {
       return decodeURIComponent(escape(window.atob(file.content)));
-    } catch (e) {
+    } catch (_e) {
       // If it fails to decode, we treat it as binary or raw
       return '';
     }
@@ -50,7 +50,7 @@ export default function GithubFileEditorModal({ file, onClose, onSave }: GithubF
         size: finalBase64.length * 0.75
       });
       onClose();
-    } catch (err: any) {
+    } catch (_err: any) {
       setErrorMsg('Failed to process string encoding safely. Double check for invalid characters.');
     }
   };
@@ -70,7 +70,7 @@ export default function GithubFileEditorModal({ file, onClose, onSave }: GithubF
               <p className="text-[9px] text-[var(--text-secondary)] font-mono">{file.name}</p>
             </div>
           </div>
-          <button 
+          <button aria-label="Close" 
             onClick={onClose} 
             className="p-1.5 hover:bg-black/5 rounded-full transition-colors text-[var(--text-secondary)] cursor-pointer"
           >

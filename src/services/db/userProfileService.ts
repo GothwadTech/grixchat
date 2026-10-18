@@ -2,6 +2,7 @@ import { supabase } from '../../lib/supabase';
 import { UserProfile } from '../../types';
 import { storage } from '../StorageService';
 
+import { logger } from '../../utils/logger';
 /**
  * Minimum gap between presence writes to the `users` row. Presence itself is
  * carried by Realtime Presence (0 DB bytes); these columns are only the
@@ -65,11 +66,12 @@ export const userProfileService = {
         }
       }
 
-      let { data: profile, error: fetchError } = await supabase
+      const { data: profileRow, error: fetchError } = await supabase
         .from('users')
         .select('*')
         .eq('id', currentUserId)
         .maybeSingle();
+      let profile = profileRow;
 
       if (fetchError) {
         console.warn('Error fetching profile:', fetchError);
@@ -80,7 +82,7 @@ export const userProfileService = {
             if (cached && cached.id === currentUserId) {
               return { profileData: cached, following: cached.following || [] };
             }
-          } catch (_) {}
+          } catch (_) { /* intentionally ignored: best-effort, failure is non-fatal */ }
         }
       }
 
@@ -113,7 +115,7 @@ export const userProfileService = {
         const fullName = userMetadata?.full_name || emailPrefix || 'Grix User';
         const photoUrl = userMetadata?.avatar_url || `https://cdn-icons-png.flaticon.com/512/149/149071.png`;
 
-        console.log('Inserting auto-generated profile for', currentUserId);
+        logger.info('Inserting auto-generated profile for', currentUserId);
         const { data: insertedProfile, error: insertError } = await supabase
           .from('users')
           .upsert({
@@ -138,7 +140,7 @@ export const userProfileService = {
         const randomSuffix = Math.floor(1000 + Math.random() * 9000);
         const finalUsername = `${baseUsername || 'user'}_${randomSuffix}`.substring(0, 15);
 
-        console.log('Updating missing username for existing profile', currentUserId);
+        logger.info('Updating missing username for existing profile', currentUserId);
         const { data: updatedProfile, error: updateError } = await supabase
           .from('users')
           .update({ username: finalUsername } as any)
@@ -172,7 +174,7 @@ export const userProfileService = {
             const cached = JSON.parse(cachedRaw);
             following = cached.following || [];
             followerIds = cached.followers || [];
-          } catch (_) {}
+          } catch (_) { /* intentionally ignored: best-effort, failure is non-fatal */ }
         }
       }
 
@@ -217,7 +219,7 @@ export const userProfileService = {
           if (cached && cached.id === currentUserId) {
             return { profileData: cached, following: cached.following || [] };
           }
-        } catch (_) {}
+        } catch (_) { /* intentionally ignored: best-effort, failure is non-fatal */ }
       }
       return { profileData: null, following: [] };
     }

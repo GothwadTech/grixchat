@@ -87,7 +87,7 @@ export class WebRtcCallService {
     this.options = options;
     this.stopped = false;
 
-    const { callId, role, callType, handlers, selfId, peerId } = options;
+    const { callId, role, callType, handlers } = options;
     if (!supabase) throw new Error('Realtime client unavailable — cannot signal the call');
 
     try {

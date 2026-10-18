@@ -1,21 +1,21 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { Lock } from 'lucide-react';
 import { LiveKitRoom } from '@livekit/components-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../providers/AuthProvider';
 import { useCall } from '../../providers/CallProvider';
 
-import { CallStatus, CallType } from './types/callTypes';
+import { CallType } from './types/callTypes';
 import { CallHeader } from './components/CallHeader';
 import { CallControlPanel } from './components/CallControlPanel';
 import { VideoFeed } from './components/VideoFeed';
 
+import { logger } from '../../utils/logger';
 export default function CallScreen() {
   const { id: otherUserId } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
-  const { user: authUser } = useAuth();
+  const { user: _authUser } = useAuth();
   
   const {
     activeCall,
@@ -33,7 +33,6 @@ export default function CallScreen() {
     toggleSpeaker,
     toggleScreenShare,
     flipCamera,
-    stopSounds,
     room,
     transport
   } = useCall();
@@ -129,7 +128,7 @@ export default function CallScreen() {
   // Global touch & tap recovery listener to bypass modern mobile browser autoplay constraints
   useEffect(() => {
     const forcePlayback = () => {
-      console.log("[WebRTC Gesture Recovery] Triggering safe manual play on user interaction...");
+      logger.info("[WebRTC Gesture Recovery] Triggering safe manual play on user interaction...");
       const localEl = localVideoRef.current;
       const remoteEl = remoteVideoRef.current;
 
@@ -138,7 +137,7 @@ export default function CallScreen() {
       }
       if (remoteEl && remoteStream && remoteEl.paused) {
         remoteEl.play().then(() => {
-          console.log("[WebRTC Gesture Recovery] Remote audio/video started successfully!");
+          logger.info("[WebRTC Gesture Recovery] Remote audio/video started successfully!");
         }).catch(e => console.warn("[WebRTC Gesture Recovery] Remote play failed:", e));
       }
     };

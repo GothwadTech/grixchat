@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, FolderOpen, Trash2, Edit2, CheckCircle2, AlertCircle, FilePlus2, RefreshCw } from 'lucide-react';
+import { Search, FolderOpen, Trash2, Edit2, RefreshCw } from 'lucide-react';
 import { calculateGitHubBlobSha, isFileModifiedLocally } from '../utils/githubSha';
 import GithubFileEditorModal from './GithubFileEditorModal';
 
@@ -55,7 +55,7 @@ export default function GithubFileList({
       const count = raw.split(/\r?\n/).length;
       linesCache.current[file.path] = count;
       return count;
-    } catch (e) {
+    } catch (_e) {
       linesCache.current[file.path] = 0;
       return 0;
     }

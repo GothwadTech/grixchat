@@ -1,7 +1,7 @@
 /**
  * Mock Supabase — auth, RPC and realtime behaviour.
  */
-import {describe, expect, it, vi} from 'vitest';
+import {describe, expect, it} from 'vitest';
 import {mockAuth} from '../auth';
 import {callRpc} from '../rpc';
 import {MockChannel} from '../realtime';

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { X, Clock, CalendarDays, Ban } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -107,7 +107,7 @@ export default function ChatTimeModal({
               </div>
               <h3 className="text-lg font-black tracking-wide text-zinc-100">{title || 'Chat Time Scheduler'}</h3>
             </div>
-            <button 
+            <button aria-label="Close" 
               onClick={onClose}
               className="p-1.5 hover:bg-white/10 rounded-full text-zinc-400 transition-colors border-none bg-transparent cursor-pointer"
             >

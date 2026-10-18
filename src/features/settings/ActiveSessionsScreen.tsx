@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { ArrowLeft, Smartphone, Monitor, Tv, LogOut, MapPin, Clock, Globe, RefreshCw, Trash2, CheckCircle } from 'lucide-react';
+import { useState } from 'react';
+import { Smartphone, Monitor, Tv, LogOut, MapPin, Clock, Globe, RefreshCw, Trash2, CheckCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import SettingHeader from '../../components/layout/SettingHeader.tsx';
 import { useAuth } from '../../providers/AuthProvider';
@@ -16,7 +16,7 @@ interface ActiveSession {
 }
 
 export default function ActiveSessionsScreen() {
-  const navigate = useNavigate();
+  const _navigate = useNavigate();
   const { userData, user } = useAuth();
   const [isTerminatingAll, setIsTerminatingAll] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -190,7 +190,7 @@ export default function ActiveSessionsScreen() {
           <h3 className="text-[11px] font-bold text-zinc-400 uppercase tracking-[0.12em]">
             Other Active Login Sessions ({otherSessions.length})
           </h3>
-          <button 
+          <button aria-label="Refresh" 
             onClick={forceRefresh}
             className={`text-zinc-400 hover:text-[var(--text-primary)] transition ${isRefreshing ? 'animate-spin' : ''}`}
           >

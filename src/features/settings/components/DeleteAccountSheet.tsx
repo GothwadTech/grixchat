@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, Trash2, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -84,7 +84,7 @@ export default function DeleteAccountSheet({ isOpen, onClose }: DeleteAccountShe
 
             <div className="px-6 py-2 flex items-center justify-between">
               <h3 className="text-[20px] leading-[18px] font-black text-red-600 tracking-tight">Delete Account</h3>
-              <button 
+              <button aria-label="Close" 
                 onClick={onClose}
                 className="p-1.5 hover:bg-[var(--bg-main)] rounded-full transition-colors text-[var(--text-secondary)]"
               >

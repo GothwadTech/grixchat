@@ -1,9 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  ArrowLeft, Github, Link, RefreshCw, Key, CheckCircle, ExternalLink, HelpCircle,
-  User, Folder, Layers, GitCommit, Activity, GitBranch, Search, CheckSquare, Square,
-  FolderClosed, FileArchive, UploadCloud, AlertTriangle, CheckCircle2, ChevronRight, Check,
-  Sparkles, Wifi, ShieldCheck, Database, FileCode, ChevronLeft
+import { Github, RefreshCw, Key, CheckCircle, ExternalLink,
+  User, Folder, Layers, GitCommit, Activity, GitBranch, Search, CheckSquare, Square, UploadCloud, AlertTriangle, CheckCircle2, Wifi, ShieldCheck, Database, ChevronLeft
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
@@ -88,9 +85,9 @@ export default function GithubScreen() {
   const [noChangesWarning, setNoChangesWarning] = useState(false);
 
   // Push live progress metric states
-  const [totalFiles, setTotalFiles] = useState(0);
-  const [filesAlreadyExist, setFilesAlreadyExist] = useState(0);
-  const [filesToUpload, setFilesToUpload] = useState(0);
+  const [_totalFiles, setTotalFiles] = useState(0);
+  const [_filesAlreadyExist, setFilesAlreadyExist] = useState(0);
+  const [_filesToUpload, setFilesToUpload] = useState(0);
   const [filesUploadedCount, setFilesUploadedCount] = useState(0);
   const [filesRemainingCount, setFilesRemainingCount] = useState(0);
   const [currentFileTransfer, setCurrentFileTransfer] = useState('');
@@ -184,7 +181,7 @@ export default function GithubScreen() {
       if (response.data?.length > 0 && !selectedRepo) {
         setSelectedRepo(response.data[0]);
       }
-    } catch (err: any) {
+    } catch (_err: any) {
       setErrorMessage('Failed to fetch github repositories. Check token scopes or connectivity.');
     } finally {
       setLoadingRepos(false);
@@ -245,7 +242,7 @@ export default function GithubScreen() {
     try {
       await axios.get('https://api.github.com/zen');
       setPingLatency(`${Date.now() - start}ms`);
-    } catch (e) {
+    } catch (_e) {
       setPingLatency('Unreachable');
     } finally {
       setPinging(false);
@@ -263,7 +260,7 @@ export default function GithubScreen() {
         const left = window.screen.width / 2 - width / 2;
         const top = window.screen.height / 2 - height / 2;
         
-        const popup = window.open(
+        const _popup = window.open(
           res.data.url, 
           'github-auth', 
           `width=${width},height=${height},left=${left},top=${top},scrollbars=yes`
@@ -464,7 +461,7 @@ export default function GithubScreen() {
           try {
             const decoded = window.atob(file.content);
             loc = decoded.split(/\r?\n/).length;
-          } catch(e) {}
+          } catch(_e) { /* intentionally ignored: best-effort, failure is non-fatal */ }
 
           setCurrentFileTransfer(`Pushing: ${file.path} (${loc} lines)`);
           setStatusMessage(`Uploading file ${i + 1}/${modifiedFiles.length}...`);
@@ -617,7 +614,7 @@ export default function GithubScreen() {
       
       {/* Top Header Panel (Matches SettingHeader / TabHeader Design exactly) */}
       <div className="w-full bg-[var(--header-bg)] px-4 min-h-[56px] pt-safe pb-1.5 flex items-center gap-3 z-50 shrink-0 relative border-b border-[var(--border-color)]/35 shadow-sm rounded-b-2xl select-none">
-        <button 
+        <button aria-label="Back" 
           onClick={() => navigate('/profile')} 
           className="p-2 hover:bg-black/5 rounded-full transition-colors cursor-pointer"
         >
@@ -1129,7 +1126,7 @@ export default function GithubScreen() {
                       API Rate Limits Monitor
                     </span>
                     
-                    <button 
+                    <button aria-label="Refresh" 
                       onClick={fetchRateInfo}
                       disabled={rateLoading}
                       className="p-1 hover:bg-[var(--box-bg)] rounded-lg transition-all text-[#0494f4]"
@@ -1166,7 +1163,7 @@ export default function GithubScreen() {
                       Gateway Diagnostic Tests
                     </span>
                     
-                    <button 
+                    <button aria-label="Refresh" 
                       onClick={testGithubPing}
                       disabled={pinging}
                       className="p-1 hover:bg-[var(--box-bg)] rounded-lg transition-all text-[#0494f4]"

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Search, ArrowLeft, Edit } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../providers/AuthProvider.tsx';
@@ -7,7 +7,7 @@ import { ChatUserList } from './components/ChatUserList.tsx';
 
 export default function MessagesListScreen() {
   const navigate = useNavigate();
-  const { user, userData: currentUserData } = useAuth();
+  const { userData: currentUserData } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const { conversations, loading } = useConversations('Chats');
 
@@ -21,7 +21,7 @@ export default function MessagesListScreen() {
       {/* Header */}
       <div className="shrink-0 flex items-center justify-between px-4 h-16 bg-[var(--header-bg)] z-50 shadow-sm border-b border-[var(--border-color)]/35 rounded-b-2xl">
         <div className="flex items-center gap-4">
-          <button onClick={() => navigate(-1)} className="hover:bg-white/10 p-2 rounded-full transition-colors">
+          <button aria-label="Back" onClick={() => navigate(-1)} className="hover:bg-white/10 p-2 rounded-full transition-colors">
             <ArrowLeft size={24} className="text-[var(--header-text)]" />
           </button>
           <div className="flex flex-col">
@@ -30,7 +30,7 @@ export default function MessagesListScreen() {
           </div>
         </div>
         <div className="flex gap-2">
-          <button className="p-2 hover:bg-white/10 rounded-full transition-colors">
+          <button aria-label="Edit" className="p-2 hover:bg-white/10 rounded-full transition-colors">
             <Edit size={22} className="text-[var(--header-text)]" />
           </button>
         </div>

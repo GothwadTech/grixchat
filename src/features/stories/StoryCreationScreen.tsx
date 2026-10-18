@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../providers/AuthProvider.tsx';
 import { ImageService } from '../../services/ImageService';
-import { X, Image, Type, Palette, Music, Sparkles, Loader2, ArrowLeft, Check, Trash } from 'lucide-react';
+import { Image, Type, Music, Sparkles, Loader2, ArrowLeft, Check, Trash } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import MusicSearchSheet from './components/MusicSearchSheet';
 import { Track } from './utils/musicData';
@@ -104,7 +104,7 @@ export default function StoryCreationScreen() {
       {/* Header Panel */}
       <div className="h-16 border-b border-white/5 bg-black/40 backdrop-blur-md flex items-center justify-between px-4 shrink-0 z-15">
         <div className="flex items-center gap-2">
-          <button 
+          <button aria-label="Back" 
             onClick={() => navigate('/stories')}
             className="p-1.5 hover:bg-white/5 rounded-full transition-colors cursor-pointer"
           >
@@ -249,7 +249,7 @@ export default function StoryCreationScreen() {
                 {selectedTrack.artist}
               </span>
             </div>
-            <button 
+            <button aria-label="Delete" 
               onClick={() => setSelectedTrack(null)}
               className="p-1 hover:bg-white/10 rounded-full text-zinc-400 hover:text-white transition-colors cursor-pointer-none ml-1.5"
             >
@@ -294,6 +294,7 @@ export default function StoryCreationScreen() {
               {PRESET_BG_COLORS.map((bg, idx) => (
                 <button
                   key={idx}
+                  aria-label={`Background color ${idx + 1}`}
                   onClick={() => setBgColor(bg)}
                   style={{ background: bg }}
                   className={`w-9 h-9 rounded-full cursor-pointer transition-transform shrink-0 ${

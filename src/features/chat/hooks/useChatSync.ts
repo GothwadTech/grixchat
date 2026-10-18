@@ -101,7 +101,7 @@ export function useChatSync(receiverId: string | undefined, chatId: string, conv
 
   useEffect(() => {
     // Check if we can instantly find details from cache to prevent the "GrixChat User / Offline" flicker
-    let cachedInfo = getInitialReceiverCached(receiverId, convType);
+    const cachedInfo = getInitialReceiverCached(receiverId, convType);
 
     if (cachedInfo) {
       setReceiver(cachedInfo);
@@ -319,7 +319,7 @@ export function useChatSync(receiverId: string | undefined, chatId: string, conv
     if (authUser) setCurrentUserData(authUser);
   }, [authUser]);
 
-  const updateWatchState = async (updates: any) => {
+  const updateWatchState = async (_updates: any) => {
     // Implementation for Supabase
   };
 

@@ -1,10 +1,8 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { 
   Wifi, 
   Database, 
-  Smartphone, 
   ChevronRight, 
-  Trash2, 
   HardDrive,
   Activity,
   ArrowDownCircle,
@@ -22,7 +20,10 @@ export default function DataUsageScreen() {
   ];
 
   const Toggle = ({ active, onClick }: { active: boolean, onClick: () => void }) => (
-    <button 
+    <button
+      type="button"
+      role="switch"
+      aria-checked={active}
       onClick={onClick}
       className={`w-10 h-5 rounded-full transition-all relative ${active ? 'bg-primary' : 'bg-zinc-300'}`}
     >

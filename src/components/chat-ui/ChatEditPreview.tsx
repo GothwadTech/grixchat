@@ -18,7 +18,7 @@ export const ChatEditPreview: React.FC<{
           <p className="text-[13px] text-white/70 font-medium truncate italic">"{editingMessage.content || editingMessage.text}"</p>
         </div>
       </div>
-      <button 
+      <button aria-label="Close" 
         onClick={() => { setEditingMessage(null); setNewMessage(''); }} 
         className="p-1.5 hover:bg-white/10 rounded-full transition-all active:scale-90"
       >

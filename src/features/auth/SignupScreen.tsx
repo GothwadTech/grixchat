@@ -1,9 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { APP_CONFIG } from '../../config/appConfig';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
-import { motion, AnimatePresence } from 'motion/react';
-import { User as UserIcon, AtSign, Lock, Eye, EyeOff, Mail, ArrowRight, Github, HelpCircle, ArrowLeft, Apple, Twitter, Facebook, Phone } from 'lucide-react';
+import { motion } from 'motion/react';
+import { User as UserIcon, AtSign, Lock, Eye, EyeOff, Mail, Github, HelpCircle, Apple, Phone } from 'lucide-react';
 import { authService } from './services/authService.ts';
 import { storage } from '../../services/StorageService';
 
@@ -21,9 +20,9 @@ export default function SignupScreen() {
   const [googleLoading, setGoogleLoading] = useState(false);
   const [githubLoading, setGithubLoading] = useState(false);
   const [appleLoading, setAppleLoading] = useState(false);
-  const [twitterLoading, setTwitterLoading] = useState(false);
-  const [facebookLoading, setFacebookLoading] = useState(false);
-  const [showSocial, setShowSocial] = useState(false);
+  const [_twitterLoading, setTwitterLoading] = useState(false);
+  const [_facebookLoading, setFacebookLoading] = useState(false);
+  const [_showSocial, _setShowSocial] = useState(false);
   const navigate = useNavigate();
 
   // Verification states
@@ -270,7 +269,7 @@ export default function SignupScreen() {
     }
   };
 
-  const handleTwitterSignUp = async () => {
+  const _handleTwitterSignUp = async () => {
     setTwitterLoading(true);
     setError('');
     try {
@@ -282,7 +281,7 @@ export default function SignupScreen() {
     }
   };
 
-  const handleFacebookSignUp = async () => {
+  const _handleFacebookSignUp = async () => {
     setFacebookLoading(true);
     setError('');
     try {

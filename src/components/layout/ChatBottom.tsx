@@ -1,7 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { X, SendHorizontal, Loader2, Mic, MicOff, StopCircle, Trash2, Camera as CameraIcon, Paperclip, Image as ImageIcon } from 'lucide-react';
+import { X, SendHorizontal, Loader2, Mic, StopCircle, Camera as CameraIcon, Paperclip } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { motion, AnimatePresence } from 'motion/react';
 import ChatAttachmentMenu from '../chat-ui/ChatAttachmentMenu';
 import PollBuilderModal from '../chat-ui/PollBuilderModal';
 import LocationSelectModal from '../chat-ui/LocationSelectModal';
@@ -83,13 +82,7 @@ export default function ChatBottom({
   fileInputRef,
   imageInputRef,
   handleFileChange,
-  showPlusMenu,
-  setShowPlusMenu,
-  plusMenuRef,
-  chatId,
   filePreviewUrls,
-  isUploading,
-  uploadProgress,
   setSelectedFiles,
   setFilePreviewUrls,
   textareaRef,
@@ -110,7 +103,7 @@ export default function ChatBottom({
   isLocked = false,
   lockMessage = ""
 }: ChatBottomProps) {
-  const navigate = useNavigate();
+  const _navigate = useNavigate();
   const { resolvedTheme } = useTheme();
   const [showCameraModal, setShowCameraModal] = useState(false);
   const fallbackImageInputRef = useRef<HTMLInputElement>(null);
@@ -312,7 +305,7 @@ export default function ChatBottom({
                         <p className="text-[8px] text-white/60 font-bold truncate w-[60px] text-center">{file.name}</p>
                       </div>
                     )}
-                    <button 
+                    <button aria-label="Close" 
                       type="button"
                       onClick={() => {
                         const newFiles = [...selectedFiles];

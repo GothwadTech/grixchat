@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { MessageCircle, Camera, User, Phone, Search } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
@@ -7,13 +7,13 @@ import { motion } from 'motion/react';
 import { LocalDataCache } from '../../services/LocalDataCache';
 
 export default function TabBottom() {
-  const { user: authUser, userData } = useAuth();
+  const { user: authUser } = useAuth();
   const location = useLocation();
   const [unreadChatsCount, setUnreadChatsCount] = useState(0);
   const [unreadGroupsCount, setUnreadGroupsCount] = useState(0);
 
   const [conversationsList, setConversationsList] = useState<string[]>([]);
-  const [triggerFetch, setTriggerFetch] = useState(0);
+  const [triggerFetch, _setTriggerFetch] = useState(0);
 
   useEffect(() => {
     if (!authUser || !supabase) return;

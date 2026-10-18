@@ -1,7 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Download, X } from 'lucide-react';
 
+import { logger } from '../../utils/logger';
 export default function PWAInstallPrompt() {
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [showPrompt, setShowPrompt] = useState(false);
@@ -36,7 +37,7 @@ export default function PWAInstallPrompt() {
     
     // Wait for the user to respond to the prompt
     const { outcome } = await deferredPrompt.userChoice;
-    console.log(`User response to the install prompt: ${outcome}`);
+    logger.info(`User response to the install prompt: ${outcome}`);
     
     // We've used the prompt, and can't use it again, throw it away
     setDeferredPrompt(null);
@@ -82,7 +83,7 @@ export default function PWAInstallPrompt() {
             </div>
           </div>
           
-          <button 
+          <button aria-label="Close" 
             onClick={handleClose}
             className="p-1 hover:bg-white/10 rounded-full transition-colors"
           >

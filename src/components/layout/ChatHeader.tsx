@@ -59,8 +59,6 @@ export default function ChatHeader({
   receiver,
   receiverId,
   formatLastSeen,
-  showOptions,
-  setShowOptions,
   isMuted,
   setIsMuted,
   deleteChat,
@@ -72,7 +70,6 @@ export default function ChatHeader({
   optionsRef,
   isTyping,
   receiverStatus,
-  currentUserId,
   type = 'direct',
 
   searchQuery = '',
@@ -214,7 +211,7 @@ export default function ChatHeader({
                 {selectDropdownOpen && (
                   <>
                     {/* Absolute fallback backdrop to dismiss on click/tap */}
-                    <div 
+                    <div role="presentation" 
                       className="fixed inset-0 z-[100] bg-transparent cursor-default" 
                       onClick={() => setSelectDropdownOpen(false)}
                     />
@@ -288,7 +285,7 @@ export default function ChatHeader({
       ) : (
         <div className="flex items-center justify-between px-4 min-h-[56px] pt-safe w-full min-w-0">
           <div className="flex items-center gap-2 min-w-0">
-            <button 
+            <button aria-label="Back" 
               type="button"
               onClick={() => navigate(-1)} 
               className="w-12 h-12 flex items-center justify-center hover:bg-white/10 rounded-full transition-colors shrink-0 border-none bg-transparent cursor-pointer"
@@ -344,7 +341,7 @@ export default function ChatHeader({
 
             {/* 3-Dot Dropdown */}
             <div className="relative" ref={optionsRef}>
-              <button 
+              <button aria-label="More options" 
                 type="button"
                 onClick={() => setDropdownOpen(true)}
                 className="w-12 h-12 flex items-center justify-center hover:bg-white/10 rounded-full transition-colors cursor-pointer border-none bg-transparent"
@@ -419,7 +416,7 @@ export default function ChatHeader({
 
               {/* Symmetrical Clear Input Button */}
               {searchQuery && (
-                <button 
+                <button aria-label="Close" 
                   type="button"
                   onClick={() => setSearchQuery && setSearchQuery('')}
                   className="p-0.5 rounded-full hover:bg-white/10 text-zinc-400 hover:text-white shrink-0 border-none bg-transparent cursor-pointer"

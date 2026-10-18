@@ -31,7 +31,7 @@ export function formatDetailedLastSeen(lastSeenVal: any): string {
   // Time calculations
   const totalSeconds = Math.floor(diffMs / 1000);
   const totalMinutes = Math.floor(totalSeconds / 60);
-  const totalHours = Math.floor(totalMinutes / 60);
+  const _totalHours = Math.floor(totalMinutes / 60);
 
   // 1. Just now state
   if (totalSeconds < 60) {

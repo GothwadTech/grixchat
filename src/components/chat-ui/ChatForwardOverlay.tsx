@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { X, Search, SendHorizontal, User, Loader2 } from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
+import { X, Search, SendHorizontal, Loader2 } from 'lucide-react';
+import { AnimatePresence } from 'motion/react';
 import { supabase } from '../../lib/supabase';
 import { LocalDataCache } from '../../services/LocalDataCache';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -123,7 +123,7 @@ export const ChatForwardOverlay: React.FC<ChatForwardOverlayProps> = ({
       <div className="fixed inset-0 z-[10000] flex flex-col bg-[var(--bg-main)] text-[var(--text-primary)]">
         {/* Modern Synced App-Style Header Overlay matching TabHeader */}
         <div className="min-h-[56px] py-1.5 flex items-center px-4 bg-[var(--header-bg)] border-b border-[var(--border-color)]/35 shadow-sm gap-3 shrink-0 rounded-b-2xl">
-          <button 
+          <button aria-label="Close" 
             type="button"
             onClick={onClose}
             className="w-11 h-11 flex items-center justify-center hover:bg-white/10 rounded-full text-[var(--header-text)] transition-all cursor-pointer border-none bg-transparent active:scale-95 duration-100 shrink-0"
@@ -151,7 +151,7 @@ export const ChatForwardOverlay: React.FC<ChatForwardOverlayProps> = ({
               className="flex-1 bg-transparent text-sm text-[var(--text-primary)] placeholder-[var(--text-secondary)]/50 outline-none w-full border-none font-medium"
             />
             {searchTerm && (
-              <button 
+              <button aria-label="Close" 
                 type="button"
                 onClick={() => setSearchTerm('')}
                 className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] border-none bg-transparent cursor-pointer"

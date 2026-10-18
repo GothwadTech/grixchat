@@ -60,7 +60,7 @@ export const sessionService = {
           const fbData = await fallbackRes.json();
           ip = fbData.ip || ip;
         }
-      } catch (__) {}
+      } catch (__) { /* intentionally ignored: best-effort, failure is non-fatal */ }
     }
 
     // 4. Update settings session schema

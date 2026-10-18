@@ -1,6 +1,5 @@
 import React from 'react';
-import { motion, AnimatePresence } from 'motion/react';
-import { Lock, Shield, Video, ArrowLeft, UserPlus, RotateCw } from 'lucide-react';
+import { ArrowLeft, RotateCw } from 'lucide-react';
 import { CallStatus, CallType } from '../types/callTypes';
 import { CallTimer } from './CallTimer';
 

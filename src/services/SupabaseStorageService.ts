@@ -28,7 +28,7 @@ export const SupabaseStorageService = {
 
     try {
       // 1. Upload the file
-      const { data, error: uploadError } = await supabase.storage
+      const { error: uploadError } = await supabase.storage
         .from(bucket)
         .upload(filePath, file, {
           // Object names are unique (`random_timestamp`), so a client that has
@@ -64,21 +64,21 @@ export const SupabaseStorageService = {
   /**
    * Specifically for images
    */
-  uploadImage: async (file: File, onProgress?: (progress: number) => void, bucket: string = 'chat-media'): Promise<string> => {
+  uploadImage: async (file: File, _onProgress?: (progress: number) => void, bucket: string = 'chat-media'): Promise<string> => {
     return SupabaseStorageService.uploadFile(file, bucket, 'images');
   },
 
   /**
    * Specifically for videos
    */
-  uploadVideo: async (file: File, onProgress?: (progress: number) => void, bucket: string = 'chat-media'): Promise<string> => {
+  uploadVideo: async (file: File, _onProgress?: (progress: number) => void, bucket: string = 'chat-media'): Promise<string> => {
     return SupabaseStorageService.uploadFile(file, bucket, 'videos');
   },
 
   /**
    * Specifically for audio
    */
-  uploadAudio: async (file: File | Blob, onProgress?: (progress: number) => void): Promise<string> => {
+  uploadAudio: async (file: File | Blob, _onProgress?: (progress: number) => void): Promise<string> => {
     const audioFile = file instanceof File ? file : new File([file], `audio_${Date.now()}.webm`, { type: file.type });
     return SupabaseStorageService.uploadFile(audioFile, 'chat-media', 'audio');
   },

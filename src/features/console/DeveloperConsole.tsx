@@ -1,16 +1,14 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
-  X, 
   Terminal, 
   HardDrive, 
   Activity, 
   Database, 
-  Cpu, 
-  XSquare,
+  Cpu,
   Sparkles,
   ChevronLeft
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion } from 'motion/react';
 import { loggerService, LogEntry } from '../../services/ConsoleLoggerService';
 
 // Import modular subcomponents
@@ -154,7 +152,7 @@ export default function DeveloperConsole({ isOpen, onClose }: DeveloperConsolePr
         
         {/* Top Header Panel (Matches SettingHeader / TabHeader Design exactly) */}
         <div className="w-full bg-[var(--header-bg)] px-4 min-h-[56px] pt-safe pb-1.5 flex items-center gap-3 z-50 shrink-0 relative border-b border-[var(--border-color)]/35 shadow-sm rounded-b-2xl select-none">
-          <button 
+          <button aria-label="Back" 
             onClick={onClose}
             className="p-2 hover:bg-black/5 rounded-full transition-colors cursor-pointer"
           >

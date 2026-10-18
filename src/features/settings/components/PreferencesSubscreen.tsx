@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { 
   Volume2, 
   Smartphone, 
@@ -44,7 +44,7 @@ export default function PreferencesSubscreen() {
         gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
         oscillator.start();
         oscillator.stop(audioCtx.currentTime + 0.1);
-      } catch (_) {}
+      } catch (_) { /* intentionally ignored: best-effort, failure is non-fatal */ }
     }
   };
 
@@ -80,7 +80,7 @@ export default function PreferencesSubscreen() {
         if (profileRaw) {
           exportObj.profile = JSON.parse(profileRaw);
         }
-      } catch (_) {}
+      } catch (_) { /* intentionally ignored: best-effort, failure is non-fatal */ }
 
       try {
         const allData: Record<string, any> = {};
@@ -113,7 +113,7 @@ export default function PreferencesSubscreen() {
           }
         }
         exportObj.localChatsBackup = allData;
-      } catch (_) {}
+      } catch (_) { /* intentionally ignored: best-effort, failure is non-fatal */ }
 
       const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(exportObj, null, 2));
       const downloadAnchor = document.createElement('a');
@@ -149,6 +149,10 @@ export default function PreferencesSubscreen() {
               </div>
             </div>
             <button 
+              type="button"
+              role="switch"
+              aria-checked={soundHaptic === 'enabled'}
+              aria-label="Sound effects"
               onClick={handleToggleSound}
               className={`w-11 h-6 rounded-full transition-all duration-200 relative cursor-pointer outline-none border-none shrink-0 ${
                 soundHaptic === 'enabled' ? 'bg-[#0494f4]' : 'bg-zinc-700/60'

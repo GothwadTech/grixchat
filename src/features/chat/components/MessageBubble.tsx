@@ -58,22 +58,18 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
   convType,
   receiver,
   activeMessageMenu,
-  setActiveMessageMenu,
-  replyingTo,
   setReplyingTo,
   showReactionPicker,
   setShowReactionPicker,
-  receiverStatus,
   handleMessageTap,
   performReactToMessage,
   onJumpToMessage,
   isHighlighted,
-  isLatestMessage,
   isSelected,
   selectedMsgIds,
   allMessages
 }) => {
-  const navigate = useNavigate();
+  const _navigate = useNavigate();
   const { user } = useAuth();
   const x = useMotionValue(0);
   const [swipeActive, setSwipeActive] = React.useState(false);
@@ -92,7 +88,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
         if (!hasVibratedRef.current) {
           hasVibratedRef.current = true;
           if (window.navigator && window.navigator.vibrate) {
-            try { window.navigator.vibrate(14); } catch (err) {}
+            try { window.navigator.vibrate(14); } catch (_err) { /* intentionally ignored: best-effort, failure is non-fatal */ }
           }
         }
       } else {
@@ -109,7 +105,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
     }
   }, [x]);
 
-  const [tick, setTick] = React.useState(0);
+  const [_tick, setTick] = React.useState(0);
   const [customBubble, setCustomBubble] = React.useState<string | null>(null);
 
   React.useEffect(() => {
@@ -170,11 +166,10 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
     }
   }
   
-  // Render System message directly
-  if (msg.type === 'system' || msg.media_type === 'system') {
-    const systemText = msg.text || msg.content || '';
-    return <SystemMessage text={systemText} />;
-  }
+  // System messages render early, but ONLY after every hook below has run.
+  // An early return above the hooks changes the hook count between renders
+  // (rules-of-hooks), which crashes React when the same row flips type.
+  const isSystemMessage = msg.type === 'system' || msg.media_type === 'system';
 
   const rawTextContent = typeof msg.content === 'string' ? msg.content : (msg.text || '');
   const isMsgDeleted = msg.is_deleted === true || rawTextContent.includes('🚫 This message was deleted') || rawTextContent.includes('This message was deleted');
@@ -224,7 +219,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
     holdTimeoutRef.current = setTimeout(() => {
       wasLongPressedRef.current = true;
       if (window.navigator?.vibrate) {
-        try { window.navigator.vibrate(35); } catch (err) {}
+        try { window.navigator.vibrate(35); } catch (_err) { /* intentionally ignored: best-effort, failure is non-fatal */ }
       }
       handleMessageTap({ isLongPress: true, stopPropagation: () => {} }, msg);
     }, 260);
@@ -572,7 +567,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
   // NOTE: Space reduction critical enhancement!
   // We remove '|| hasReplyHeader' from block layout check so that text-only replied messages
   // can use the inline-timestamp layout, preventing giant empty spacer gaps!
-  const useBlockFormat = (!!mediaUrl || !isTextString || isLongOrMultiLine) && !isShortWithReply;
+  const _useBlockFormat = (!!mediaUrl || !isTextString || isLongOrMultiLine) && !isShortWithReply;
 
   const isReceiverOnlineNow = receiver && isUserOnline(
     receiver.isOnline !== undefined ? receiver.isOnline : receiver.is_online,
@@ -584,9 +579,13 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
       const lastSeenTime = new Date(receiver.lastSeen || receiver.last_seen).getTime();
       const msgTime = new Date(msg.created_at).getTime();
       wasReceiverOnlineAfterMessage = lastSeenTime >= msgTime;
-    } catch (e) {}
+    } catch (_e) { /* intentionally ignored: best-effort, failure is non-fatal */ }
   }
   const isMessageDelivered = isReceiverOnlineNow || wasReceiverOnlineAfterMessage;
+
+  if (isSystemMessage) {
+    return <SystemMessage text={msg.text || msg.content || ''} />;
+  }
 
   return (
     <div 
@@ -678,7 +677,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
             if (swipeActive || info.offset.x > 42) {
               setReplyingTo(msg);
               if (window.navigator && window.navigator.vibrate) {
-                try { window.navigator.vibrate(10); } catch(e){}
+                try { window.navigator.vibrate(10); } catch(_e){ /* intentionally ignored: best-effort, failure is non-fatal */ }
               }
             }
             setSwipeActive(false);

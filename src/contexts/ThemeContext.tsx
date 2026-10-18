@@ -75,7 +75,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     document.documentElement.setAttribute('data-theme', resolvedTheme);
     
     // Update theme-color meta tag for PWA status bar
-    let themeColor = resolvedTheme === 'light' ? '#ffffff' : '#202124';
+    const themeColor = resolvedTheme === 'light' ? '#ffffff' : '#202124';
     
     let metaThemeColor = document.querySelector('meta[name="theme-color"]');
     if (!metaThemeColor) {

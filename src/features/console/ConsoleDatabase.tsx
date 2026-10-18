@@ -1,7 +1,6 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { 
   Database, 
-  Activity, 
   RefreshCw, 
   Wifi, 
   AlertCircle, 
@@ -24,7 +23,7 @@ export default function ConsoleDatabase({
   isMeasuringLatency,
   showToastNotification
 }: ConsoleDatabaseProps) {
-  const [activeTables, setActiveTables] = useState<string[]>([
+  const [activeTables, _setActiveTables] = useState<string[]>([
     'conversation_participants',
     'follows',
     'messages',

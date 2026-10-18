@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { UploadCloud, FileArchive, RefreshCw, AlertCircle, FileText } from 'lucide-react';
+import { UploadCloud, FileArchive, RefreshCw, AlertCircle } from 'lucide-react';
 import JSZip from 'jszip';
 
 interface ExtractedFile {

@@ -1,13 +1,10 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Users, 
   ChevronRight,
   Loader2,
-  User,
-  Heart,
-  UserCheck,
-  MessageSquare
+  UserCheck
 } from 'lucide-react';
 import { useAuth } from '../../providers/AuthProvider.tsx';
 import { supabase } from '../../lib/supabase';
@@ -18,6 +15,7 @@ import { LocalDataCache } from '../../services/LocalDataCache';
 import { useCall } from '../../providers/CallProvider';
 import { useLivePresence } from '../../providers/PresenceProvider';
 
+import { sanitizeSearchTerm } from '../../utils/searchTerm';
 interface UserProfile {
   uid: string;
   username: string;
@@ -38,7 +36,7 @@ export default function SearchTab() {
   const [discoverLoading, setDiscoverLoading] = useState(false);
   const [userResults, setUserResults] = useState<UserProfile[]>([]);
   const [hiddenUserIds, setHiddenUserIds] = useState<string[]>([]);
-  const [pendingRequestsCount, setPendingRequestsCount] = useState(0);
+  const [_pendingRequestsCount, setPendingRequestsCount] = useState(0);
 
   // Contacts / friends state
   const [contacts, setContacts] = useState<UserProfile[]>(() => {
@@ -182,13 +180,15 @@ export default function SearchTab() {
       if (discoverSearchTerm.trim()) {
         const handleSearch = async () => {
           const term = discoverSearchTerm.toLowerCase().trim();
+          const safeTerm = sanitizeSearchTerm(term);
+          if (!safeTerm) { setDiscoverLoading(false); return; }
           if (!supabase || !authUser?.id) return;
           setDiscoverLoading(true);
           try {
             const { data } = await supabase
               .from('users')
               .select('id, username, full_name, photo_url, is_online, last_seen')
-              .or(`username.ilike.%${term}%,full_name.ilike.%${term}%`)
+              .or(`username.ilike.%${safeTerm}%,full_name.ilike.%${safeTerm}%`)
               .neq('id', authUser?.id)
               .limit(40);
             
@@ -219,13 +219,13 @@ export default function SearchTab() {
   }, [discoverSearchTerm, authUser?.id]);
 
   // Handle Call Initialization
-  const handleCall = (userId: string, type: 'voice' | 'video') => {
+  const _handleCall = (userId: string, type: 'voice' | 'video') => {
     if (initiateCall) {
       initiateCall(userId, type);
     }
   };
 
-  const renderUserProfileRow = (profile: UserProfile, isFriend: boolean = false) => {
+  const renderUserProfileRow = (profile: UserProfile, _isFriend: boolean = false) => {
     return (
       <div 
         key={profile.uid}

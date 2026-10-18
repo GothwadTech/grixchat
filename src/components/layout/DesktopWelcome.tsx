@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'motion/react';
-import { ShieldCheck, MessageSquare, Laptop, Smartphone } from 'lucide-react';
+import { ShieldCheck, MessageSquare, Laptop } from 'lucide-react';
 import { APP_CONFIG } from '../../config/appConfig';
 
 export default function DesktopWelcome() {

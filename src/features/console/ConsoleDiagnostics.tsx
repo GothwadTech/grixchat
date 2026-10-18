@@ -6,9 +6,7 @@ import {
   Activity, 
   ShieldAlert, 
   Users, 
-  CopyCheck, 
-  Sparkles,
-  Database
+  CopyCheck
 } from 'lucide-react';
 import { LogEntry, loggerService } from '../../services/ConsoleLoggerService';
 

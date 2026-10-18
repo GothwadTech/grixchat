@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Star, Search, UserPlus, Loader2, X } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Star, Search, Loader2, X } from 'lucide-react';
 import SettingHeader from '../../components/layout/SettingHeader.tsx';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../providers/AuthProvider';
@@ -49,7 +49,7 @@ export default function FavoritesScreen() {
         schema: 'public', 
         table: 'users',
         filter: `id=eq.${authUser.id}`
-      }, (payload) => {
+      }, (_payload) => {
         fetchFavorites();
       })
       .subscribe();
@@ -136,7 +136,7 @@ export default function FavoritesScreen() {
                       <p className="text-[11px] text-[var(--text-secondary)]">@{user.username}</p>
                     </div>
                   </div>
-                  <button 
+                  <button aria-label="Close" 
                     onClick={() => handleRemoveFavorite(user.id)}
                     disabled={removingId === user.id}
                     className="p-2 text-rose-500 hover:bg-rose-50 rounded-full transition-colors disabled:opacity-50"

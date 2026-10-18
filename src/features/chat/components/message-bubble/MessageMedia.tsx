@@ -118,7 +118,7 @@ export const MessageMedia: React.FC<MessageMediaProps> = ({
       >
         <img 
           src={mediaUrl} 
-          alt="Sent image" 
+          alt="Shared attachment preview" 
           className="max-w-full h-auto max-h-64 object-cover hover:opacity-95 transition-opacity"
           referrerPolicy="no-referrer"
         />

@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { ArrowLeft, Search, ChevronDown, ChevronUp, MessageSquare, Shield, HelpCircle, Star, Sparkles } from 'lucide-react';
+import { useState } from 'react';
+import { Search, ChevronDown, ChevronUp, MessageSquare, Shield, HelpCircle, Star, Sparkles } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import SettingHeader from '../../components/layout/SettingHeader.tsx';
 
@@ -10,7 +10,7 @@ interface FAQItem {
 }
 
 export default function HelpFaqScreen() {
-  const navigate = useNavigate();
+  const _navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState<'all' | 'general' | 'account' | 'chats' | 'safety'>('all');
   const [expandedIndex, setExpandedIndex] = useState<number | null>(null);

@@ -205,7 +205,7 @@ export default function NewGroupScreen() {
     <div className="fixed inset-0 z-[200] bg-[var(--bg-main)] flex flex-col font-sans">
       {/* Header */}
       <div className="shrink-0 bg-[var(--bg-card)] border-b border-[var(--border-color)] px-4 py-3 flex items-center gap-4">
-        <button onClick={() => step === 1 ? navigate(-1) : setStep(1)} className="p-2 -ml-2 hover:bg-black/5 rounded-full transition-colors">
+        <button aria-label="Back" onClick={() => step === 1 ? navigate(-1) : setStep(1)} className="p-2 -ml-2 hover:bg-black/5 rounded-full transition-colors">
           <ArrowLeft size={24} />
         </button>
         <div className="flex-1">
@@ -220,7 +220,7 @@ export default function NewGroupScreen() {
           </p>
         </div>
         {step === 1 && selectedUsers.length > 0 && (
-          <button 
+          <button aria-label="Confirm" 
             onClick={() => setStep(2)}
             className="p-2 bg-[#0494f4] text-white rounded-full shadow-lg shadow-[#0494f4]/20 active:scale-90 transition-transform"
           >
@@ -246,7 +246,7 @@ export default function NewGroupScreen() {
                     <div key={user.id} className="flex items-center gap-1.5 px-2 py-1 bg-[#0494f4]/10 border border-[#0494f4]/20 rounded-full shrink-0">
                       <Avatar url={user.photoURL} type="direct" size="custom" customSizeClass="w-5 h-5" name={user.fullName} />
                       <span className="text-[9px] font-bold text-[#0494f4] truncate max-w-[60px]">{user.fullName}</span>
-                      <button onClick={() => toggleUserSelection(user)} className="text-[#0494f4] hover:text-[#0494f4]/80">
+                      <button aria-label="Close" onClick={() => toggleUserSelection(user)} className="text-[#0494f4] hover:text-[#0494f4]/80">
                         <X size={10} />
                       </button>
                     </div>

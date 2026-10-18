@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { 
-  Users, 
   ArrowLeft, 
   Settings, 
   Edit3, 
@@ -17,7 +16,6 @@ import {
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../providers/AuthProvider.tsx';
-import { motion, AnimatePresence } from 'motion/react';
 import { ImageService } from '../../services/ImageService.ts';
 import Avatar from '../../components/common/Avatar';
 
@@ -211,7 +209,7 @@ export default function GroupSettingsScreen() {
     <div className="fixed inset-0 z-[200] bg-[var(--bg-main)] flex flex-col font-sans">
       {/* Header */}
       <div className="shrink-0 bg-[var(--bg-card)] border-b border-[var(--border-color)] px-4 py-3 flex items-center gap-4">
-        <button onClick={() => navigate(-1)} className="p-2 -ml-2 hover:bg-black/5 rounded-full transition-colors">
+        <button aria-label="Back" onClick={() => navigate(-1)} className="p-2 -ml-2 hover:bg-black/5 rounded-full transition-colors">
           <ArrowLeft size={24} />
         </button>
         <div className="flex-1">
@@ -219,7 +217,7 @@ export default function GroupSettingsScreen() {
           <p className="text-[10px] font-bold text-[var(--text-secondary)] uppercase">{members.length} participants</p>
         </div>
         {isAdmin && (
-          <button className="p-2 hover:bg-black/5 rounded-full transition-colors">
+          <button aria-label="More options" className="p-2 hover:bg-black/5 rounded-full transition-colors">
             <MoreVertical size={20} />
           </button>
         )}
@@ -257,13 +255,13 @@ export default function GroupSettingsScreen() {
                     className="bg-[var(--bg-main)] border border-[var(--border-color)] rounded-lg px-3 py-1 text-lg font-black outline-none focus:border-blue-500"
                     autoFocus
                   />
-                  <button onClick={handleUpdateName} className="p-2 bg-emerald-500 text-white rounded-lg"><Check size={16} /></button>
-                  <button onClick={() => { setShowEditName(false); setNewName(group.name); }} className="p-2 bg-rose-500 text-white rounded-lg"><X size={16} /></button>
+                  <button aria-label="Confirm" onClick={handleUpdateName} className="p-2 bg-emerald-500 text-white rounded-lg"><Check size={16} /></button>
+                  <button aria-label="Close" onClick={() => { setShowEditName(false); setNewName(group.name); }} className="p-2 bg-rose-500 text-white rounded-lg"><X size={16} /></button>
                 </div>
               ) : (
                 <div className="flex items-center gap-3">
                   <h1 className="text-2xl font-black text-[var(--text-primary)] tracking-tight">{group.name}</h1>
-                  {isAdmin && <button onClick={() => setShowEditName(true)} className="p-1.5 text-blue-500 hover:bg-blue-500/10 rounded-full"><Edit3 size={18} /></button>}
+                  {isAdmin && <button aria-label="Edit" onClick={() => setShowEditName(true)} className="p-1.5 text-blue-500 hover:bg-blue-500/10 rounded-full"><Edit3 size={18} /></button>}
                 </div>
               )}
             </div>

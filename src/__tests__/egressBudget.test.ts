@@ -7,7 +7,7 @@
  *
  * @vitest-environment node
  */
-import {beforeAll, describe, expect, it} from 'vitest';
+import { describe, expect, it} from 'vitest';
 import {createClient} from '../../dev/mock/index';
 import {store} from '../../dev/mock/store';
 import {CONVERSATION_LIST_SELECT} from '../features/chat/hooks/useConversations';
@@ -125,8 +125,7 @@ describe('conversation-list egress budget', () => {
     expect((data || []).length).toBeGreaterThanOrEqual(20);
 
     const size = bytes(data);
-    // eslint-disable-next-line no-console
-    console.log(`[egress] conversation list: ${(size / 1024).toFixed(1)} KB in ${elapsed} ms (budget ${FETCH_BUDGET / 1024} KB)`);
+        console.log(`[egress] conversation list: ${(size / 1024).toFixed(1)} KB in ${elapsed} ms (budget ${FETCH_BUDGET / 1024} KB)`);
     expect(size).toBeLessThan(FETCH_BUDGET);
   });
 

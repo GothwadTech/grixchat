@@ -2,7 +2,6 @@ import React from 'react';
 import { 
   Phone, 
   Video, 
-  PhoneMissed, 
   ArrowDownLeft, 
   ArrowUpRight, 
   PhoneCall
@@ -70,7 +69,7 @@ export const CallsHistoryList: React.FC<CallsHistoryListProps> = ({
 
   return (
     <div className="flex flex-col bg-[var(--bg-card)]">
-      {calls.map((call, index) => {
+      {calls.map((call, _index) => {
         const isMissed = call.isMissed;
         return (
           <div 

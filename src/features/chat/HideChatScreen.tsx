@@ -1,18 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, MessageCircle, Lock, Settings, ShieldAlert, Key, Unlock } from 'lucide-react';
+import { ArrowLeft, Lock, Settings, Unlock } from 'lucide-react';
 import { useAuth } from '../../providers/AuthProvider';
 import { useConversations } from './hooks/useConversations';
 import { ChatUserList } from './components/ChatUserList';
 import { CommonSearchBar } from '../../components/common/CommonSearchBar';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion } from 'motion/react';
 
 // Safe Session Storage Wrapper for sandboxed iframe environments
 const safeSessionStorage = {
   getItem: (key: string): string | null => {
     try {
       return sessionStorage.getItem(key);
-    } catch (e) {
+    } catch (_e) {
       // Fallback to window global memory if denied
       return (window as any)[`__grix_${key}`] || null;
     }
@@ -20,7 +20,7 @@ const safeSessionStorage = {
   setItem: (key: string, value: string): void => {
     try {
       sessionStorage.setItem(key, value);
-    } catch (e) {
+    } catch (_e) {
       // Fallback to window global memory if denied
       (window as any)[`__grix_${key}`] = value;
     }
@@ -28,7 +28,7 @@ const safeSessionStorage = {
   removeItem: (key: string): void => {
     try {
       sessionStorage.removeItem(key);
-    } catch (e) {
+    } catch (_e) {
       // Fallback to window global memory if denied
       delete (window as any)[`__grix_${key}`];
     }
@@ -101,7 +101,7 @@ export default function HideChatScreen() {
       <div className="h-full flex flex-col bg-[var(--bg-xs)] justify-between overflow-hidden font-sans select-none">
         {/* Header with back */}
         <div className="shrink-0 flex items-center px-4 min-h-[56px] pt-safe pb-1.5 bg-[var(--header-bg)] border-b border-[var(--border-color)]/35 shadow-sm rounded-b-2xl">
-          <button 
+          <button aria-label="Back" 
             onClick={() => navigate('/profile')} 
             className="w-12 h-12 flex items-center justify-center hover:bg-black/5 rounded-full transition-colors"
           >
@@ -181,7 +181,7 @@ export default function HideChatScreen() {
       {/* Header */}
       <div className="shrink-0 flex items-center justify-between px-4 min-h-[56px] pt-safe pb-1.5 bg-[var(--header-bg)] z-50 shadow-sm border-b border-[var(--border-color)]/35 rounded-b-2xl">
         <div className="flex items-center gap-3">
-          <button onClick={() => navigate('/profile')} className="w-12 h-12 flex items-center justify-center hover:bg-white/10 rounded-full transition-colors">
+          <button aria-label="Back" onClick={() => navigate('/profile')} className="w-12 h-12 flex items-center justify-center hover:bg-white/10 rounded-full transition-colors">
             <ArrowLeft size={22} className="text-[var(--header-text)]" />
           </button>
           <div className="flex items-center gap-2">

@@ -1,6 +1,5 @@
 import React from 'react';
 import { useSearch } from '../../contexts/SearchContext.tsx';
-import { motion, AnimatePresence } from 'motion/react';
 import { Search, X } from 'lucide-react';
 import TabHeader from './TabHeader.tsx';
 
@@ -24,7 +23,7 @@ export default function TopNav() {
               className="flex-1 bg-transparent border-none outline-none text-[15px] font-bold text-[var(--text-primary)] placeholder:text-[var(--text-secondary)]/50"
             />
             {searchTerm && (
-              <button 
+              <button aria-label="Close" 
                 onClick={() => setSearchTerm('')}
                 className="p-1 hover:bg-black/5 rounded-full transition-colors"
               >

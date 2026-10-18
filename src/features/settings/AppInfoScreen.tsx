@@ -1,6 +1,6 @@
 import React from 'react';
 import { APP_CONFIG } from '../../config/appConfig';
-import { ArrowLeft, Info, ShieldCheck, Globe, Code, Github } from 'lucide-react';
+import { ShieldCheck, Code, Github } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import SettingHeader from '../../components/layout/SettingHeader.tsx';
 import TermuxConsoleButton from '../../components/TermuxConsoleButton';

@@ -3,6 +3,7 @@ import { supabase } from '../../../lib/supabase';
 import { useAuth } from '../../../providers/AuthProvider.tsx';
 import { LocalDataCache } from '../../../services/LocalDataCache';
 
+import { logger } from '../../../utils/logger';
 /**
  * Does `conversation_participants.last_read_at` exist yet?
  * `null` = untested. Read receipts used to UPDATE one row per unread message;
@@ -235,7 +236,7 @@ export const useChatMessages = (conversationId: string, initialLimit: number = 2
         if (activeConv && (activeConv.unread || activeConv.unreadCount > 0)) {
           hasUnreadInCache = true;
         }
-      } catch (_) {}
+      } catch (_) { /* intentionally ignored: best-effort, failure is non-fatal */ }
 
       if (!hasUnreadLocally && !hasUnreadInCache) {
         return; // No unread messages locally or in cached badge, skip remote DB write!
@@ -264,7 +265,7 @@ export const useChatMessages = (conversationId: string, initialLimit: number = 2
           }
           // Column not there yet — remember and fall back for this session.
           readMarkerSupported = false;
-        } catch (err) {
+        } catch (_err) {
           readMarkerSupported = false;
         }
       }
@@ -381,7 +382,7 @@ export const useChatMessages = (conversationId: string, initialLimit: number = 2
           } else {
             fetchMessagesRef.current();
           }
-        } catch (err) {
+        } catch (_err) {
           fetchMessagesRef.current();
         }
       })
@@ -425,7 +426,7 @@ export const useChatMessages = (conversationId: string, initialLimit: number = 2
       })
       .subscribe((status) => {
         if (status === 'SUBSCRIBED') {
-          console.log('Successfully subscribed to chat:', conversationId);
+          logger.info('Successfully subscribed to chat:', conversationId);
         }
       });
 

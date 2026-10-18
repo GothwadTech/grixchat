@@ -535,7 +535,7 @@ export default function ChatScreen() {
       <AnimatePresence>
         {infoModalMessage && (
           <div className="fixed inset-0 z-[100000] flex items-center justify-center bg-black/75 backdrop-blur-[3px] select-none p-4">
-            <div 
+            <div role="presentation" 
               className="absolute inset-0 bg-transparent" 
               onClick={() => setInfoModalMessage(null)} 
             />

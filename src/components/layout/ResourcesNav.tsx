@@ -1,11 +1,9 @@
 import React from 'react';
 import { motion } from 'motion/react';
 import { 
-  Phone, 
   MessageSquare, 
   Users, 
   UserPlus, 
-  CircleDashed, 
   Clapperboard, 
   Video, 
   Grid, 
@@ -13,15 +11,8 @@ import {
   Search, 
   Compass, 
   Bell, 
-  TrendingUp,
-  Wrench, 
-  LayoutGrid, 
-  Gamepad2, 
-  MoreHorizontal, 
-  Upload,
-  Camera,
-  HelpCircle,
-  Globe
+  TrendingUp, 
+  Upload
 } from 'lucide-react';
 
 import { useLayout } from '../../contexts/LayoutContext.tsx';

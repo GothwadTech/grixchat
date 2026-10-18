@@ -1,0 +1,17 @@
+# Weekly dependency updates, grouped so a Vite or React bump is one PR, not twenty.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      react:
+        patterns: ["react", "react-dom", "@types/react", "@types/react-dom", "react-router*"]
+      tooling:
+        patterns: ["vite", "@vitejs/*", "vitest", "@vitest/*", "typescript", "eslint*", "@eslint/*", "typescript-eslint"]
+    open-pull-requests-limit: 5
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly

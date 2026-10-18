@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { X, MapPin, Navigation, Compass, Globe } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -103,7 +103,7 @@ export default function LocationSelectModal({ isOpen, onClose, onSend }: Locatio
               </div>
               <h3 className="text-lg font-black tracking-wide text-zinc-100 font-sans">Share Location</h3>
             </div>
-            <button 
+            <button aria-label="Close" 
               onClick={onClose}
               className="p-1.5 hover:bg-white/10 rounded-full text-zinc-400 transition-colors border-none bg-transparent cursor-pointer"
             >

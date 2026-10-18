@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   Bell, 
   MessageSquare, 
@@ -86,7 +86,7 @@ export default function NotificationsSettingsScreen() {
 
     if ('serviceWorker' in navigator) {
       const regs = await navigator.serviceWorker.getRegistrations();
-      results.swRegistered = regs.some(r => r.active && r.active.scriptURL.includes('sw.js'));
+      results.swRegistered = regs.some(r => r.active && r.active.scriptURL.includes('firebase-messaging-sw.js'));
     }
 
     setDiag(results);
@@ -145,7 +145,7 @@ export default function NotificationsSettingsScreen() {
     <div className="fixed inset-0 bg-[var(--bg-card)] flex flex-col z-[100] animate-fade-in font-sans">
       {/* Premium visual aligned header bar */}
       <div className="flex items-center gap-3 px-4 h-14 bg-[var(--bg-card)] border-b border-[var(--border-color)]/20 text-[var(--text-primary)] shrink-0 shadow-sm">
-        <button 
+        <button aria-label="Back" 
           onClick={() => navigate(-1)} 
           className="p-1.5 hover:bg-[var(--border-color)]/5 rounded-full active:scale-95 transition-transform cursor-pointer text-[var(--text-primary)]"
         >
@@ -188,6 +188,9 @@ export default function NotificationsSettingsScreen() {
                 </div>
               </div>
               <button 
+                role="switch"
+                aria-checked={permission === 'granted'}
+                aria-label="Allow notification alerts"
                 onClick={handleMasterToggle}
                 className={`w-11 h-6 rounded-full transition-all duration-200 relative cursor-pointer outline-none border-none shrink-0 ${
                   permission === 'granted' ? 'bg-[#0494f4]' : 'bg-zinc-700/60'
@@ -234,6 +237,9 @@ export default function NotificationsSettingsScreen() {
             <div className="flex items-center justify-between bg-[var(--bg-card)] border border-[var(--border-color)]/20 rounded-xl px-4 py-3">
               <span className="text-[13px] font-semibold text-[var(--text-primary)]">Sound Effects Enabled</span>
               <button 
+                role="switch"
+                aria-checked={settings.conversationTones}
+                aria-label="Conversation tones"
                 onClick={() => toggleSetting('conversationTones')}
                 className={`w-11 h-6 rounded-full transition-all duration-200 relative cursor-pointer outline-none border-none shrink-0 ${
                   settings.conversationTones ? 'bg-[#0494f4]' : 'bg-zinc-700/60'
@@ -266,6 +272,9 @@ export default function NotificationsSettingsScreen() {
                 </div>
               </div>
               <button 
+                role="switch"
+                aria-checked={settings.vibrate}
+                aria-label="Vibrate"
                 onClick={() => toggleSetting('vibrate')}
                 className={`w-11 h-6 rounded-full transition-all duration-200 relative cursor-pointer outline-none border-none shrink-0 ${
                   settings.vibrate ? 'bg-[#0494f4]' : 'bg-zinc-700/60'
@@ -288,6 +297,9 @@ export default function NotificationsSettingsScreen() {
                 </div>
               </div>
               <button 
+                role="switch"
+                aria-checked={settings.highPriority}
+                aria-label="High priority headers"
                 onClick={() => toggleSetting('highPriority')}
                 className={`w-11 h-6 rounded-full transition-all duration-200 relative cursor-pointer outline-none border-none shrink-0 ${
                   settings.highPriority ? 'bg-[#0494f4]' : 'bg-zinc-700/60'
@@ -333,6 +345,9 @@ export default function NotificationsSettingsScreen() {
                 </div>
               </div>
               <button 
+                role="switch"
+                aria-checked={settings.groupHighPriority}
+                aria-label="Group high priority"
                 onClick={() => toggleSetting('groupHighPriority')}
                 className={`w-11 h-6 rounded-full transition-all duration-200 relative cursor-pointer outline-none border-none shrink-0 ${
                   settings.groupHighPriority ? 'bg-[#0494f4]' : 'bg-zinc-700/60'

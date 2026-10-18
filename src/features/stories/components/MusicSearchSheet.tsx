@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Search, Music, Play, Pause, Check, Volume2, X } from 'lucide-react';
+import { Search, Music, Play, Pause, Check, X } from 'lucide-react';
 import { TRACKS, CATEGORIES, Track } from '../utils/musicData';
 
 interface MusicSearchSheetProps {
@@ -62,7 +62,7 @@ export default function MusicSearchSheet({ onSelectTrack, selectedTrack, onClose
           <Music size={22} className="text-[#0494f4]" />
           <span>Add Music Track</span>
         </h3>
-        <button onClick={onClose} className="p-1.5 hover:bg-white/10 rounded-full transition-colors cursor-pointer">
+        <button aria-label="Close" onClick={onClose} className="p-1.5 hover:bg-white/10 rounded-full transition-colors cursor-pointer">
           <X size={24} />
         </button>
       </div>

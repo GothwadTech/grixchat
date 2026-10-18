@@ -69,7 +69,7 @@ export const ChatSelectDropdown: React.FC<ChatSelectDropdownProps> = ({
   return (
     <>
       {/* Backdrop trigger for soft dismissal on tap */}
-      <div 
+      <div role="presentation" 
         className="fixed inset-0 z-[100] bg-transparent cursor-default" 
         onClick={onClose} 
       />

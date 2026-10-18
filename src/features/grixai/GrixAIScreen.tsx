@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Trash2, Sparkles, Zap, Cpu, ArrowLeft, Phone, ShieldCheck } from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
+import { AnimatePresence } from 'motion/react';
 import { aiService, AIMessage, AIModelType } from '../../services/AIService.ts';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../providers/AuthProvider.tsx';
@@ -18,7 +17,7 @@ import { GrixAISettingsSheet } from './components/GrixAISettingsSheet';
 import { GrixAITelemetryOverlay } from './components/GrixAITelemetryOverlay';
 
 export default function GrixAIScreen() {
-  const navigate = useNavigate();
+  const _navigate = useNavigate();
   const { user } = useAuth();
   const { chatBackground } = useTheme();
   const [messages, setMessages] = useState<AIMessage[]>([]);

@@ -1,31 +1,17 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
+import { useState, useRef, useEffect } from 'react';
+import { AnimatePresence } from 'motion/react';
 import { 
-  Search, 
   Bell, 
   MoreVertical, 
   Settings, 
-  UserPlus, 
   Users, 
-  Laptop, 
-  Star, 
   Archive,
   EyeOff,
   Heart,
-  Plus,
-  Camera,
-  LayoutGrid,
-  BarChart2,
-  Play,
-  Volume2,
   VolumeX,
   Lock,
-  PlaySquare,
   Radio,
   MessageCircle,
-  Info,
-  LogOut,
-  X,
   Trash,
   Pin,
   ArrowLeft
@@ -39,17 +25,14 @@ import { useAuth } from '../../providers/AuthProvider.tsx';
 import { useLayout } from '../../contexts/LayoutContext.tsx';
 import { ChatTabDropdown } from '../chat-ui/ChatTabDropdown';
 import { ChatSelectDropdown } from '../chat-ui/ChatSelectDropdown';
-import { GroupsTabDropdown } from '../chat-ui/GroupsTabDropdown';
 import { ProfileTabDropdown } from '../chat-ui/ProfileTabDropdown';
-import { authService } from '../../features/auth/services/authService.ts';
-
 export default function TabHeader() {
   const { userData, user: authUser, refreshUserData } = useAuth();
-  const { setIsSearchOpen } = useSearch();
+  useSearch();
   const location = useLocation();
-  const navigate = useNavigate();
+  const _navigate = useNavigate();
   const [showMenu, setShowMenu] = useState(false);
-  const [isMuted, setIsMuted] = useState(false);
+  const [_isMuted, _setIsMuted] = useState(false);
   const [hasUnreadLikes, setHasUnreadLikes] = useState(false);
   const [hasUnreadNotifs, setHasUnreadNotifs] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
@@ -116,7 +99,7 @@ export default function TabHeader() {
 
   const { chatListFilter, setChatListFilter, isChatSelectMode, setChatSelectMode, selectedChatIds, setSelectedChatIds } = useLayout();
 
-  const menuOptions = [
+  const _menuOptions = [
     { label: 'New group', icon: Users, path: '/new-group?type=group' },
     { label: 'New channel', icon: Radio, path: '/new-group?type=channel' },
     { label: 'Archived', icon: Archive, path: '/chats/archived' },
@@ -126,7 +109,7 @@ export default function TabHeader() {
     { label: 'Settings', icon: Settings, path: '/profile' },
   ];
 
-  const filterOptions = [
+  const _filterOptions = [
     { label: 'All Chats', filter: 'all', icon: MessageCircle },
     { label: 'Private Chats', filter: 'direct', icon: Lock },
     { label: 'Groups Only', filter: 'groups', icon: Users },
@@ -134,12 +117,12 @@ export default function TabHeader() {
   ] as const;
 
   const isChatsPage = location.pathname === '/' || location.pathname === '/chats';
-  const isStoriesPage = location.pathname === '/stories';
+  const _isStoriesPage = location.pathname === '/stories';
   const isReelsPage = location.pathname === '/reels';
-  const isPostsPage = location.pathname === '/posts';
-  const isSearchPage = location.pathname === '/search';
+  const _isPostsPage = location.pathname === '/posts';
+  const _isSearchPage = location.pathname === '/search';
   const isProfilePage = location.pathname === '/profile';
-  const isCallsPage = location.pathname === '/calls';
+  const _isCallsPage = location.pathname === '/calls';
 
   if (isChatSelectMode && isChatsPage) {
     const handleSelectAll = () => {
@@ -196,7 +179,7 @@ export default function TabHeader() {
     return (
       <div className="w-full px-4 min-h-[56px] flex justify-between items-center z-50 shrink-0 relative animate-fade-in select-none">
         <div className="flex items-center gap-3">
-          <button 
+          <button aria-label="Back" 
             type="button" 
             onClick={() => {
               setChatSelectMode(false);
@@ -401,7 +384,7 @@ export default function TabHeader() {
         {/* 3 Dots Menu - Show on Chats tab only */}
         {isChatsPage && (
           <div className="relative" ref={menuRef}>
-            <button 
+            <button aria-label="More options" 
               onClick={() => setShowMenu(prev => !prev)}
               className="w-12 h-12 flex items-center justify-center hover:bg-black/5 dark:hover:bg-white/5 rounded-full transition-colors cursor-pointer relative active:scale-95 duration-100"
               id="header-three-dots"
@@ -425,7 +408,7 @@ export default function TabHeader() {
         {/* 3 Dots Menu - Show on Profile Tab */}
         {isProfilePage && (
           <div className="relative" ref={profileMenuRef}>
-            <button 
+            <button aria-label="More options" 
               onClick={() => setShowProfileMenu(prev => !prev)}
               className="w-12 h-12 flex items-center justify-center hover:bg-black/5 dark:hover:bg-white/5 rounded-full transition-colors cursor-pointer relative active:scale-95 duration-100"
               id="header-profile-three-dots"

@@ -3,12 +3,13 @@ import { supabase } from '../lib/supabase';
 import { apiFetch } from '../lib/apiClient';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from './AuthProvider';
-import { Phone, PhoneOff, Video, Volume2, ShieldAlert } from 'lucide-react';
+import { Phone, PhoneOff, Video } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { CallStatus, CallType } from '../features/call/types/callTypes';
-import { Room, RoomEvent, Track } from 'livekit-client';
+import { Room, RoomEvent } from 'livekit-client';
 import { webRtcCallService } from '../features/call/services/WebRtcCallService';
 
+import { logger } from '../utils/logger';
 /**
  * How long the caller rings before the call is written off as missed. Every
  * other timeout in the file is derived from it, so the two sides can never
@@ -262,7 +263,7 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (typeof navigator === 'undefined' || !navigator.vibrate) return;
     stopVibration();
     const buzz = () => {
-      try { navigator.vibrate([400, 300, 400]); } catch (_) {}
+      try { navigator.vibrate([400, 300, 400]); } catch (_) { /* intentionally ignored: best-effort, failure is non-fatal */ }
     };
     buzz();
     vibrateTimerRef.current = setInterval(buzz, 2500);
@@ -273,7 +274,7 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
       clearInterval(vibrateTimerRef.current);
       vibrateTimerRef.current = null;
     }
-    try { navigator?.vibrate?.(0); } catch (_) {}
+    try { navigator?.vibrate?.(0); } catch (_) { /* intentionally ignored: best-effort, failure is non-fatal */ }
   };
 
   // Unlock Web Audio on the first gesture of the session (see PhoneRingtones.unlock)
@@ -305,7 +306,7 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         if (staleCalls && staleCalls.length > 0) {
           const ids = staleCalls.map(c => c.id);
-          console.log("[Call System] Auto-cleaning stale zombie calls: ", ids);
+          logger.info("[Call System] Auto-cleaning stale zombie calls: ", ids);
           await supabase
             .from('calls')
             .update({ status: 'ended', is_missed: true } as any)
@@ -339,7 +340,7 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [activeCall?.status]);
 
   // Insert chat room logs dynamically
-  const addLoggingMessage = async (status: 'started' | 'ended' | 'missed', cid: string, partnerId: string, callType: CallType) => {
+  const addLoggingMessage = async (status: 'started' | 'ended' | 'missed', _cid: string, partnerId: string, callType: CallType) => {
     if (!authUser || !partnerId || !supabase) return;
     try {
       const { data: convId } = await supabase.rpc('get_direct_conversation_id', { u1: authUser.id, u2: partnerId });
@@ -400,7 +401,7 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
       localStreamRef.current.getTracks().forEach(track => {
         try {
           track.stop();
-        } catch (err) {}
+        } catch (_err) { /* intentionally ignored: best-effort, failure is non-fatal */ }
       });
       localStreamRef.current = null;
     }
@@ -410,7 +411,7 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
       remoteStreamRef.current.getTracks().forEach(track => {
         try {
           track.stop();
-        } catch (err) {}
+        } catch (_err) { /* intentionally ignored: best-effort, failure is non-fatal */ }
       });
       remoteStreamRef.current = null;
     }
@@ -420,7 +421,7 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (activeCallChannelRef.current) {
       try {
         supabase.removeChannel(activeCallChannelRef.current);
-      } catch (err) {}
+      } catch (_err) { /* intentionally ignored: best-effort, failure is non-fatal */ }
       activeCallChannelRef.current = null;
     }
 
@@ -567,7 +568,7 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
    */
   const connectViaLiveKit = async (roomName: string, participantIdentity: string, callType: CallType): Promise<boolean> => {
     try {
-      console.log(`[Calling] Fetching secure token from backend for room_id: ${roomName}...`);
+      logger.info(`[Calling] Fetching secure token from backend for room_id: ${roomName}...`);
       
       let payload = { success: false, token: "mock-livekit-token-sandbox", error: "" };
       
@@ -595,7 +596,7 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Fallback or explicit cloud address
       const livekitUrl = import.meta.env.VITE_LIVEKIT_URL;
       
-      let token = payload.token;
+      const token = payload.token;
       
       // No LiveKit on this deployment (no credentials, no URL, or the API
       // answered with the sandbox marker) → the caller uses real WebRTC.
@@ -621,8 +622,8 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
       roomRef.current = roomInstance;
       setRoom(roomInstance);
 
-      roomInstance.on(RoomEvent.TrackSubscribed, (track, publication, participant) => {
-        console.log(`[LiveKit] Remote track subscribed: ${track.kind}`);
+      roomInstance.on(RoomEvent.TrackSubscribed, (track, _publication, _participant) => {
+        logger.info(`[LiveKit] Remote track subscribed: ${track.kind}`);
         updateRemoteStreamFromRoom(roomInstance);
         setActiveCall(prev => {
           if (prev && prev.status !== 'connected') {
@@ -632,23 +633,23 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
         });
       });
 
-      roomInstance.on(RoomEvent.TrackUnsubscribed, (track, publication, participant) => {
-        console.log(`[LiveKit] Remote track unsubscribed: ${track.kind}`);
+      roomInstance.on(RoomEvent.TrackUnsubscribed, (track, _publication, _participant) => {
+        logger.info(`[LiveKit] Remote track unsubscribed: ${track.kind}`);
         updateRemoteStreamFromRoom(roomInstance);
       });
 
-      roomInstance.on(RoomEvent.LocalTrackPublished, (publication, participant) => {
-        console.log(`[LiveKit] Local track published: ${publication.track?.kind}`);
+      roomInstance.on(RoomEvent.LocalTrackPublished, (publication, _participant) => {
+        logger.info(`[LiveKit] Local track published: ${publication.track?.kind}`);
         updateLocalStreamFromRoom(roomInstance);
       });
 
-      roomInstance.on(RoomEvent.LocalTrackUnpublished, (publication, participant) => {
-        console.log(`[LiveKit] Local track unpublished: ${publication.track?.kind}`);
+      roomInstance.on(RoomEvent.LocalTrackUnpublished, (publication, _participant) => {
+        logger.info(`[LiveKit] Local track unpublished: ${publication.track?.kind}`);
         updateLocalStreamFromRoom(roomInstance);
       });
 
       roomInstance.on(RoomEvent.ParticipantConnected, (p) => {
-        console.log(`[LiveKit] Peer Participant online:`, p.identity);
+        logger.info(`[LiveKit] Peer Participant online:`, p.identity);
         clearConnectWatchdog();
         setActiveCall(prev => {
           if (prev && prev.status !== 'connected') {
@@ -659,18 +660,18 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
 
       roomInstance.on(RoomEvent.ParticipantDisconnected, (p) => {
-        console.log(`[LiveKit] Peer Participant offline:`, p.identity);
+        logger.info(`[LiveKit] Peer Participant offline:`, p.identity);
         endCall();
       });
 
       roomInstance.on(RoomEvent.Disconnected, () => {
-        console.log(`[LiveKit] Room disconnected`);
+        logger.info(`[LiveKit] Room disconnected`);
         handleEndCallLocally();
       });
 
       // Joint connection Handshake
       await roomInstance.connect(livekitUrl, token);
-      console.log(`[LiveKit] Connected to SFU gateway seamlessly.`);
+      logger.info(`[LiveKit] Connected to SFU gateway seamlessly.`);
 
       // Enable devices dynamically
       if (callType === 'video') {
@@ -790,7 +791,7 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (viaLiveKit) return;
 
     try {
-      console.log('[Calling] Establishing a peer-to-peer WebRTC session...');
+      logger.info('[Calling] Establishing a peer-to-peer WebRTC session...');
       setTransport('p2p');
 
       await webRtcCallService.start({
@@ -878,7 +879,7 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // The caller may have hung up while this phone was still ringing.
       const { data: fresh } = await supabase.from('calls').select('status').eq('id', cid).single();
       if (fresh && fresh.status !== 'ringing') {
-        console.log('[Calling] Call is no longer ringing, not answering:', fresh.status);
+        logger.info('[Calling] Call is no longer ringing, not answering:', fresh.status);
         setActiveCall(null);
         navigate('/chats', { replace: true });
         return;
@@ -939,7 +940,7 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const initiateCall = async (otherUserId: string, callType: 'voice' | 'video') => {
     if (!authUser || !supabase) return;
     if (initiatingCallRef.current) {
-      console.log("[Call Hook] Call already initiating, skipping duplicate invocation.");
+      logger.info("[Call Hook] Call already initiating, skipping duplicate invocation.");
       return;
     }
     
@@ -1033,7 +1034,7 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (otherUserId === 'grix-ai' || otherUserId === authUser.id) {
         setTimeout(async () => {
           try {
-            console.log("[Grix Simulator] Auto-accepting simulated call...");
+            logger.info("[Grix Simulator] Auto-accepting simulated call...");
             await supabase.from('calls').update({ status: 'accepted' } as any).eq('id', realCallId);
             await addLoggingMessage('started', realCallId, otherUserId, callType);
           } catch (e) {
@@ -1049,7 +1050,7 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (!supabase) return;
         const { data: snap } = await supabase.from('calls').select('status').eq('id', realCallId).single();
         if (snap && snap.status === 'ringing') {
-          console.log(`[Call Timeout] No answer after ${RING_TIMEOUT_MS / 1000} s, marking as ended/missed...`);
+          logger.info(`[Call Timeout] No answer after ${RING_TIMEOUT_MS / 1000} s, marking as ended/missed...`);
           await closeCallRow(realCallId, otherUserId, callType, { status: 'ended', missed: true });
           setActiveCall(prev => prev ? { ...prev, status: 'ended' } : null);
           await handleEndCallLocally();

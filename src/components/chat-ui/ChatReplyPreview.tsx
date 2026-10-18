@@ -21,7 +21,7 @@ export const ChatReplyPreview: React.FC<{
           <p className="text-[13px] text-white/70 font-medium truncate italic">"{replyingTo.content || replyingTo.text}"</p>
         </div>
       </div>
-      <button 
+      <button aria-label="Close" 
         onClick={() => setReplyingTo(null)} 
         className="p-1.5 hover:bg-white/10 rounded-full transition-all active:scale-90"
       >

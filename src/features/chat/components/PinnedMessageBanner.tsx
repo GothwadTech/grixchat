@@ -33,7 +33,7 @@ export const PinnedMessageBanner: React.FC<PinnedMessageBannerProps> = ({
           </p>
         </div>
       </div>
-      <button 
+      <button aria-label="Close" 
         type="button"
         onClick={(e) => {
           e.stopPropagation();

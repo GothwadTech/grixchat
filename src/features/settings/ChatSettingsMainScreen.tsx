@@ -4,13 +4,11 @@ import {
   Archive, 
   Lock, 
   EyeOff, 
-  Palette, 
   Check, 
   Image as ImageIcon, 
   Trash2, 
   Loader2, 
-  ChevronRight,
-  ShieldCheck
+  ChevronRight
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../providers/AuthProvider.tsx';
@@ -22,7 +20,7 @@ import BubbleCustomizer from './components/BubbleCustomizer.tsx';
 export default function ChatSettingsMainScreen() {
   const navigate = useNavigate();
   const { userData } = useAuth();
-  const { theme, setTheme, chatBackground, setChatBackground } = useTheme();
+  const { chatBackground, setChatBackground } = useTheme();
   const [uploading, setUploading] = useState(false);
   const [clearing, setClearing] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -36,7 +34,7 @@ export default function ChatSettingsMainScreen() {
   const archivedCount = userData?.archivedChats?.length || 0;
   const hiddenCount = userData?.hiddenChats?.length || 0;
 
-  const themes: { id: Theme; label: string; sub: string }[] = [
+  const _themes: { id: Theme; label: string; sub: string }[] = [
     { id: 'system', label: 'System Default', sub: 'Matches device themes automatically' },
     { id: 'light', label: 'Light Classic', sub: 'Bright visual setting preset' },
     { id: 'dark', label: 'Dark Cosmic', sub: 'Super relaxed low-contrast style' }
@@ -81,7 +79,7 @@ export default function ChatSettingsMainScreen() {
     <div className="fixed inset-0 bg-[var(--bg-card)] flex flex-col z-[100] animate-fade-in font-sans">
       {/* Premium header */}
       <div className="flex items-center gap-3 px-4 h-14 bg-[var(--bg-card)] border-b border-[var(--border-color)]/20 text-[var(--text-primary)] shrink-0 shadow-sm">
-        <button 
+        <button aria-label="Back" 
           onClick={() => navigate(-1)} 
           className="p-1.5 hover:bg-[var(--border-color)]/5 rounded-full active:scale-95 transition-transform cursor-pointer text-[var(--text-primary)]"
         >
