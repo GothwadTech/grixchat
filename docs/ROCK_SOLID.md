@@ -92,7 +92,7 @@ The toggles on Notifications, Preferences, AppLock and DataUsage now expose
 
 | # | Item | Status | Notes |
 |---|---|---|---|
-| 27 | Cleanup audit for timers and channels | ⏳ | 24 `setInterval` and 42 unsubscribe references exist. Not audited one by one. |
+| 27 | Cleanup audit for timers and channels | 🟡 | `transactionQueueService` now has `dispose()`, which removes its `online` listener and both timers, and HMR re-init cannot stack them (tested). The other 24 `setInterval` uses and 42 unsubscribe references are **not audited one by one yet**. |
 | 28 | Realtime reconnect and backoff | ⏳ | Supabase reconnects internally. Behaviour under a real flaky network is not verified. |
 | 29 | Presence heartbeat audit | ⏳ | |
 | 30 | Pause polling when the tab is hidden | ⏳ | |
@@ -130,7 +130,7 @@ The toggles on Notifications, Preferences, AppLock and DataUsage now expose
 | 47 | Silent token refresh and graceful expiry | 🟡 | `resolveAccessToken()` refreshes tokens within 30 s of expiry. Expiry UX not audited. |
 | 48 | Logout clears every cache | ⏳ | |
 | 49 | Multi-account leak test | ⏳ | |
-| 50 | Safe storage access | 🟡 | `StorageService` wraps `localStorage`. Five direct calls remain. They are inside try blocks or in the developer console. |
+| 50 | Safe storage access | ✅ | Every `localStorage` access goes through `StorageService` (`canUse`, `readRawForDiagnostics`, `rawKeys` added for diagnostics and export only). The Supabase probe uses `storage.canUse()`. |
 | 51 | Account deletion audit (storage files too) | ⏳ | |
 | 52 | Consistent validation and password messages | ⏳ | |
 
@@ -141,7 +141,7 @@ The toggles on Notifications, Preferences, AppLock and DataUsage now expose
 | 53 | Schema validation on every route body | ⏳ | |
 | 54 | Server-side maximum `limit` | ⏳ | |
 | 55 | Consistent error shape | 🟡 | Routes return `{ error }`. A client-side handler that uses it everywhere is not done. |
-| 56 | Request IDs in server logs | ⏳ | |
+| 56 | Request IDs in server logs | ✅ | Every API response carries `X-Request-Id`, and unhandled-error and cross-origin logs print the same id. The client does not show the id in its error UI yet. |
 | 57 | Health endpoint | ✅ | `GET /api/health` already existed. Verified. |
 | 58 | Fail-fast on missing env vars | 🟡 | The client warns at build time and in `supabase.ts`. No hard fail. |
 
@@ -182,9 +182,9 @@ The toggles on Notifications, Preferences, AppLock and DataUsage now expose
 
 ## Summary
 
-- ✅ **Done:** 13 items.
-- 🟡 **Partly done:** 14 items.
-- ⏳ **Not yet:** 49 items.
+- ✅ **Done:** 16 items.
+- 🟡 **Partly done:** 13 items.
+- ⏳ **Not yet:** 47 items.
 
 The honest read: this pass fixed the real bugs it could find by reading and
 testing code, and put the guard rails in place (lint, tests, coverage, bundle
