@@ -10,6 +10,7 @@ import GithubProfileHeader from './components/GithubProfileHeader';
 import GithubZipUploader from './components/GithubZipUploader';
 import GithubFileList from './components/GithubFileList';
 import { calculateGitHubBlobSha } from './utils/githubSha';
+import type { ErrorLike } from '../../utils/errors';
 
 interface GitHubProfile {
   login: string;
@@ -141,9 +142,9 @@ export default function GithubScreen() {
         headers: { Authorization: `token ${token}` }
       });
       setProfile(response.data);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Invalid token or GitHub unavailable', err);
-      if (err.response?.status === 401) {
+      if ((err as ErrorLike).response?.status === 401) {
         storage.removeItem('github_token');
         setGithubToken(null);
       }
@@ -167,7 +168,7 @@ export default function GithubScreen() {
         // Functional update: only fills the selection if still empty, no dependency on selectedRepo.
         setSelectedRepo(prev => prev ?? response.data[0]);
       }
-    } catch (_err: any) {
+    } catch (_err: unknown) {
       setErrorMessage('Failed to fetch github repositories. Check token scopes or connectivity.');
     } finally {
       setLoadingRepos(false);
@@ -487,8 +488,8 @@ export default function GithubScreen() {
               else activeRemoteFiles.push({ path: file.path, sha: newSha });
               setRemoteFiles([...activeRemoteFiles]);
             }
-          } catch (fileErr: any) {
-            const errorDetail = fileErr.response?.data?.message || fileErr.message;
+          } catch (fileErr: unknown) {
+            const errorDetail = (fileErr as ErrorLike).response?.data?.message || (fileErr as ErrorLike).message;
             throw new Error(`Sequential sync stopped at "${file.path}": ${errorDetail}`);
           }
 
@@ -585,13 +586,13 @@ export default function GithubScreen() {
             setCommitSuccessUrl(pushRes.data.html_url || `https://github.com/${selectedRepo.full_name}`);
           }
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
         clearInterval(progressTimer);
         throw err;
       }
 
-    } catch (err: any) {
-      const detail = err.response?.data?.message || err.message;
+    } catch (err: unknown) {
+      const detail = (err as ErrorLike).response?.data?.message || (err as ErrorLike).message;
       setErrorMessage(detail);
     } finally {
       setIsPushing(false);

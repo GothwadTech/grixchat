@@ -16,6 +16,7 @@ import { useTheme, Theme } from '../../contexts/ThemeContext';
 import { ImageService } from '../../services/ImageService';
 import { storage } from '../../services/StorageService';
 import BubbleCustomizer from './components/BubbleCustomizer.tsx';
+import type { ErrorLike } from '../../utils/errors';
 
 export default function ChatSettingsMainScreen() {
   const navigate = useNavigate();
@@ -57,8 +58,8 @@ export default function ChatSettingsMainScreen() {
     try {
       const url = await ImageService.uploadImage(file);
       setChatBackground(`url(${url})`);
-    } catch (error: any) {
-      showToast(error.message || "Failed to upload wallpaper image.");
+    } catch (error: unknown) {
+      showToast((error as ErrorLike).message || "Failed to upload wallpaper image.");
     } finally {
       setUploading(false);
     }

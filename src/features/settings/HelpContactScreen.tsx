@@ -85,7 +85,7 @@ export default function HelpContactScreen() {
       // Reset form variables
       setSubject('');
       setMessage('');
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error submitting support ticket via live database, queuing for sync:', err);
       try {
         await transactionQueue.addTransaction('support_ticket_insert', {

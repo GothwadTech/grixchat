@@ -2,6 +2,7 @@ import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Palette } from 'lucide-react';
 import { storage } from '../../../services/StorageService';
+import { useDialog } from '../../../hooks/useDialog';
 
 interface BackgroundItem {
   id: string;
@@ -48,6 +49,7 @@ export const ChatCustomizerModal: React.FC<ChatCustomizerModalProps> = ({
   customBg,
   setCustomBg,
 }) => {
+  useDialog(onClose, isOpen);
   if (!receiverId) return null;
 
   const handleBgSelect = (bgId: string) => {
@@ -74,7 +76,7 @@ export const ChatCustomizerModal: React.FC<ChatCustomizerModalProps> = ({
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-[100000] flex items-center justify-center bg-black/75 backdrop-blur-[2px]">
+        <div role="dialog" aria-modal="true" aria-label="chat customizer modal" className="fixed inset-0 z-[100000] flex items-center justify-center bg-black/75 backdrop-blur-[2px]">
           <div role="presentation" className="absolute inset-0" onClick={onClose} />
           
           <motion.div 

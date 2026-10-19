@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { ChevronLeft, Plus, Trash2, HelpCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { useDialog } from '../../hooks/useDialog';
 
 interface PollBuilderModalProps {
   isOpen: boolean;
@@ -9,6 +10,7 @@ interface PollBuilderModalProps {
 }
 
 export default function PollBuilderModal({ isOpen, onClose, onCreate }: PollBuilderModalProps) {
+  useDialog(onClose, isOpen);
   const [question, setQuestion] = useState('');
   const [options, setOptions] = useState<string[]>(['', '']);
   const [multiple, setMultiple] = useState(false);
@@ -50,7 +52,7 @@ export default function PollBuilderModal({ isOpen, onClose, onCreate }: PollBuil
 
   return (
     <AnimatePresence>
-      <motion.div
+      <motion.div role="dialog" aria-modal="true" aria-label="poll builder modal"
         initial={{ opacity: 0, y: 30 }}
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: 30 }}

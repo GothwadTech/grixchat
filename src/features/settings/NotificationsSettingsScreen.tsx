@@ -15,6 +15,7 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { apiPostJson } from '../../lib/apiClient';
 import { useAuth } from '../../providers/AuthProvider';
+import type { ErrorLike } from '../../utils/errors';
 
 export default function NotificationsSettingsScreen() {
   const { user, userData, refreshUserData } = useAuth();
@@ -114,9 +115,9 @@ export default function NotificationsSettingsScreen() {
       } else {
         throw new Error((data && data.error) || `Failed to send test notification (${status})`);
       }
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error(e);
-      alert(`Error dispatching alert: ${e.message}`);
+      alert(`Error dispatching alert: ${(e as ErrorLike).message}`);
     } finally {
       setIsSendingTest(false);
     }

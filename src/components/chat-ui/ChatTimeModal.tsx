@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { X, Clock, CalendarDays, Ban } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { useDialog } from '../../hooks/useDialog';
 
 export interface ChatTimeRestrictions {
   enabled: boolean;
@@ -35,6 +36,7 @@ export default function ChatTimeModal({
   onSave,
   title
 }: ChatTimeModalProps) {
+  useDialog(onClose, isOpen);
   const [enabled, setEnabled] = useState(false);
   const [neverAllowed, setNeverAllowed] = useState(false);
   const [allowedDays, setAllowedDays] = useState<number[]>([1, 2, 3, 4, 5]); // default Mon-Fri
@@ -82,7 +84,7 @@ export default function ChatTimeModal({
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-[500] flex items-center justify-center p-4">
+      <div role="dialog" aria-modal="true" aria-label="chat time modal" className="fixed inset-0 z-[500] flex items-center justify-center p-4">
         {/* Backdrop overlay */}
         <motion.div 
           initial={{ opacity: 0 }}

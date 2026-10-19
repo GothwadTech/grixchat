@@ -5,6 +5,7 @@ import { motion } from 'motion/react';
 import { Eye, EyeOff, Mail, Lock, Github, Apple } from 'lucide-react';
 import { authService } from './services/authService.ts';
 import { storage } from '../../services/StorageService';
+import type { ErrorLike } from '../../utils/errors';
 
 export default function LoginScreen() {
   const [identifier, setIdentifier] = useState(''); // Can be email or username
@@ -105,8 +106,8 @@ export default function LoginScreen() {
 
       await authService.login(loginEmail, password);
       navigate('/chats');
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError((err as ErrorLike).message);
     } finally {
       setLoading(false);
     }
@@ -140,8 +141,8 @@ export default function LoginScreen() {
 
       await authService.resetPassword(email);
       setSuccess(true);
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError((err as ErrorLike).message);
     } finally {
       setLoading(false);
     }
@@ -160,8 +161,8 @@ export default function LoginScreen() {
     setError('');
     try {
       await authService.loginWithGoogle();
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError((err as ErrorLike).message);
       setGoogleLoading(false);
     }
   };
@@ -171,8 +172,8 @@ export default function LoginScreen() {
     setError('');
     try {
       await authService.loginWithGithub();
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError((err as ErrorLike).message);
     } finally {
       setGithubLoading(false);
     }
@@ -183,8 +184,8 @@ export default function LoginScreen() {
     setError('');
     try {
       await authService.loginWithApple();
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError((err as ErrorLike).message);
     } finally {
       setAppleLoading(false);
     }
@@ -195,8 +196,8 @@ export default function LoginScreen() {
     setError('');
     try {
       await authService.loginWithTwitter();
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError((err as ErrorLike).message);
     } finally {
       setTwitterLoading(false);
     }
@@ -207,8 +208,8 @@ export default function LoginScreen() {
     setError('');
     try {
       await authService.loginWithFacebook();
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError((err as ErrorLike).message);
     } finally {
       setFacebookLoading(false);
     }

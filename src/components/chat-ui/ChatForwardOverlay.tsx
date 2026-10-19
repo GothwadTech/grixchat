@@ -7,6 +7,7 @@ import { useTheme } from '../../contexts/ThemeContext';
 import Avatar from '../common/Avatar';
 import { isUserOnline } from '../../utils/presence';
 import { useLivePresence } from '../../providers/PresenceProvider';
+import { useDialog } from '../../hooks/useDialog';
 
 interface ChatForwardOverlayProps {
   isOpen: boolean;
@@ -23,6 +24,7 @@ export const ChatForwardOverlay: React.FC<ChatForwardOverlayProps> = ({
   currentUserId,
   onForwardComplete
 }) => {
+  useDialog(onClose, isOpen);
   const liveOf = useLivePresence();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -120,7 +122,7 @@ export const ChatForwardOverlay: React.FC<ChatForwardOverlayProps> = ({
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-[10000] flex flex-col bg-[var(--bg-main)] text-[var(--text-primary)]">
+      <div role="dialog" aria-modal="true" aria-label="chat forward overlay" className="fixed inset-0 z-[10000] flex flex-col bg-[var(--bg-main)] text-[var(--text-primary)]">
         {/* Modern Synced App-Style Header Overlay matching TabHeader */}
         <div className="min-h-[56px] py-1.5 flex items-center px-4 bg-[var(--header-bg)] border-b border-[var(--border-color)]/35 shadow-sm gap-3 shrink-0 rounded-b-2xl">
           <button aria-label="Close" 

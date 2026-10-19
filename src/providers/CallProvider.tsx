@@ -689,7 +689,7 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
       updateLocalStreamFromRoom(roomInstance);
       return true;
 
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("[LiveKit Initialization Error]", error);
       // A half-open room would steal the media toggles from the P2P fallback.
       if (roomRef.current) {

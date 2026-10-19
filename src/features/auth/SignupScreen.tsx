@@ -5,6 +5,7 @@ import { motion } from 'motion/react';
 import { User as UserIcon, AtSign, Lock, Eye, EyeOff, Mail, Github, HelpCircle, Apple, Phone } from 'lucide-react';
 import { authService } from './services/authService.ts';
 import { storage } from '../../services/StorageService';
+import type { ErrorLike } from '../../utils/errors';
 
 export default function SignupScreen() {
   const [email, setEmail] = useState('');
@@ -89,8 +90,8 @@ export default function SignupScreen() {
         setOtp(new Array(6).fill(''));
         setTimeout(() => setResendMessage(''), 4000);
       }
-    } catch (err: any) {
-      setError(err.message || 'Failed to resend code');
+    } catch (err: unknown) {
+      setError((err as ErrorLike).message || 'Failed to resend code');
     } finally {
       setResendLoading(false);
     }
@@ -145,8 +146,8 @@ export default function SignupScreen() {
         setTimeout(() => {
           navigate('/chats');
         }, 1500);
-      } catch (err: any) {
-        setError(err.message || 'Invalid verification code. Please try again.');
+      } catch (err: unknown) {
+        setError((err as ErrorLike).message || 'Invalid verification code. Please try again.');
       } finally {
         setVerifyLoading(false);
       }
@@ -227,8 +228,8 @@ export default function SignupScreen() {
       }
 
       setIsVerifying(true);
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError((err as ErrorLike).message);
     } finally {
       setLoading(false);
     }
@@ -239,8 +240,8 @@ export default function SignupScreen() {
     setError('');
     try {
       await authService.loginWithGoogle();
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError((err as ErrorLike).message);
       setGoogleLoading(false);
     }
   };
@@ -250,8 +251,8 @@ export default function SignupScreen() {
     setError('');
     try {
       await authService.loginWithGithub();
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError((err as ErrorLike).message);
     } finally {
       setGithubLoading(false);
     }
@@ -262,8 +263,8 @@ export default function SignupScreen() {
     setError('');
     try {
       await authService.loginWithApple();
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError((err as ErrorLike).message);
     } finally {
       setAppleLoading(false);
     }
@@ -274,8 +275,8 @@ export default function SignupScreen() {
     setError('');
     try {
       await authService.loginWithTwitter();
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError((err as ErrorLike).message);
     } finally {
       setTwitterLoading(false);
     }
@@ -286,8 +287,8 @@ export default function SignupScreen() {
     setError('');
     try {
       await authService.loginWithFacebook();
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError((err as ErrorLike).message);
     } finally {
       setFacebookLoading(false);
     }

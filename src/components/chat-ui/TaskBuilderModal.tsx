@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { ChevronLeft, Calendar, ClipboardList } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { useDialog } from '../../hooks/useDialog';
 
 interface TaskBuilderModalProps {
   isOpen: boolean;
@@ -9,6 +10,7 @@ interface TaskBuilderModalProps {
 }
 
 export default function TaskBuilderModal({ isOpen, onClose, onCreate }: TaskBuilderModalProps) {
+  useDialog(onClose, isOpen);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [assignee, setAssignee] = useState('');
@@ -37,7 +39,7 @@ export default function TaskBuilderModal({ isOpen, onClose, onCreate }: TaskBuil
 
   return (
     <AnimatePresence>
-      <motion.div
+      <motion.div role="dialog" aria-modal="true" aria-label="task builder modal"
         initial={{ opacity: 0, y: 30 }}
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: 30 }}
