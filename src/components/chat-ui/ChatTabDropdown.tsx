@@ -13,6 +13,7 @@ import {
 import { motion, AnimatePresence } from 'motion/react';
 import { useNavigate } from 'react-router-dom';
 import { useLayout } from '../../contexts/LayoutContext.tsx';
+import { TabDropdownShell } from './TabDropdownShell';
 
 interface ChatTabDropdownProps {
   isOpen: boolean;
@@ -64,21 +65,7 @@ export const ChatTabDropdown: React.FC<ChatTabDropdownProps> = ({
   ] as const;
 
   return (
-    <>
-      {/* Fallback backdrop to dismiss on click/tap */}
-      <div role="presentation" 
-        className="fixed inset-0 z-[100] bg-transparent cursor-default" 
-        onClick={onClose} 
-      />
-
-      {/* Symmetrical elegant dropdown matching ChatHeaderDropdown precisely */}
-      <motion.div
-        initial={{ opacity: 0, scale: 0.95, y: -10 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.95, y: -10 }}
-        transition={{ duration: 0.12, ease: 'easeOut' }}
-        className="absolute right-0 top-11 z-[101] w-[190px] bg-[var(--bg-card)] border border-[var(--border-color)]/60 shadow-[0_10px_35px_rgba(0,0,0,0.15)] rounded-2xl p-1.5 flex flex-col gap-[1px] text-[var(--text-primary)] overflow-hidden select-none"
-      >
+    <TabDropdownShell onDismiss={onClose} label="Chat list menu">
         <AnimatePresence mode="wait">
           {page === 1 ? (
             <motion.div
@@ -162,7 +149,6 @@ export const ChatTabDropdown: React.FC<ChatTabDropdownProps> = ({
             </motion.div>
           )}
         </AnimatePresence>
-      </motion.div>
-    </>
+    </TabDropdownShell>
   );
 };

@@ -7,12 +7,12 @@ import {
   Github,
   Terminal
 } from 'lucide-react';
-import { motion } from 'motion/react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../providers/AuthProvider.tsx';
 import { MultiAccountService, StoredAccount } from '../../services/MultiAccountService';
 import { storage } from '../../services/StorageService';
 import { authService } from '../../features/auth/services/authService.ts';
+import { TabDropdownShell } from './TabDropdownShell';
 
 interface ProfileTabDropdownProps {
   isOpen: boolean;
@@ -62,21 +62,7 @@ export const ProfileTabDropdown: React.FC<ProfileTabDropdownProps> = ({
   const _profilePic = userData?.photoURL || (userData as any)?.photo_url || authUser?.user_metadata?.avatar_url || DEFAULT_LOGO;
 
   return (
-    <>
-      {/* Backdrop to dismiss on click/tap */}
-      <div role="presentation" 
-        className="fixed inset-0 z-[100] bg-transparent cursor-default" 
-        onClick={onClose} 
-      />
-
-      {/* Profile menu dropdown styling matching ChatTabDropdown precisely */}
-      <motion.div
-        initial={{ opacity: 0, scale: 0.95, y: -10 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.95, y: -10 }}
-        transition={{ duration: 0.12, ease: 'easeOut' }}
-        className="absolute right-0 top-11 z-[101] w-[190px] bg-[var(--bg-card)] border border-[var(--border-color)]/60 shadow-[0_10px_35px_rgba(0,0,0,0.15)] rounded-2xl p-1.5 flex flex-col gap-[1px] text-[var(--text-primary)] overflow-hidden select-none"
-      >
+    <TabDropdownShell onDismiss={onClose} label="Profile menu">
         <div className="flex flex-col gap-[1px]">
           {/* Top: Current active account (styled exactly like switch profiles, with User icon) */}
           <div className="w-full px-4 py-2.5 text-left flex items-center gap-3 min-w-0 text-[13px] font-semibold text-[var(--text-primary)]">
@@ -158,7 +144,6 @@ export const ProfileTabDropdown: React.FC<ProfileTabDropdownProps> = ({
             <span>Log Out</span>
           </button>
         </div>
-      </motion.div>
-    </>
+    </TabDropdownShell>
   );
 };
