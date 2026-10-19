@@ -49,11 +49,11 @@ It activates after `npm install`, through the `prepare` script.
 |---|---|---|---|
 | 1 | ESLint (React hooks, TypeScript) | ✅ | `eslint.config.js`. `lint:eslint` runs in CI with `--quiet` (errors only). |
 | 2 | `react-hooks/exhaustive-deps` | ✅ | `rules-of-hooks` violation fixed (MessageBubble). All 48 exhaustive-deps warnings are fixed, and the rule is now an **error** in `eslint.config.js`. Fixes use the least risky pattern per case: stable `useCallback` wrappers, primitive keys (`uid`, `conversationIdsKey`), and refs for values that must not re-subscribe (`navigateRef`, `latestRef`, `streamRef`, `hiddenChatsRef`). Two real bugs came out of it: the camera cleanup stopped a stale `null` stream, and the story views effect could loop. Both are fixed. |
-| 3 | Remove the ~637 `any` usages | ⏳ | Warnings only. Typing them needs the real DB row shapes, so this is a dedicated pass. `any` is a warning, not an error. |
+| 3 | Remove the ~598 `any` usages | 🟡 | Down from 644 warnings. Catch clauses are now `unknown` with the `errorMessage` / `ErrorLike` helper in `src/utils/errors.ts`. The rest (about 173 `as any`, 161 `any` parameters) needs real DB row types. `no-explicit-any` stays a warning. |
 | 4 | Split giant files | ⏳ | `server/api.ts` (1416 lines), `CallProvider.tsx` (1280), `GithubScreen.tsx` (1244), `MessageBubble.tsx` (844). Splitting without a real device to test on is risky, so it is deferred. |
 | 5 | `console.*` through one logger | ✅ | `src/utils/logger.ts` is the only client place allowed to call `console` directly. Server, Functions and tests may use it. |
 | 6 | Empty `catch {}` blocks | 🟡 | 35 empty blocks now carry an explicit "intentionally ignored" comment, which ESLint accepts. They are **not** all changed to log or handle the error. |
-| 7 | Merge duplicate dropdowns | ⏳ | ChatTab / GroupsTab / ProfileTab dropdowns are still separate files. |
+| 7 | Merge duplicate dropdowns | ✅ | `ChatTabDropdown` and `ProfileTabDropdown` render through `TabDropdownShell` (backdrop, `role="menu"`, Escape to close). Unused `GroupsTabDropdown.tsx` deleted. |
 | 8 | Dead code cleanup | 🟡 | 362 unused imports and locals removed. Unused *exports* not audited. `public/sw.js` deleted. |
 
 ## 2. Accessibility
@@ -61,12 +61,12 @@ It activates after `npm install`, through the `prepare` script.
 | # | Item | Status | Notes |
 |---|---|---|---|
 | 9 | Labels on icon-only buttons | ✅ | 85 buttons labelled from their icon, plus 11 by hand (toggles, shutter, colour swatches). Checked with an AST scan. |
-| 10 | Focus trap and Esc in modals | ⏳ | Needs a shared modal primitive. |
+| 10 | Focus trap and Esc in modals | ✅ | `src/hooks/useDialog.ts`, wired into 13 dialogs and sheets (camera, chat time, poll and task builders, location, forward, customizer, options, github editor, change email/password, delete account, reauth). Esc closes only the top-most dialog. Tab cycles inside it. Focus returns to the opener. Tested in `src/__tests__/useDialog.test.tsx`. `ChatAttachmentMenu` uses Esc only. |
 | 11 | Keyboard support for menus | 🟡 | Click-away backdrops now `role="presentation"`. **62 click handlers on non-buttons and 63 static-element warnings remain** (custom menus and rows). Warnings, not errors. |
-| 12 | Colour contrast audit | ⏳ | Needs a visual pass in both themes. |
-| 13 | `prefers-reduced-motion` | ⏳ | |
-| 14 | Form label association | 🟡 | 21 `label-has-associated-control` warnings remain (mostly ChatTimeModal and PollBuilder). |
-| 15 | Visible focus rings | ⏳ | |
+| 12 | Colour contrast audit | ✅ | `scripts/check-contrast.mjs` checks 18 text/background pairs in both themes at WCAG 4.5:1 and runs in CI. Primary darkened to `#0479c2` so white text passes. |
+| 13 | `prefers-reduced-motion` | ✅ | CSS block in `src/index.css` and `<MotionConfig reducedMotion="user">` in `src/main.tsx`. |
+| 14 | Form label association | ✅ | `label-has-associated-control` is 0 and set to `error`. Toggle labels use `htmlFor`/`id` pairs. |
+| 15 | Visible focus rings | ✅ | `:focus-visible` outline in `src/index.css`. |
 | 16 | Large text / dynamic type layout check | ⏳ | |
 
 Two `alt` texts that were redundant or missing are fixed.
@@ -143,7 +143,7 @@ The toggles on Notifications, Preferences, AppLock and DataUsage now expose
 | 55 | Consistent error shape | 🟡 | Routes return `{ error }`. A client-side handler that uses it everywhere is not done. |
 | 56 | Request IDs in server logs | ✅ | Every API response carries `X-Request-Id`, and unhandled-error and cross-origin logs print the same id. The client does not show the id in its error UI yet. |
 | 57 | Health endpoint | ✅ | `GET /api/health` already existed. Verified. |
-| 58 | Fail-fast on missing env vars | 🟡 | The client warns at build time and in `supabase.ts`. No hard fail. |
+| 58 | Fail-fast on missing env vars | ✅ | `scripts/check-env.mjs` runs in `prebuild` and exits 1 when required `VITE_*` vars are missing (`ALLOW_MISSING_ENV=1` overrides for placeholder builds). At runtime, production shows a config-error screen instead of a blank app (`src/main.tsx`). |
 
 ## 9. PWA, mobile and performance
 
@@ -182,9 +182,11 @@ The toggles on Notifications, Preferences, AppLock and DataUsage now expose
 
 ## Summary
 
-- ✅ **Done:** 16 items.
-- 🟡 **Partly done:** 13 items.
-- ⏳ **Not yet:** 47 items.
+- ✅ **Done:** 23 items.
+- 🟡 **Partly done:** 12 items.
+- ⏳ **Not yet:** 41 items.
+
+_Counted from the table rows above. Items 77–84 are human steps tracked in `docs/KNOWN_ISSUES.md`._
 
 The honest read: this pass fixed the real bugs it could find by reading and
 testing code, and put the guard rails in place (lint, tests, coverage, bundle
