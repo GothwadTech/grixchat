@@ -73,7 +73,7 @@ export default function ChatScreen() {
     deleteMessage: performDeleteMessage, 
     reactToMessage: performReactToMessage, 
     clearChat: performClearChat
-  } = useChatActions(chatId, receiverId || '');
+  } = useChatActions(chatId);
 
   const { isOtherTyping, handleTyping, stopTyping } = useTypingStatus(
     chatId,

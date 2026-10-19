@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../../../lib/supabase';
 import { useAuth } from '../../../providers/AuthProvider.tsx';
 import { toDate } from '../../../utils/dateUtils.ts';
@@ -11,6 +11,12 @@ export const useCalls = (activeFilter: string) => {
   const [hasMore, setHasMore] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [isPaginating, setIsPaginating] = useState(false);
+  // Read through refs: the effect must only re-subscribe when the user or the filter
+  // changes, not when the list length or the hidden-chat array identity changes.
+  const callsRef = useRef(calls);
+  callsRef.current = calls;
+  const hiddenChatsRef = useRef(userData?.hiddenChats);
+  hiddenChatsRef.current = userData?.hiddenChats;
 
   useEffect(() => {
     if (!user || !supabase) return;
@@ -18,19 +24,20 @@ export const useCalls = (activeFilter: string) => {
 
     if (isPaginating) {
       setLoadingMore(true);
-    } else if (limit === 15 && calls.length === 0) {
+    } else if (limit === 15 && callsRef.current.length === 0) {
       setLoading(true);
     }
 
     const fetchCalls = async () => {
       try {
         let hiddenUserIds: string[] = [];
-        if (userData?.hiddenChats && userData.hiddenChats.length > 0) {
+        const hiddenChats = hiddenChatsRef.current;
+        if (hiddenChats && hiddenChats.length > 0) {
           try {
             const { data: partData } = await supabase
               .from('conversation_participants')
               .select('user_id')
-              .in('conversation_id', userData.hiddenChats)
+              .in('conversation_id', hiddenChats)
               .neq('user_id', user.id);
             
             if (partData) {

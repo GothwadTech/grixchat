@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Github, RefreshCw, Key, CheckCircle, ExternalLink,
   User, Folder, Layers, GitCommit, Activity, GitBranch, Search, CheckSquare, Square, UploadCloud, AlertTriangle, CheckCircle2, Wifi, ShieldCheck, Database, ChevronLeft
 } from 'lucide-react';
@@ -108,21 +108,6 @@ export default function GithubScreen() {
     }
   }, []);
 
-  useEffect(() => {
-    if (githubToken) {
-      fetchRepos();
-      fetchRateInfo();
-      testGithubPing();
-    }
-  }, [githubToken]);
-
-  // Handle repository connection changes to load remote file indexes
-  useEffect(() => {
-    if (selectedRepo && githubToken) {
-      fetchRemoteHashes(selectedRepo.owner.login, selectedRepo.name, branch);
-    }
-  }, [selectedRepo, branch, githubToken]);
-
   // Load local codebase file directories on mount
   useEffect(() => {
     const fetchLocalFilesList = async () => {
@@ -168,7 +153,7 @@ export default function GithubScreen() {
     }
   };
 
-  const fetchRepos = async () => {
+  const fetchRepos = useCallback(async () => {
     if (!githubToken) return;
     setLoadingRepos(true);
     setErrorMessage('');
@@ -178,17 +163,18 @@ export default function GithubScreen() {
       });
       setRepos(response.data || []);
       // Auto select first repo if none selected yet
-      if (response.data?.length > 0 && !selectedRepo) {
-        setSelectedRepo(response.data[0]);
+      if (response.data?.length > 0) {
+        // Functional update: only fills the selection if still empty, no dependency on selectedRepo.
+        setSelectedRepo(prev => prev ?? response.data[0]);
       }
     } catch (_err: any) {
       setErrorMessage('Failed to fetch github repositories. Check token scopes or connectivity.');
     } finally {
       setLoadingRepos(false);
     }
-  };
+  }, [githubToken]);
 
-  const fetchRemoteHashes = async (owner: string, repoName: string, targetBranch: string): Promise<RemoteFileRef[]> => {
+  const fetchRemoteHashes = useCallback(async (owner: string, repoName: string, targetBranch: string): Promise<RemoteFileRef[]> => {
     if (!githubToken) return [];
     try {
       const branchRes = await axios.get(`https://api.github.com/repos/${owner}/${repoName}/branches/${targetBranch}`, {
@@ -211,9 +197,9 @@ export default function GithubScreen() {
       setRemoteFiles([]);
       return [];
     }
-  };
+  }, [githubToken]);
 
-  const fetchRateInfo = async () => {
+  const fetchRateInfo = useCallback(async () => {
     if (!githubToken) return;
     setRateLoading(true);
     try {
@@ -234,7 +220,22 @@ export default function GithubScreen() {
     } finally {
       setRateLoading(false);
     }
-  };
+  }, [githubToken]);
+
+  useEffect(() => {
+    if (githubToken) {
+      fetchRepos();
+      fetchRateInfo();
+      testGithubPing();
+    }
+  }, [githubToken, fetchRepos, fetchRateInfo]);
+
+  // Handle repository connection changes to load remote file indexes
+  useEffect(() => {
+    if (selectedRepo && githubToken) {
+      fetchRemoteHashes(selectedRepo.owner.login, selectedRepo.name, branch);
+    }
+  }, [selectedRepo, branch, githubToken, fetchRemoteHashes]);
 
   const testGithubPing = async () => {
     setPinging(true);

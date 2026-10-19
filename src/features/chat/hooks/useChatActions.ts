@@ -7,7 +7,7 @@ import { LocalDataCache } from '../../../services/LocalDataCache';
 import { pushNotificationService } from '../services/pushNotificationService';
 
 import { logger } from '../../../utils/logger';
-export const useChatActions = (conversationId: string, receiverId: string) => {
+export const useChatActions = (conversationId: string) => {
   const { user, userData } = useAuth();
 
   const sendMessage = useCallback(async ({
@@ -150,7 +150,7 @@ export const useChatActions = (conversationId: string, receiverId: string) => {
     } catch (error) {
       console.error('Error sending message:', error);
     }
-  }, [conversationId, user, userData, receiverId]);
+  }, [conversationId, user, userData]);
 
   const editMessage = useCallback(async (msgId: string, newText: string) => {
     if (!supabase) return;

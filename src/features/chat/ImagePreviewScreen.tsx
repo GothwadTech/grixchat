@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   X, Download, Share2, Play, Pause,
@@ -48,6 +48,20 @@ export default function ImagePreviewScreen() {
     setCacheSize(`${randomSize} MB`);
   }, [imageUrl, videoUrl]);
 
+  // Stable: only refs and the state setter are touched, so they are safe as effect deps.
+  const clearControlsTimeout = useCallback(() => {
+    if (controlsTimeoutRef.current) {
+      clearTimeout(controlsTimeoutRef.current);
+    }
+  }, []);
+
+  const resetControlsTimeout = useCallback(() => {
+    clearControlsTimeout();
+    controlsTimeoutRef.current = setTimeout(() => {
+      setShowControls(false);
+    }, 4500);
+  }, [clearControlsTimeout]);
+
   // Auto-hide controls timer while playing
   useEffect(() => {
     if (isPlaying && !showSpeedMenu && !showContextMenu && !showDetailsPanel && !isSeeking) {
@@ -56,20 +70,8 @@ export default function ImagePreviewScreen() {
       clearControlsTimeout();
     }
     return () => clearControlsTimeout();
-  }, [isPlaying, showSpeedMenu, showContextMenu, showDetailsPanel, isSeeking]);
+  }, [isPlaying, showSpeedMenu, showContextMenu, showDetailsPanel, isSeeking, resetControlsTimeout, clearControlsTimeout]);
 
-  const resetControlsTimeout = () => {
-    clearControlsTimeout();
-    controlsTimeoutRef.current = setTimeout(() => {
-      setShowControls(false);
-    }, 4500);
-  };
-
-  const clearControlsTimeout = () => {
-    if (controlsTimeoutRef.current) {
-      clearTimeout(controlsTimeoutRef.current);
-    }
-  };
 
   const toggleControls = (_e: React.MouseEvent) => {
     if (showSpeedMenu || showContextMenu || showDetailsPanel) {

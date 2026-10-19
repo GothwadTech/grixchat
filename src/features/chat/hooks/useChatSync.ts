@@ -85,6 +85,8 @@ export function useChatSync(receiverId: string | undefined, chatId: string, conv
   const [watchData, setWatchData] = useState<any>(null);
   const [isWatchMode, setIsWatchMode] = useState(false);
   const { user, userData: authUser } = useAuth();
+  // Stable id for effect deps; the user object itself changes on every token refresh.
+  const uid = user?.id;
 
   const [prevReceiverId, setPrevReceiverId] = useState<string | undefined>(receiverId);
   // Live roster answer for this chat partner (null until the roster has synced).
@@ -203,29 +205,31 @@ export function useChatSync(receiverId: string | undefined, chatId: string, conv
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [receiverId, convType, user?.id, livePresence]);
+  }, [receiverId, convType, uid, livePresence]);
 
   // Presence is the live signal; this tick only lets the *durable* fallback
   // decay while we are looking at the screen (no network involved).
+  const hasReceiver = !!receiver;
+  const receiverIsOnline = receiver?.isOnline;
   useEffect(() => {
-    if (convType !== 'direct' || !receiver) return;
+    if (convType !== 'direct' || !hasReceiver) return;
 
     const interval = setInterval(() => {
-      const expected = resolveOnline(livePresence, receiver.isOnline, receiverLastSeen)
+      const expected = resolveOnline(livePresence, receiverIsOnline, receiverLastSeen)
         ? 'online'
         : 'offline';
       setReceiverStatus(expected);
     }, 20000);
 
     return () => clearInterval(interval);
-  }, [receiver?.isOnline, receiverLastSeen, convType, livePresence]);
+  }, [hasReceiver, receiverIsOnline, receiverLastSeen, convType, livePresence]);
 
   useEffect(() => {
     // Clear old watch data states instantly when chatId changes
     setWatchData(null);
     setIsWatchMode(false);
 
-    if (!user || !chatId || !supabase) return;
+    if (!uid || !chatId || !supabase) return;
 
     // Fetch conversation data (including watch together state)
     const fetchChat = async () => {
@@ -260,10 +264,10 @@ export function useChatSync(receiverId: string | undefined, chatId: string, conv
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [chatId, user?.id]);
+  }, [chatId, uid]);
 
   useEffect(() => {
-    if (!user || !receiverId || !supabase) {
+    if (!uid || !receiverId || !supabase) {
       setChatSettings(null);
       return;
     }
@@ -272,7 +276,7 @@ export function useChatSync(receiverId: string | undefined, chatId: string, conv
       const { data } = await supabase
         .from('chat_settings')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('user_id', uid)
         .eq('receiver_id', receiverId)
         .maybeSingle();
       
@@ -295,7 +299,7 @@ export function useChatSync(receiverId: string | undefined, chatId: string, conv
         event: '*',
         schema: 'public',
         table: 'chat_settings',
-        filter: `user_id=eq.${user.id}`
+        filter: `user_id=eq.${uid}`
       }, (payload) => {
         const newData = payload.new as any;
         if (newData && newData.receiver_id === receiverId) {
@@ -313,7 +317,7 @@ export function useChatSync(receiverId: string | undefined, chatId: string, conv
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user?.id, receiverId]);
+  }, [uid, receiverId]);
 
   useEffect(() => {
     if (authUser) setCurrentUserData(authUser);

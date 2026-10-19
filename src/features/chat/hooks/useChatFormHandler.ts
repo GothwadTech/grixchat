@@ -311,6 +311,7 @@ export function useChatFormHandler({
     performSendMessage, 
     addOptimisticMessage, 
     confirmOptimisticMessage, 
+    receiverId,
     textareaRef
   ]);
 

@@ -97,11 +97,13 @@ function buildMutualSet(rows: any[], myId: string): Set<string> {
 
 export const useConversations = (activeFilter: string) => {
   const { user, isAuthReady } = useAuth();
+  // Stable id for effect deps; the user object itself changes on every token refresh.
+  const uid = user?.id;
   
   // Use cached data instantly if it exists to prevent loader flickering
   const [conversations, setConversations] = useState<any[]>(() => {
-    if (user?.id) {
-      const cached = LocalDataCache.getConversations(user.id);
+    if (uid) {
+      const cached = LocalDataCache.getConversations(uid);
       if (cached && Array.isArray(cached)) {
         return cached;
       }
@@ -113,8 +115,8 @@ export const useConversations = (activeFilter: string) => {
   
   // If we already have cached conversations, we don't need a full-screen loading spinner
   const [loading, setLoading] = useState(() => {
-    if (user?.id) {
-      const cached = LocalDataCache.getConversations(user.id);
+    if (uid) {
+      const cached = LocalDataCache.getConversations(uid);
       if (cached && Array.isArray(cached) && cached.length > 0) {
         return false;
       }
@@ -149,11 +151,11 @@ export const useConversations = (activeFilter: string) => {
   }, []);
 
   const fetchConversations = useCallback(async () => {
-    if (!user || activeFilter === 'Calls' || !supabase || !isAuthReady) return;
+    if (!uid || activeFilter === 'Calls' || !supabase || !isAuthReady) return;
     if (inFlightRef.current) return; // coalesce bursts into one request
     inFlightRef.current = true;
 
-    const myId = user.id;
+    const myId = uid;
     const cached = LocalDataCache.getConversations(myId) || [];
     if (cached.length === 0) setLoading(true);
 
@@ -390,7 +392,7 @@ export const useConversations = (activeFilter: string) => {
       setLoadingMore(false);
       setIsPaginating(false);
     }
-  }, [user, activeFilter, isAuthReady, formatTime]);
+  }, [uid, activeFilter, isAuthReady, formatTime]);
 
   useEffect(() => { refreshRef.current = fetchConversations; }, [fetchConversations]);
 
@@ -409,8 +411,8 @@ export const useConversations = (activeFilter: string) => {
    * here (6 round-trips, 25–130 KB) for every message and every read receipt.
    */
   const patchConversationFromMessage = useCallback((row: any) => {
-    if (!user?.id || !row?.conversation_id) return;
-    const myId = user.id;
+    if (!uid || !row?.conversation_id) return;
+    const myId = uid;
     const current = listRef.current;
     const idx = current.findIndex((c) => c.id === row.conversation_id);
     if (idx === -1) {
@@ -435,11 +437,11 @@ export const useConversations = (activeFilter: string) => {
     listRef.current = next;
     setConversations(next);
     LocalDataCache.saveConversations(myId, next);
-  }, [user?.id, formatTime, scheduleStructuralRefresh]);
+  }, [uid, formatTime, scheduleStructuralRefresh]);
 
   /** Realtime `conversations` UPDATE → same idea, from the denormalized columns. */
   const patchConversationFromRow = useCallback((row: any) => {
-    if (!user?.id || !row?.id) return;
+    if (!uid || !row?.id) return;
     const current = listRef.current;
     const idx = current.findIndex((c) => c.id === row.id);
     if (idx === -1) return;
@@ -454,11 +456,11 @@ export const useConversations = (activeFilter: string) => {
     const next = [updated, ...current.filter((_, i) => i !== idx)];
     listRef.current = next;
     setConversations(next);
-    LocalDataCache.saveConversations(user.id, next);
-  }, [user?.id, formatTime]);
+    LocalDataCache.saveConversations(uid, next);
+  }, [uid, formatTime]);
 
   useEffect(() => {
-    if (!user || activeFilter === 'Calls' || !supabase || !isAuthReady) return;
+    if (!uid || activeFilter === 'Calls' || !supabase || !isAuthReady) return;
 
     // Local cache first: instant, zero egress.
     const unsubscribeCache = LocalDataCache.subscribe('conversations', (updatedList) => {
@@ -474,18 +476,18 @@ export const useConversations = (activeFilter: string) => {
 
     // Structural events only — these mean the list itself changed shape.
     // (A message arriving is NOT one of them any more: it patches in place.)
-    const channelId = `conversations-realtime-${user.id}`;
+    const channelId = `conversations-realtime-${uid}`;
     const channel = supabase
       .channel(channelId)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'conversation_participants', filter: `user_id=eq.${user.id}` }, () => {
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'conversation_participants', filter: `user_id=eq.${uid}` }, () => {
         scheduleStructuralRefresh();
       })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'follows', filter: `follower_id=eq.${user.id}` }, () => {
-        invalidateFollows(user.id);
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'follows', filter: `follower_id=eq.${uid}` }, () => {
+        invalidateFollows(uid);
         scheduleStructuralRefresh();
       })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'follows', filter: `following_id=eq.${user.id}` }, () => {
-        invalidateFollows(user.id);
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'follows', filter: `following_id=eq.${uid}` }, () => {
+        invalidateFollows(uid);
         scheduleStructuralRefresh();
       })
       .subscribe();
@@ -505,20 +507,25 @@ export const useConversations = (activeFilter: string) => {
         structuralTimerRef.current = null;
       }
     };
-  }, [user?.id, activeFilter, isAuthReady, scheduleStructuralRefresh]);
+  }, [uid, activeFilter, isAuthReady, scheduleStructuralRefresh]);
 
   /**
    * Live traffic — ONE channel for the whole list, and every handler patches
    * local state from the realtime payload. Nothing here issues a query.
    */
+  // A primitive key: the effect re-subscribes only when the visible id set changes.
+  const conversationIdsKey = conversations
+    .map((c) => c.id)
+    .slice(0, REALTIME_IN_FILTER_LIMIT)
+    .join(',');
   useEffect(() => {
-    if (!supabase || !user || conversations.length === 0) return;
+    if (!supabase || !uid) return;
 
-    const ids = conversations.map((c) => c.id).slice(0, REALTIME_IN_FILTER_LIMIT);
+    const ids = conversationIdsKey ? conversationIdsKey.split(',') : [];
     const inFilter = `(${ids.join(',')})`;
     if (ids.length === 0) return;
 
-    const channelName = `chat-list-live-${user.id}`;
+    const channelName = `chat-list-live-${uid}`;
     const ch = supabase
       .channel(channelName)
       .on('postgres_changes', {
@@ -543,16 +550,16 @@ export const useConversations = (activeFilter: string) => {
       chatChannelsRef.current = [];
       subscribedIdsRef.current = [];
     };
-  }, [conversations.map((c) => c.id).join(','), user?.id, patchConversationFromMessage, patchConversationFromRow]);
+  }, [conversationIdsKey, uid, patchConversationFromMessage, patchConversationFromRow]);
 
   // Suggested users fetch
   useEffect(() => {
-    if (!user || !supabase || !isAuthReady) return;
+    if (!uid || !supabase || !isAuthReady) return;
     const fetchSuggested = async () => {
       const { data } = await supabase
         .from('users')
         .select('id, username, full_name, photo_url, is_online, last_seen')
-        .neq('id', user.id)
+        .neq('id', uid)
         .limit(5);
       
       if (data) {
@@ -566,7 +573,7 @@ export const useConversations = (activeFilter: string) => {
       }
     };
     fetchSuggested();
-  }, [user, isAuthReady]);
+  }, [uid, isAuthReady]);
 
   const loadMore = useCallback(() => {
     if (!loading && !loadingMore && hasMore) {

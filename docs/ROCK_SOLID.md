@@ -48,7 +48,7 @@ It activates after `npm install`, through the `prepare` script.
 | # | Item | Status | Notes |
 |---|---|---|---|
 | 1 | ESLint (React hooks, TypeScript) | ✅ | `eslint.config.js`. `lint:eslint` runs in CI with `--quiet` (errors only). |
-| 2 | `react-hooks/exhaustive-deps` | 🟡 | `rules-of-hooks` violation fixed (MessageBubble). **48 exhaustive-deps warnings remain.** Each one needs a human check, because adding a dependency such as `user` or `authUser` can start a refetch loop. List them with `npx eslint src -f unix | grep exhaustive-deps`. |
+| 2 | `react-hooks/exhaustive-deps` | ✅ | `rules-of-hooks` violation fixed (MessageBubble). All 48 exhaustive-deps warnings are fixed, and the rule is now an **error** in `eslint.config.js`. Fixes use the least risky pattern per case: stable `useCallback` wrappers, primitive keys (`uid`, `conversationIdsKey`), and refs for values that must not re-subscribe (`navigateRef`, `latestRef`, `streamRef`, `hiddenChatsRef`). Two real bugs came out of it: the camera cleanup stopped a stale `null` stream, and the story views effect could loop. Both are fixed. |
 | 3 | Remove the ~637 `any` usages | ⏳ | Warnings only. Typing them needs the real DB row shapes, so this is a dedicated pass. `any` is a warning, not an error. |
 | 4 | Split giant files | ⏳ | `server/api.ts` (1416 lines), `CallProvider.tsx` (1280), `GithubScreen.tsx` (1244), `MessageBubble.tsx` (844). Splitting without a real device to test on is risky, so it is deferred. |
 | 5 | `console.*` through one logger | ✅ | `src/utils/logger.ts` is the only client place allowed to call `console` directly. Server, Functions and tests may use it. |

@@ -30,7 +30,14 @@ export default function CameraCaptureModal({
   const _isDark = resolvedTheme === 'dark';
 
   const [facingMode, setFacingMode] = useState<'user' | 'environment'>('user');
-  const [stream, setStream] = useState<MediaStream | null>(null);
+  const [, setStreamState] = useState<MediaStream | null>(null);
+  // Mirror of `stream` for cleanup code: effect cleanups see the value from when the
+  // effect ran (always null for a camera that starts asynchronously), so they must read the ref.
+  const streamRef = useRef<MediaStream | null>(null);
+  const setStream = useCallback((next: MediaStream | null) => {
+    streamRef.current = next;
+    setStreamState(next);
+  }, []);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [capturedImg, setCapturedImg] = useState<string | null>(null);
   const [caption, setCaption] = useState('');
@@ -48,8 +55,8 @@ export default function CameraCaptureModal({
         if (typeof reader.result === 'string') {
           setCapturedImg(reader.result);
           // Stop stream if active when choosing from gallery too
-          if (stream) {
-            stream.getTracks().forEach((track) => track.stop());
+          if (streamRef.current) {
+            streamRef.current.getTracks().forEach((track) => track.stop());
             setStream(null);
           }
         }
@@ -65,8 +72,8 @@ export default function CameraCaptureModal({
       setIsReady(false);
 
       // Stop previous stream if active
-      if (stream) {
-        stream.getTracks().forEach((track) => track.stop());
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((track) => track.stop());
       }
 
       const mediaStream = await navigator.mediaDevices.getUserMedia({
@@ -90,23 +97,23 @@ export default function CameraCaptureModal({
         'Camera could not be accessed. Please ensure microphone/camera permissions are enabled or try using GrixChat in a direct browser tab.'
       );
     }
-  }, [facingMode]);
+  }, [facingMode, setStream]);
 
   useEffect(() => {
     if (isOpen && !capturedImg) {
       startCamera();
     }
     return () => {
-      if (stream) {
-        stream.getTracks().forEach((track) => track.stop());
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((track) => track.stop());
       }
     };
-  }, [isOpen, facingMode, capturedImg]);
+  }, [isOpen, facingMode, capturedImg, startCamera]);
 
   // Clean raw tracks on close
   const handleClose = () => {
-    if (stream) {
-      stream.getTracks().forEach((track) => track.stop());
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((track) => track.stop());
     }
     setStream(null);
     setCapturedImg(null);
@@ -143,8 +150,8 @@ export default function CameraCaptureModal({
     setCapturedImg(dataUrl);
 
     // Stop streams to save hardware resources while editing/capturing
-    if (stream) {
-      stream.getTracks().forEach((track) => track.stop());
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((track) => track.stop());
       setStream(null);
     }
   };

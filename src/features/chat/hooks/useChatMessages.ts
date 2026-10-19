@@ -40,6 +40,8 @@ export const useChatMessages = (conversationId: string, initialLimit: number = 2
   const [messageLimit, setMessageLimit] = useState(initialLimit);
   const lastMessageCount = useRef(0);
   const { user, userData, isAuthReady } = useAuth();
+  // Stable id for effect deps; the user object itself changes on every token refresh.
+  const uid = user?.id;
   const markAsReadTimeoutRef = useRef<any>(null);
 
   // Cleanup markAsRead debounce timeout on unmount
@@ -82,11 +84,11 @@ export const useChatMessages = (conversationId: string, initialLimit: number = 2
         ...msg,
         id: tempId,
         created_at: new Date().toISOString(),
-        sender_id: user?.id,
+        sender_id: uid,
         is_read: false,
         status: 'sending', // New field for status indicator
         sender: {
-          id: user?.id,
+          id: uid,
           username: userData?.username,
           full_name: userData?.fullName,
           photo_url: userData?.photoURL
@@ -95,7 +97,7 @@ export const useChatMessages = (conversationId: string, initialLimit: number = 2
       return newList.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
     });
     return tempId;
-  }, [user, userData]);
+  }, [uid, userData]);
 
   const fetchMessages = useCallback(async (isMore = false) => {
     if (!conversationId || !supabase) return;
@@ -160,7 +162,7 @@ export const useChatMessages = (conversationId: string, initialLimit: number = 2
         
         // Mark as read immediately if any unread message from another user was fetched
         const hasUnreadFromOthers = reversed.some(
-          (m: any) => m && m.sender_id !== user?.id && !m.is_read
+          (m: any) => m && m.sender_id !== uid && !m.is_read
         );
         if (hasUnreadFromOthers) {
           markAsReadRef.current(true);
@@ -189,7 +191,7 @@ export const useChatMessages = (conversationId: string, initialLimit: number = 2
       setLoading(false);
       setLoadingMore(false);
     }
-  }, [conversationId, messageLimit, user?.id]);
+  }, [conversationId, messageLimit, uid]);
 
   // Synchronously sync messages & loading state when conversationId changes
   useEffect(() => {
@@ -217,21 +219,21 @@ export const useChatMessages = (conversationId: string, initialLimit: number = 2
 
   // Mark as read function that will be stored in a ref to stay fresh but stable
   const markAsRead = useCallback(async (force: boolean = false) => {
-    if (!conversationId || !user || !supabase) return;
+    if (!conversationId || !uid || !supabase) return;
     
     // Instantly clear cached count for zero local UI latency!
-    LocalDataCache.clearUnreadCount(user.id, conversationId);
+    LocalDataCache.clearUnreadCount(uid, conversationId);
 
     if (!force) {
       // Optimize DB write egress: Check if there is actually any unread message from another user in the active message list or cache.
       // If we have none, skip performing the DB update request to save budget and API traffic!
       const hasUnreadLocally = messagesRef.current.some(
-        (m: any) => m && m.sender_id !== user.id && !m.is_read
+        (m: any) => m && m.sender_id !== uid && !m.is_read
       );
 
       let hasUnreadInCache = false;
       try {
-        const cachedConvs = LocalDataCache.getConversations(user.id);
+        const cachedConvs = LocalDataCache.getConversations(uid);
         const activeConv = cachedConvs?.find((c: any) => c.id === conversationId);
         if (activeConv && (activeConv.unread || activeConv.unreadCount > 0)) {
           hasUnreadInCache = true;
@@ -256,7 +258,7 @@ export const useChatMessages = (conversationId: string, initialLimit: number = 2
             .from('conversation_participants')
             .update({ last_read_at: now } as any)
             .eq('conversation_id', conversationId)
-            .eq('user_id', user.id);
+            .eq('user_id', uid);
 
           if (!error) {
             readMarkerSupported = true;
@@ -278,7 +280,7 @@ export const useChatMessages = (conversationId: string, initialLimit: number = 2
           .from('messages')
           .update({ is_read: true } as any)
           .eq('conversation_id', conversationId)
-          .neq('sender_id', user.id)
+          .neq('sender_id', uid)
           .eq('is_read', false);
         if (since) query = query.gt('created_at', since);
 
@@ -310,7 +312,7 @@ export const useChatMessages = (conversationId: string, initialLimit: number = 2
         executeUpdate();
       }, 1200);
     }
-  }, [conversationId, user?.id]);
+  }, [conversationId, uid]);
 
   const markAsReadRef = useRef(markAsRead);
   useEffect(() => {
@@ -322,11 +324,11 @@ export const useChatMessages = (conversationId: string, initialLimit: number = 2
     if (!conversationId || !isAuthReady) return;
     const isMore = messageLimit > initialLimit;
     fetchMessages(isMore);
-  }, [conversationId, messageLimit, initialLimit, isAuthReady]);
+  }, [conversationId, messageLimit, initialLimit, isAuthReady, fetchMessages]);
 
   // 3. Hook for Realtime Postgres Subscription (Bound exclusively to conversation ID)
   useEffect(() => {
-    if (!conversationId || !supabase || !user || !isAuthReady) return;
+    if (!conversationId || !supabase || !uid || !isAuthReady) return;
 
     // Real-time subscription for new messages or edits
     const channel = supabase
@@ -338,7 +340,7 @@ export const useChatMessages = (conversationId: string, initialLimit: number = 2
         filter: `conversation_id=eq.${conversationId}`
       }, async (payload) => {
         // Skip inserts from the current user as they are handled optimistically and confirmed inside the component
-        if (payload.new.sender_id === user.id) {
+        if (payload.new.sender_id === uid) {
           return;
         }
 
@@ -444,7 +446,7 @@ export const useChatMessages = (conversationId: string, initialLimit: number = 2
       window.removeEventListener('focus', handleFocus);
       supabase.removeChannel(channel);
     };
-  }, [conversationId, user?.id, isAuthReady]);
+  }, [conversationId, uid, isAuthReady]);
 
   const loadMore = useCallback(() => {
     if (!loading && !loadingMore) setMessageLimit(prev => prev + 20);
@@ -477,7 +479,7 @@ export const useChatMessages = (conversationId: string, initialLimit: number = 2
   const visibleMessages = messages.filter((m: any) => {
     if (!m) return false;
     // Hide completely if current authenticated user's id is inside deleted_by array
-    if (user?.id && Array.isArray(m.deleted_by) && m.deleted_by.includes(user.id)) {
+    if (uid && Array.isArray(m.deleted_by) && m.deleted_by.includes(uid)) {
       return false;
     }
     return true;

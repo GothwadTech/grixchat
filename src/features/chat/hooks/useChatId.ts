@@ -8,17 +8,19 @@ export function useChatId(receiverId: string | undefined) {
   const [chatId, setChatId] = useState<string>('');
   const [convType, setConvType] = useState<'direct' | 'group'>('direct');
   const { user } = useAuth();
+  // Stable id for effect deps; the user object itself changes on every token refresh.
+  const uid = user?.id;
 
   useEffect(() => {
     // Clear old chatId instantly when receiverId changes to avoid leaking messages to the previous chat!
     setChatId('');
 
-    if (!receiverId || !user || !supabase) {
+    if (!receiverId || !uid || !supabase) {
       return;
     }
 
     let foundInCache = false;
-    const cachedConvs = LocalDataCache.getConversations(user.id);
+    const cachedConvs = LocalDataCache.getConversations(uid);
     if (cachedConvs && Array.isArray(cachedConvs)) {
       // 1. Try match by ID
       const matchById = cachedConvs.find(c => c.id === receiverId);
@@ -39,7 +41,7 @@ export function useChatId(receiverId: string | undefined) {
     
     const resolveChatId = async () => {
       try {
-        const myId = user.id;
+        const myId = uid;
 
         // Check if receiverId is a user (DM)
         const { data: userData } = await supabase
@@ -82,7 +84,7 @@ export function useChatId(receiverId: string | undefined) {
     };
 
     resolveChatId();
-  }, [receiverId, user?.id]);
+  }, [receiverId, uid]);
 
   return { chatId, convType };
 }
