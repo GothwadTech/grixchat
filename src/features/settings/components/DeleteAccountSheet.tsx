@@ -4,6 +4,8 @@ import { X, Trash2, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../providers/AuthProvider';
 import { supabase } from '../../../lib/supabase';
+import type { ErrorLike } from '../../../utils/errors';
+import { useDialog } from '../../../hooks/useDialog';
 
 interface DeleteAccountSheetProps {
   isOpen: boolean;
@@ -11,6 +13,7 @@ interface DeleteAccountSheetProps {
 }
 
 export default function DeleteAccountSheet({ isOpen, onClose }: DeleteAccountSheetProps) {
+  useDialog(onClose, isOpen);
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -45,9 +48,9 @@ export default function DeleteAccountSheet({ isOpen, onClose }: DeleteAccountShe
       setTimeout(() => {
         navigate('/login');
       }, 3000);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Account deletion error:", err);
-      setError(err.message || "Failed to delete account. You may need to sign out and sign in again to perform this sensitive action.");
+      setError((err as ErrorLike).message || "Failed to delete account. You may need to sign out and sign in again to perform this sensitive action.");
     } finally {
       setLoading(false);
     }
@@ -65,7 +68,7 @@ export default function DeleteAccountSheet({ isOpen, onClose }: DeleteAccountShe
             onClick={onClose}
             className="fixed inset-0 bg-black/60 z-[300] backdrop-blur-sm"
           />
-          <motion.div 
+          <motion.div role="dialog" aria-modal="true" aria-label="delete account sheet" 
             initial={{ y: '100%' }}
             animate={{ y: 0 }}
             exit={{ y: '100%' }}

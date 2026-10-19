@@ -3,6 +3,8 @@ import { motion, AnimatePresence } from 'motion/react';
 import { X, Lock, Eye, EyeOff, CheckCircle2, ShieldCheck } from 'lucide-react';
 import { supabase } from '../../../lib/supabase';
 import { focusOnMount } from '../../../utils/focusOnMount';
+import type { ErrorLike } from '../../../utils/errors';
+import { useDialog } from '../../../hooks/useDialog';
 
 interface ChangePasswordSheetProps {
   isOpen: boolean;
@@ -11,6 +13,7 @@ interface ChangePasswordSheetProps {
 }
 
 export default function ChangePasswordSheet({ isOpen, onClose, onSuccess }: ChangePasswordSheetProps) {
+  useDialog(onClose, isOpen);
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -47,9 +50,9 @@ export default function ChangePasswordSheet({ isOpen, onClose, onSuccess }: Chan
         setNewPassword('');
         setConfirmPassword('');
       }, 2000);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Password update error:", err);
-      setError(err.message || "Failed to update password. Ensure you have recently signed in.");
+      setError((err as ErrorLike).message || "Failed to update password. Ensure you have recently signed in.");
     } finally {
       setLoading(false);
     }
@@ -67,7 +70,7 @@ export default function ChangePasswordSheet({ isOpen, onClose, onSuccess }: Chan
             onClick={onClose}
             className="fixed inset-0 bg-black/60 z-[300] backdrop-blur-sm"
           />
-          <motion.div 
+          <motion.div role="dialog" aria-modal="true" aria-label="change password sheet" 
             initial={{ y: '100%' }}
             animate={{ y: 0 }}
             exit={{ y: '100%' }}

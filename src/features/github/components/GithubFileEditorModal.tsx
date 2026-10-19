@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { X, Check, FileText, AlertTriangle } from 'lucide-react';
+import { useDialog } from '../../../hooks/useDialog';
 
 interface ExtractedFile {
   path: string;
@@ -16,6 +17,7 @@ interface GithubFileEditorModalProps {
 }
 
 export default function GithubFileEditorModal({ file, onClose, onSave }: GithubFileEditorModalProps) {
+  useDialog(onClose);
   const [filePath, setFilePath] = useState(file.path);
   const [textContent, setTextContent] = useState(() => {
     try {
@@ -50,13 +52,13 @@ export default function GithubFileEditorModal({ file, onClose, onSave }: GithubF
         size: finalBase64.length * 0.75
       });
       onClose();
-    } catch (_err: any) {
+    } catch (_err: unknown) {
       setErrorMsg('Failed to process string encoding safely. Double check for invalid characters.');
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+    <div role="dialog" aria-modal="true" aria-label="github file editor modal" className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
       <div className="bg-[var(--bg-card)] w-full max-w-2xl rounded-2xl border border-[var(--border-color)] flex flex-col max-h-[85vh] shadow-2xl overflow-hidden">
         
         {/* Header bar */}

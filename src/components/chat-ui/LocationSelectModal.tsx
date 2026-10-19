@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { X, MapPin, Navigation, Compass, Globe } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { useDialog } from '../../hooks/useDialog';
 
 interface LocationSelectModalProps {
   isOpen: boolean;
@@ -19,6 +20,7 @@ const PRESET_PLACES = [
 ];
 
 export default function LocationSelectModal({ isOpen, onClose, onSend }: LocationSelectModalProps) {
+  useDialog(onClose, isOpen);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
@@ -79,7 +81,7 @@ export default function LocationSelectModal({ isOpen, onClose, onSend }: Locatio
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-[500] flex items-center justify-center p-4 animate-fade-in">
+      <div role="dialog" aria-modal="true" aria-label="location select modal" className="fixed inset-0 z-[500] flex items-center justify-center p-4 animate-fade-in">
         {/* Backdrop */}
         <motion.div 
           initial={{ opacity: 0 }}

@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { Image, FileText, MapPin, BarChart3, Folder, ClipboardList } from 'lucide-react';
 import { motion } from 'motion/react';
+import { useDialog } from '../../hooks/useDialog';
 
 interface ChatAttachmentMenuProps {
   isOpen: boolean;
@@ -25,6 +26,7 @@ export default function ChatAttachmentMenu({
   onSelectTask,
   buttonRef
 }: ChatAttachmentMenuProps) {
+  useDialog(onClose, isOpen);
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {

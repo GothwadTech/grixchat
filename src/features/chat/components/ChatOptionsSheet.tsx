@@ -16,6 +16,7 @@ import {
 import { motion, AnimatePresence } from 'motion/react';
 import { useNavigate } from 'react-router-dom';
 import Avatar from '../../../components/common/Avatar';
+import { useDialog } from '../../../hooks/useDialog';
 
 interface ChatOptionsSheetProps {
   isOpen: boolean;
@@ -48,6 +49,7 @@ export const ChatOptionsSheet: React.FC<ChatOptionsSheetProps> = ({
   onCustomizeClick,
   children
 }) => {
+  useDialog(onClose, isOpen);
   const navigate = useNavigate();
 
   const handleAction = (action: () => void) => {
@@ -70,7 +72,7 @@ export const ChatOptionsSheet: React.FC<ChatOptionsSheetProps> = ({
           />
 
           {/* Sheet */}
-          <motion.div 
+          <motion.div role="dialog" aria-modal="true" aria-label="chat options sheet" 
             initial={{ y: '100%' }}
             animate={{ y: 0 }}
             exit={{ y: '100%' }}

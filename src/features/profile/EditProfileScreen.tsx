@@ -10,6 +10,7 @@ import { ImageService } from '../../services/ImageService';
 import { useAuth } from '../../providers/AuthProvider.tsx';
 import SettingHeader from '../../components/layout/SettingHeader.tsx';
 import { truncateToChars, countChars } from '../../utils/bioHelper';
+import type { ErrorLike } from '../../utils/errors';
 
 export default function EditProfileScreen() {
   const navigate = useNavigate();
@@ -48,7 +49,7 @@ export default function EditProfileScreen() {
     try {
       const url = await ImageService.uploadImage(file, undefined, 'profiles');
       setPhotoURL(url);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Image upload failed:", err);
       setError("Failed to upload image. Please try again.");
     } finally {
@@ -97,9 +98,9 @@ export default function EditProfileScreen() {
 
       await refreshUserData();
       navigate('/profile');
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Error updating profile:", err);
-      setError(err.message);
+      setError((err as ErrorLike).message);
     } finally {
       setLoading(false);
     }

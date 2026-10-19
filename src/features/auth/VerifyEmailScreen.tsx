@@ -6,6 +6,7 @@ import { Mail, RefreshCw, LogOut, CheckCircle2 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../providers/AuthProvider';
+import type { ErrorLike } from '../../utils/errors';
 
 export default function VerifyEmailScreen() {
   const [loading, setLoading] = useState(false);
@@ -96,8 +97,8 @@ export default function VerifyEmailScreen() {
           navigate('/chats');
         }, 1500);
       }
-    } catch (err: any) {
-      setError(err.message || 'Invalid verification code. Please try again.');
+    } catch (err: unknown) {
+      setError((err as ErrorLike).message || 'Invalid verification code. Please try again.');
     } finally {
       setVerifyLoading(false);
     }
@@ -116,8 +117,8 @@ export default function VerifyEmailScreen() {
         setOtp(new Array(6).fill(''));
         inputRefs.current[0]?.focus();
       }
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError((err as ErrorLike).message);
     } finally {
       setLoading(false);
     }

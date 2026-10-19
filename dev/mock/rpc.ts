@@ -10,6 +10,7 @@
  */
 import { store } from './store';
 import { clone, looseEq, nowISO, Row, uuid } from './utils';
+import type { ErrorLike } from '../../src/utils/errors';
 
 const ok = (data: any) => ({ data, error: null });
 const fail = (message: string) => ({
@@ -136,8 +137,8 @@ export async function callRpc(fn: string, args: any = {}) {
   }
   try {
     return impl(args ?? {});
-  } catch (e: any) {
-    return fail(`rpc ${fn} failed: ${e?.message || e}`);
+  } catch (e: unknown) {
+    return fail(`rpc ${fn} failed: ${(e as ErrorLike)?.message || e}`);
   }
 }
 

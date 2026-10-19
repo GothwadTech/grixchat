@@ -4,6 +4,8 @@ import { X, Mail, ArrowRight, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '../../../providers/AuthProvider';
 import { supabase } from '../../../lib/supabase';
 import { focusOnMount } from '../../../utils/focusOnMount';
+import type { ErrorLike } from '../../../utils/errors';
+import { useDialog } from '../../../hooks/useDialog';
 
 interface ChangeEmailSheetProps {
   isOpen: boolean;
@@ -12,6 +14,7 @@ interface ChangeEmailSheetProps {
 }
 
 export default function ChangeEmailSheet({ isOpen, onClose, onSuccess }: ChangeEmailSheetProps) {
+  useDialog(onClose, isOpen);
   const { user } = useAuth();
   const [newEmail, setNewEmail] = useState('');
   const [loading, setLoading] = useState(false);
@@ -47,9 +50,9 @@ export default function ChangeEmailSheet({ isOpen, onClose, onSuccess }: ChangeE
         setIsSuccess(false);
         setNewEmail('');
       }, 2000);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Email update error:", err);
-      setError(err.message || "Failed to update email. Ensure you have recently signed in.");
+      setError((err as ErrorLike).message || "Failed to update email. Ensure you have recently signed in.");
     } finally {
       setLoading(false);
     }
@@ -67,7 +70,7 @@ export default function ChangeEmailSheet({ isOpen, onClose, onSuccess }: ChangeE
             onClick={onClose}
             className="fixed inset-0 bg-black/60 z-[300] backdrop-blur-sm"
           />
-          <motion.div 
+          <motion.div role="dialog" aria-modal="true" aria-label="change email sheet" 
             initial={{ y: '100%' }}
             animate={{ y: 0 }}
             exit={{ y: '100%' }}

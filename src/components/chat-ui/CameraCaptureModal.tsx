@@ -3,6 +3,7 @@ import { X, RefreshCw, Trash2, Send, CameraOff, Image as ImageIcon } from 'lucid
 import { motion, AnimatePresence } from 'motion/react';
 import { useTheme } from '../../contexts/ThemeContext';
 import { focusOnMount } from '../../utils/focusOnMount';
+import { useDialog } from '../../hooks/useDialog';
 
 interface CameraCaptureModalProps {
   isOpen: boolean;
@@ -27,6 +28,7 @@ export default function CameraCaptureModal({
   onClose,
   onCapture,
 }: CameraCaptureModalProps) {
+  useDialog(onClose, isOpen);
   const { resolvedTheme } = useTheme();
   const _isDark = resolvedTheme === 'dark';
 
@@ -91,7 +93,7 @@ export default function CameraCaptureModal({
       if (videoRef.current) {
         videoRef.current.srcObject = mediaStream;
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error starting camera:', err);
       // Fallback message encouraging selecting a photo instead
       setErrorMsg(
@@ -174,7 +176,7 @@ export default function CameraCaptureModal({
 
   return (
     <AnimatePresence>
-      <motion.div
+      <motion.div role="dialog" aria-modal="true" aria-label="camera capture modal"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}

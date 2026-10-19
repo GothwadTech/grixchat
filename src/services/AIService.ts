@@ -88,7 +88,7 @@ class AIService {
       }
 
       return responseData?.reply || "I'm sorry, I couldn't process that.";
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Gemini AI Proxy Client Error:", error);
       return "I'm having some trouble connecting to Gemini. Please verify your server API key setup and try again later.";
     }

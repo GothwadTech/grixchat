@@ -5,6 +5,7 @@ import { getFirebaseMessaging } from '../lib/firebase';
 import { getToken } from '@firebase/messaging';
 
 import { logger } from '../utils/logger';
+import type { ErrorLike } from '../utils/errors';
 export default function NotificationHandler() {
   const { user, userData, refreshUserData } = useAuth();
   // Latest values for the delayed FCM setup. Reading them through a ref (instead of
@@ -124,12 +125,12 @@ export default function NotificationHandler() {
         } else {
           logger.info('FCM: Obtained blank token.');
         }
-      } catch (fcmErr: any) {
+      } catch (fcmErr: unknown) {
         console.warn('FCM: Token retrieval failed details:', {
-          message: fcmErr?.message || String(fcmErr),
-          code: fcmErr?.code,
-          name: fcmErr?.name,
-          stack: fcmErr?.stack,
+          message: (fcmErr as ErrorLike)?.message || String(fcmErr),
+          code: (fcmErr as ErrorLike)?.code,
+          name: (fcmErr as ErrorLike)?.name,
+          stack: (fcmErr as ErrorLike)?.stack,
           full: fcmErr
         });
       }

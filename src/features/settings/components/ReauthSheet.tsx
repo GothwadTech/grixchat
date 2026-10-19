@@ -4,6 +4,8 @@ import { X, Lock, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../../../providers/AuthProvider';
 import { supabase } from '../../../lib/supabase';
 import { focusOnMount } from '../../../utils/focusOnMount';
+import type { ErrorLike } from '../../../utils/errors';
+import { useDialog } from '../../../hooks/useDialog';
 
 interface ReauthSheetProps {
   isOpen: boolean;
@@ -14,6 +16,7 @@ interface ReauthSheetProps {
 }
 
 export default function ReauthSheet({ isOpen, onClose, onSuccess, title = "Confirm Security", description = "Please enter your current password to continue." }: ReauthSheetProps) {
+  useDialog(onClose, isOpen);
   const { user } = useAuth();
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -36,9 +39,9 @@ export default function ReauthSheet({ isOpen, onClose, onSuccess, title = "Confi
         if (error) throw error;
       }
       onSuccess();
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Reauth error:", err);
-      setError(err.message || "Incorrect password. Please try again.");
+      setError((err as ErrorLike).message || "Incorrect password. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -56,7 +59,7 @@ export default function ReauthSheet({ isOpen, onClose, onSuccess, title = "Confi
             onClick={onClose}
             className="fixed inset-0 bg-black/60 z-[300] backdrop-blur-sm"
           />
-          <motion.div 
+          <motion.div role="dialog" aria-modal="true" aria-label="reauth sheet" 
             initial={{ y: '100%' }}
             animate={{ y: 0 }}
             exit={{ y: '100%' }}

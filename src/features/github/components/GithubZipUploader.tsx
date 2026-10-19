@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { UploadCloud, FileArchive, RefreshCw, AlertCircle } from 'lucide-react';
 import JSZip from 'jszip';
+import type { ErrorLike } from '../../../utils/errors';
 
 interface ExtractedFile {
   path: string;
@@ -65,9 +66,9 @@ export default function GithubZipUploader({ onFilesExtracted }: GithubZipUploade
       }
 
       onFilesExtracted(tempFiles);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err);
-      setErrorMsg(err.message || 'Failed to extract ZIP. Please verify the archive is valid.');
+      setErrorMsg((err as ErrorLike).message || 'Failed to extract ZIP. Please verify the archive is valid.');
     } finally {
       setExtracting(false);
     }

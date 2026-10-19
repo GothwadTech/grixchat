@@ -18,6 +18,7 @@
  */
 import { createClient, type SupabaseClient, type User } from '@supabase/supabase-js';
 import { SignJWT, importPKCS8 } from 'jose';
+import type { ErrorLike } from '../src/utils/errors';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Environment & capabilities
@@ -608,9 +609,9 @@ export async function handleApiRequest(request: Request, env: ApiEnv): Promise<R
     }
 
     return finish(await route(ctx));
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error(`[${requestId}] Unhandled API error on ${ctx.path}:`, err);
-    return finish(json({ error: err?.message || 'Internal server error', requestId }, 500));
+    return finish(json({ error: (err as ErrorLike)?.message || 'Internal server error', requestId }, 500));
   }
 }
 
@@ -894,9 +895,9 @@ async function sendNotification(ctx: Ctx): Promise<Response> {
 
         const payload: any = await response.json().catch(() => null);
         return { token: `${token.slice(0, 10)}…`, success: true, messageId: payload?.name };
-      } catch (err: any) {
-        console.error('FCM: send failed:', err?.message || err);
-        return { token: `${token.slice(0, 10)}…`, success: false, error: err?.message || 'send failed' };
+      } catch (err: unknown) {
+        console.error('FCM: send failed:', (err as ErrorLike)?.message || err);
+        return { token: `${token.slice(0, 10)}…`, success: false, error: (err as ErrorLike)?.message || 'send failed' };
       }
     })
   );
@@ -1049,9 +1050,9 @@ async function uploadFile(ctx: Ctx): Promise<Response> {
       });
     }
     throw new Error(`Gofile error: ${JSON.stringify(payload)}`);
-  } catch (err: any) {
-    console.error('Upload failed:', err?.message || err);
-    return json({ status: 'error', message: `Upload failed: ${err?.message || err}` }, 502);
+  } catch (err: unknown) {
+    console.error('Upload failed:', (err as ErrorLike)?.message || err);
+    return json({ status: 'error', message: `Upload failed: ${(err as ErrorLike)?.message || err}` }, 502);
   }
 }
 
@@ -1164,8 +1165,8 @@ async function githubCallback(ctx: Ctx): Promise<Response> {
     <style>@keyframes spin { to { transform: rotate(360deg); } }</style>
   </body>
 </html>`);
-  } catch (err: any) {
-    console.error('GitHub callback failed:', err?.message || err);
+  } catch (err: unknown) {
+    console.error('GitHub callback failed:', (err as ErrorLike)?.message || err);
     return html('<p>Auth failed</p>', 500);
   }
 }
@@ -1206,9 +1207,9 @@ async function githubPush(ctx: Ctx): Promise<Response> {
 
     if (!pushResponse.ok) return relayGitHubError(pushResponse);
     return json(await pushResponse.json());
-  } catch (err: any) {
-    console.error('GitHub push failed:', err?.message || err);
-    return json({ message: err?.message || 'Push failed' }, 502);
+  } catch (err: unknown) {
+    console.error('GitHub push failed:', (err as ErrorLike)?.message || err);
+    return json({ message: (err as ErrorLike)?.message || 'Push failed' }, 502);
   }
 }
 
@@ -1288,13 +1289,13 @@ async function githubPushBatch(ctx: Ctx): Promise<Response> {
           uploadedCount: uploaded,
           html_url: `https://github.com/${owner}/${repo}/commits/${branch}`,
         });
-      } catch (err: any) {
+      } catch (err: unknown) {
         if (uploaded > 0) {
           return json({
             message: `Uploaded ${uploaded} files successfully, but stopped because of a GitHub limit.`,
             sequential: true,
             uploadedCount: uploaded,
-            error: err?.message,
+            error: (err as ErrorLike)?.message,
             html_url: `https://github.com/${owner}/${repo}/commits/${branch}`,
           });
         }
@@ -1354,9 +1355,9 @@ async function githubPushBatch(ctx: Ctx): Promise<Response> {
 
     console.log(`Smart Sync: branch ${branch} updated.`);
     return json(await refResponse.json());
-  } catch (err: any) {
-    console.error('Smart batch push failed:', err?.message || err);
-    return json({ message: err?.message || 'Batch push failed' }, 502);
+  } catch (err: unknown) {
+    console.error('Smart batch push failed:', (err as ErrorLike)?.message || err);
+    return json({ message: (err as ErrorLike)?.message || 'Batch push failed' }, 502);
   }
 }
 
@@ -1386,8 +1387,8 @@ async function githubListFiles(ctx: Ctx): Promise<Response> {
 
   try {
     return json({ files: repoFs.listFiles() });
-  } catch (err: any) {
-    return json({ error: err?.message || 'Failed to list files' }, 500);
+  } catch (err: unknown) {
+    return json({ error: (err as ErrorLike)?.message || 'Failed to list files' }, 500);
   }
 }
 
@@ -1414,7 +1415,7 @@ async function githubGetFileContent(ctx: Ctx): Promise<Response> {
     const content = repoFs.readFileBase64(requested);
     if (content === null) return json({ error: 'File not found' }, 404);
     return json({ content });
-  } catch (err: any) {
-    return json({ error: err?.message || 'Failed to read file' }, 500);
+  } catch (err: unknown) {
+    return json({ error: (err as ErrorLike)?.message || 'Failed to read file' }, 500);
   }
 }
