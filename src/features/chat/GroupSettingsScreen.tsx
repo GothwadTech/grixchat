@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { 
   ArrowLeft, 
@@ -22,6 +22,9 @@ import Avatar from '../../components/common/Avatar';
 export default function GroupSettingsScreen() {
   const { id: chatId } = useParams();
   const navigate = useNavigate();
+  // Read via ref: `navigate` identity changes on navigation and must not re-run the data effect.
+  const navigateRef = useRef(navigate);
+  navigateRef.current = navigate;
   const { user: authUser, userData: currentUserData } = useAuth();
   const authUserId = authUser?.id || authUser?.uid || '';
 
@@ -69,7 +72,7 @@ export default function GroupSettingsScreen() {
         })));
       } catch (err) {
         console.error("Error fetching group details:", err);
-        navigate('/chats');
+        navigateRef.current('/chats');
       } finally {
         setLoading(false);
       }

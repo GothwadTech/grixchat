@@ -7,6 +7,10 @@ import { getToken } from 'firebase/messaging';
 import { logger } from '../utils/logger';
 export default function NotificationHandler() {
   const { user, userData, refreshUserData } = useAuth();
+  // Latest values for the delayed FCM setup. Reading them through a ref (instead of
+  // depending on fcmTokens) stops the token save -> profile refresh -> re-run loop.
+  const latestRef = useRef({ userData, refreshUserData });
+  latestRef.current = { userData, refreshUserData };
   const registrationRef = useRef<ServiceWorkerRegistration | null>(null);
 
   useEffect(() => {
@@ -98,7 +102,7 @@ export default function NotificationHandler() {
           logger.info('FCM: Acquired client token successfully:', currentToken.substring(0, 15) + '...');
 
           // Sync with profile in Supabase
-          const existingTokens = userData?.fcmTokens || [];
+          const existingTokens = latestRef.current.userData?.fcmTokens || [];
           if (!existingTokens.includes(currentToken)) {
             const updatedTokens = [...existingTokens, currentToken];
             
@@ -111,7 +115,7 @@ export default function NotificationHandler() {
               .eq('id', user.id);
 
             if (!error) {
-              await refreshUserData();
+              await latestRef.current.refreshUserData();
               logger.info('FCM: Token successfully saved to Supabase profile.');
             } else {
               console.error('FCM: Failed to save token to database:', error);

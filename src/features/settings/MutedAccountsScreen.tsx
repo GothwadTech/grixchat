@@ -12,14 +12,15 @@ export default function MutedAccountsScreen() {
   const [unmutingId, setUnmutingId] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!authUser || !supabase) return;
+    const uid = authUser?.id;
+    if (!uid || !supabase) return;
 
     const fetchMutedDetails = async () => {
       // Re-fetch user data to get fresh muted list
       const { data: userProfile } = await supabase
         .from('users')
         .select('muted_users')
-        .eq('id', authUser.id)
+        .eq('id', uid)
         .single();
       
       const mutedIds = userProfile?.muted_users || [];
@@ -48,12 +49,12 @@ export default function MutedAccountsScreen() {
     fetchMutedDetails();
 
     const channel = supabase
-      .channel(`muted:${authUser.id}`)
+      .channel(`muted:${uid}`)
       .on('postgres_changes', { 
         event: 'UPDATE', 
         schema: 'public', 
         table: 'users',
-        filter: `id=eq.${authUser.id}`
+        filter: `id=eq.${uid}`
       }, () => fetchMutedDetails())
       .subscribe();
 

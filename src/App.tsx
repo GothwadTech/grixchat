@@ -361,7 +361,7 @@ export default function App() {
     logger.info(`Auth Ready: ${isAuthReady}`);
     
     CacheService.clearOldCache();
-  }, [user]);
+  }, [user, isAuthReady]);
 
   // Dynamic theme-color meta tag sync
   useEffect(() => {

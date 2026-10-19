@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Check, X, Loader2, Users, Send, ArrowDownLeft, ArrowUpRight } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
@@ -22,12 +22,9 @@ export default function MessageRequestsScreen() {
   const [loading, setLoading] = useState(true);
   const [actionId, setActionId] = useState<string | null>(null);
 
-  useEffect(() => {
-    fetchRequests();
-  }, [authUser]);
-
-  const fetchRequests = async () => {
-    if (!authUser?.id || !supabase) return;
+  const fetchRequests = useCallback(async () => {
+    const uid = authUser?.id;
+    if (!uid || !supabase) return;
     try {
       setLoading(true);
 
@@ -35,16 +32,16 @@ export default function MessageRequestsScreen() {
       const { data: followRows } = await supabase
         .from('follows')
         .select('follower_id, following_id')
-        .or(`follower_id.eq.${authUser.id},following_id.eq.${authUser.id}`);
+        .or(`follower_id.eq.${uid},following_id.eq.${uid}`);
 
       const IFollow = new Set<string>();
       const FollowsMe = new Set<string>();
 
       followRows?.forEach(row => {
-        if (row.follower_id === authUser.id) {
+        if (row.follower_id === uid) {
           IFollow.add(row.following_id);
         }
-        if (row.following_id === authUser.id) {
+        if (row.following_id === uid) {
           FollowsMe.add(row.follower_id);
         }
       });
@@ -103,7 +100,12 @@ export default function MessageRequestsScreen() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [authUser?.id]);
+
+  useEffect(() => {
+    fetchRequests();
+  }, [fetchRequests]);
+
 
   const handleAccept = async (otherId: string) => {
     if (!supabase || !authUser?.id) return;

@@ -12,14 +12,15 @@ export default function BlockedAccountsScreen() {
   const [unblockingId, setUnblockingId] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!authUser || !supabase) return;
+    const uid = authUser?.id;
+    if (!uid || !supabase) return;
 
     const fetchBlockedDetails = async () => {
       // Re-fetch to get fresh list
       const { data: userProfile } = await supabase
         .from('users')
         .select('blocked_users')
-        .eq('id', authUser.id)
+        .eq('id', uid)
         .single();
       
       const blockedIds = userProfile?.blocked_users || [];

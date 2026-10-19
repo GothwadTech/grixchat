@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../providers/AuthProvider.tsx';
@@ -57,11 +57,8 @@ export default function SearchUserScreen() {
   const [userResults, setUserResults] = useState<UserProfile[]>([]);
   const [suggestedUsers, setSuggestedUsers] = useState<UserProfile[]>([]);
 
-  useEffect(() => {
-    fetchInitialData();
-  }, []);
-
-  const fetchInitialData = async () => {
+  const fetchInitialData = useCallback(async () => {
+    const uid = authUser?.id;
     if (!supabase) return;
     try {
       setLoading(true);
@@ -70,7 +67,7 @@ export default function SearchUserScreen() {
       const { data: usersData } = await supabase
         .from('users')
         .select('id, username, full_name, photo_url, is_online, last_seen')
-        .neq('id', authUser?.id)
+        .neq('id', uid)
         .limit(20);
       
       if (usersData) {
@@ -88,20 +85,10 @@ export default function SearchUserScreen() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [authUser?.id]);
 
-  useEffect(() => {
-    const delayDebounceFn = setTimeout(() => {
-      if (searchTerm.trim()) {
-        handleSearch();
-      } else {
-        fetchInitialData();
-      }
-    }, 300);
-    return () => clearTimeout(delayDebounceFn);
-  }, [searchTerm]);
-
-  const handleSearch = async () => {
+  const handleSearch = useCallback(async () => {
+    const uid = authUser?.id;
     const term = searchTerm.toLowerCase();
     const safeTerm = sanitizeSearchTerm(term);
     if (!safeTerm) { setLoading(false); return; }
@@ -112,7 +99,7 @@ export default function SearchUserScreen() {
         .from('users')
         .select('id, username, full_name, photo_url, is_online, last_seen')
         .or(`username.ilike.%${safeTerm}%,full_name.ilike.%${safeTerm}%`)
-        .neq('id', authUser?.id)
+        .neq('id', uid)
         .limit(30);
       
       if (data) {
@@ -129,7 +116,25 @@ export default function SearchUserScreen() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [searchTerm, authUser?.id]);
+
+  useEffect(() => {
+    fetchInitialData();
+  }, [fetchInitialData]);
+
+  useEffect(() => {
+    const delayDebounceFn = setTimeout(() => {
+      if (searchTerm.trim()) {
+        handleSearch();
+      } else {
+        fetchInitialData();
+      }
+    }, 300);
+    return () => clearTimeout(delayDebounceFn);
+  }, [searchTerm, handleSearch, fetchInitialData]);
+
+
+
 
   return (
     <div className="h-full flex flex-col bg-[var(--bg-main)] overflow-hidden font-sans">

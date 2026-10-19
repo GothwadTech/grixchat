@@ -58,13 +58,14 @@ export default function TabHeader() {
   }, []);
 
   useEffect(() => {
-    if (!authUser || !supabase) return;
+    const uid = authUser?.id;
+    if (!uid || !supabase) return;
 
     const fetchUnread = async () => {
       const { data, error } = await supabase
         .from('notifications')
         .select('type, is_read')
-        .eq('user_id', authUser.id)
+        .eq('user_id', uid)
         .eq('is_read', false)
         .limit(20);
       
@@ -79,14 +80,14 @@ export default function TabHeader() {
 
     fetchUnread();
 
-    const headerChannelId = `tab-header-notifs:${authUser.id}-${Math.random().toString(36).substring(2, 9)}`;
+    const headerChannelId = `tab-header-notifs:${uid}-${Math.random().toString(36).substring(2, 9)}`;
     const channel = supabase
       .channel(headerChannelId)
       .on('postgres_changes', {
         event: '*',
         schema: 'public',
         table: 'notifications',
-        filter: `user_id=eq.${authUser.id}`
+        filter: `user_id=eq.${uid}`
       }, () => {
         fetchUnread();
       })

@@ -13,14 +13,15 @@ export default function FavoritesScreen() {
   const [removingId, setRemovingId] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!authUser || !supabase) return;
+    const uid = authUser?.id;
+    if (!uid || !supabase) return;
 
     const fetchFavorites = async () => {
       // Re-fetch user data to get fresh favorites list or use currentUserData
       const { data: userProfile } = await supabase
         .from('users')
         .select('favorites')
-        .eq('id', authUser.id)
+        .eq('id', uid)
         .single();
       
       const favoriteIds = userProfile?.favorites || [];
@@ -43,12 +44,12 @@ export default function FavoritesScreen() {
     fetchFavorites();
 
     const channel = supabase
-      .channel(`favorites:${authUser.id}`)
+      .channel(`favorites:${uid}`)
       .on('postgres_changes', { 
         event: 'UPDATE', 
         schema: 'public', 
         table: 'users',
-        filter: `id=eq.${authUser.id}`
+        filter: `id=eq.${uid}`
       }, (_payload) => {
         fetchFavorites();
       })

@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState, useRef } from 'react';
+import React, { useCallback, createContext, useContext, useEffect, useState, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { apiFetch } from '../lib/apiClient';
 import { useNavigate } from 'react-router-dom';
@@ -244,22 +244,16 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
     activeCallRef.current = activeCall;
   }, [activeCall]);
 
-  // Reset sounds / haptics on status change
-  useEffect(() => {
-    if (activeCall && ['connected', 'ended', 'denied', 'error', 'offline'].includes(activeCall.status)) {
-      PhoneRingtones.stop();
-      stopVibration();
+  // Haptics helpers (refs only, so they are stable across renders)
+  const stopVibration = useCallback(() => {
+    if (vibrateTimerRef.current) {
+      clearInterval(vibrateTimerRef.current);
+      vibrateTimerRef.current = null;
     }
-    if (activeCall && ['connected', 'ended', 'denied', 'error', 'offline', 'rejected'].includes(activeCall.status)) {
-      if (ringTimeoutRef.current) {
-        clearTimeout(ringTimeoutRef.current);
-        ringTimeoutRef.current = null;
-      }
-    }
-  }, [activeCall?.status]);
+    try { navigator?.vibrate?.(0); } catch (_) { /* intentionally ignored: best-effort, failure is non-fatal */ }
+  }, []);
 
-  /** Telegram-style: keep buzzing until somebody picks up or the ring dies. */
-  const startVibration = () => {
+  const startVibration = useCallback(() => {
     if (typeof navigator === 'undefined' || !navigator.vibrate) return;
     stopVibration();
     const buzz = () => {
@@ -267,16 +261,25 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
     buzz();
     vibrateTimerRef.current = setInterval(buzz, 2500);
-  };
+  }, [stopVibration]);
 
-  const stopVibration = () => {
-    if (vibrateTimerRef.current) {
-      clearInterval(vibrateTimerRef.current);
-      vibrateTimerRef.current = null;
+  // Reset sounds / haptics on status change
+  const authUserId = authUser?.id;
+  const callStatus = activeCall?.status;
+  useEffect(() => {
+    if (callStatus && ['connected', 'ended', 'denied', 'error', 'offline'].includes(callStatus)) {
+      PhoneRingtones.stop();
+      stopVibration();
     }
-    try { navigator?.vibrate?.(0); } catch (_) { /* intentionally ignored: best-effort, failure is non-fatal */ }
-  };
+    if (callStatus && ['connected', 'ended', 'denied', 'error', 'offline', 'rejected'].includes(callStatus)) {
+      if (ringTimeoutRef.current) {
+        clearTimeout(ringTimeoutRef.current);
+        ringTimeoutRef.current = null;
+      }
+    }
+  }, [callStatus, stopVibration]);
 
+  /** Telegram-style: keep buzzing until somebody picks up or the ring dies. */
   // Unlock Web Audio on the first gesture of the session (see PhoneRingtones.unlock)
   useEffect(() => {
     const unlock = () => PhoneRingtones.unlock();
@@ -290,7 +293,8 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Defensive Auto-reconciliation of stale zombie calls matching current user
   useEffect(() => {
-    if (!authUser || !supabase) return;
+    const myId = authUserId;
+    if (!myId || !supabase) return;
 
     const cleanupStaleZombieCalls = async () => {
       try {
@@ -301,7 +305,7 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
           .from('calls')
           .select('id')
           .eq('status', 'ringing')
-          .or(`caller_id.eq.${authUser.id},receiver_id.eq.${authUser.id}`)
+          .or(`caller_id.eq.${myId},receiver_id.eq.${myId}`)
           .lt('created_at', thresholdDate);
 
         if (staleCalls && staleCalls.length > 0) {
@@ -324,12 +328,12 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // ZOMBIE_THRESHOLD_MS comment.
     const interval = setInterval(cleanupStaleZombieCalls, ZOMBIE_SWEEP_MS);
     return () => clearInterval(interval);
-  }, [authUser?.id]);
+  }, [authUserId]);
 
   // Handle active call duration timer
   useEffect(() => {
     let intervalId: any;
-    if (activeCall && activeCall.status === 'connected') {
+    if (callStatus === 'connected') {
       intervalId = setInterval(() => {
         setTimer(prev => prev + 1);
       }, 1000);
@@ -337,7 +341,7 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setTimer(0);
     }
     return () => clearInterval(intervalId);
-  }, [activeCall?.status]);
+  }, [callStatus]);
 
   // Insert chat room logs dynamically
   const addLoggingMessage = async (status: 'started' | 'ended' | 'missed', _cid: string, partnerId: string, callType: CallType) => {
@@ -444,13 +448,14 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Monitor incoming calls for the logged-in user
   useEffect(() => {
-    if (!authUser || !supabase) return;
+    const myId = authUserId;
+    if (!myId || !supabase) return;
 
     const fetchIncomingCall = async () => {
       const { data, error } = await supabase
         .from('calls')
         .select('*, users:users!calls_caller_id_fkey (username, photo_url, full_name)')
-        .eq('receiver_id', authUser.id)
+        .eq('receiver_id', myId)
         .eq('status', 'ringing')
         .order('created_at', { ascending: false })
         .limit(1);
@@ -488,12 +493,12 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
     fetchIncomingCall();
 
     const channel = supabase
-      .channel(`calls-for-${authUser.id}`)
+      .channel(`calls-for-${myId}`)
       .on('postgres_changes', { 
         event: '*', 
         schema: 'public', 
         table: 'calls', 
-        filter: `receiver_id=eq.${authUser.id}` 
+        filter: `receiver_id=eq.${myId}` 
       }, (payload: any) => {
         const eventType = payload.eventType;
         const currentData = payload.new as any;
@@ -525,7 +530,7 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
       channel.unsubscribe();
       PhoneRingtones.stop();
     };
-  }, [authUser]);
+  }, [authUserId, startVibration, stopVibration]);
 
   // Aggregate tracks helper to maintain backward compatible HTML Video srcObject MediaStreams
   const updateLocalStreamFromRoom = (room: Room) => {

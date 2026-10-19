@@ -10,6 +10,8 @@ import { logger } from '../../utils/logger';
 export default function StoryWatcherScreen() {
   const { userId } = useParams();
   const navigate = useNavigate();
+  const navigateRef = useRef(navigate);
+  navigateRef.current = navigate;
   const { user: authUser, userData } = useAuth();
   const [stories, setStories] = useState<any[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -19,6 +21,8 @@ export default function StoryWatcherScreen() {
   const [showViewsSheet, setShowViewsSheet] = useState(false);
   const [progress, setProgress] = useState(0);
   const [isMuted, setIsMuted] = useState(false);
+  const isMutedRef = useRef(isMuted);
+  isMutedRef.current = isMuted;
   /** Video stories run for their own length, not the 5 s default. */
   const [videoDurationMs, setVideoDurationMs] = useState<number | null>(null);
   const elapsedRef = useRef(0);
@@ -46,14 +50,14 @@ export default function StoryWatcherScreen() {
           })));
 
           if (data.length === 0) {
-            navigate('/stories');
+            navigateRef.current('/stories');
           }
         } else {
-          navigate('/stories');
+          navigateRef.current('/stories');
         }
       } catch (err) {
         console.error('Error fetching stories for watcher:', err);
-        navigate('/stories');
+        navigateRef.current('/stories');
       } finally {
         setLoading(false);
       }
@@ -63,19 +67,20 @@ export default function StoryWatcherScreen() {
   }, [userId]);
 
   // Handle active story music track playback
+    const currentMusicUrl = stories[currentIndex]?.music_url;
+  const authUserEmail = authUser?.email;
   useEffect(() => {
     if (audioRef.current) {
       audioRef.current.pause();
       audioRef.current = null;
     }
 
-    const currentStory = stories[currentIndex];
-    const trackUrl = currentStory?.music_url;
+    const trackUrl = currentMusicUrl;
     
     if (trackUrl) {
       const audio = new Audio(trackUrl);
       audio.volume = 0.5;
-      audio.muted = isMuted;
+      audio.muted = isMutedRef.current;
       audio.loop = true;
       audioRef.current = audio;
       
@@ -93,7 +98,7 @@ export default function StoryWatcherScreen() {
         audioRef.current = null;
       }
     };
-  }, [currentIndex, stories]);
+  }, [currentIndex, currentMusicUrl]);
 
   // Handle story view registration (record view automatically on mount or when index changes)
   useEffect(() => {
@@ -112,7 +117,7 @@ export default function StoryWatcherScreen() {
         await supabase.rpc('view_story', {
           story_id_param: activeStory.id,
           viewer_id_param: authUser.id,
-          viewer_username_param: userData?.username || authUser.email?.split('@')[0] || 'User',
+          viewer_username_param: userData?.username || authUserEmail?.split('@')[0] || 'User',
           viewer_fullname_param: userData?.fullName || '',
           viewer_photo_url_param: userData?.photoURL || ''
         });
@@ -122,30 +127,33 @@ export default function StoryWatcherScreen() {
     };
 
     recordStoryView();
-  }, [currentIndex, stories, authUser?.id, userData]);
+  }, [currentIndex, stories, authUser?.id, authUserEmail, userData]);
 
   // Opening the viewer list re-reads the row, so the list is never stale.
+  // Depends on ids only: this effect writes `stories`, so depending on the array
+  // itself would re-run it forever.
+  const currentStoryId = stories[currentIndex]?.id;
+  const currentStoryOwnerId = stories[currentIndex]?.user_id;
   useEffect(() => {
-    if (!showViewsSheet || !supabase) return;
-    const story = stories[currentIndex];
-    if (!story || story.user_id !== authUser?.id) return;
+    if (!showViewsSheet || !supabase || !currentStoryId) return;
+    if (currentStoryOwnerId !== authUser?.id) return;
 
     let cancelled = false;
     supabase
       .from('stories')
       .select('views')
-      .eq('id', story.id)
+      .eq('id', currentStoryId)
       .single()
       .then(({ data }: any) => {
         if (cancelled || !data) return;
         setStories(prev =>
-          prev.map(item => (item.id === story.id ? {...item, views: data.views} : item)),
+          prev.map(item => (item.id === currentStoryId ? {...item, views: data.views} : item)),
         );
       });
     return () => {
       cancelled = true;
     };
-  }, [showViewsSheet, currentIndex, authUser?.id]);
+  }, [showViewsSheet, currentStoryId, currentStoryOwnerId, authUser?.id]);
 
   // Handle pausing of audio playback
   useEffect(() => {
@@ -185,7 +193,7 @@ export default function StoryWatcherScreen() {
       setProgress(pct);
       if (pct >= 100) {
         clearInterval(interval);
-        handleNext();
+        handleNextRef.current();
       }
     }, 50);
 
@@ -199,6 +207,10 @@ export default function StoryWatcherScreen() {
       navigate('/stories');
     }
   };
+
+  // The auto-advance timer calls the latest handler without re-subscribing on every render.
+  const handleNextRef = useRef(handleNext);
+  handleNextRef.current = handleNext;
 
   const handlePrev = () => {
     if (currentIndex > 0) {

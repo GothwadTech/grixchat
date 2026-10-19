@@ -32,7 +32,11 @@ export function usePresenceRoster() {
     PresenceService.getSnapshot,
   );
 
-  const ids = useMemo(() => new Set(PresenceService.onlineIds()), [version]);
+  // `version` is a change trigger: recompute the set whenever the roster changes.
+  const ids = useMemo(() => {
+    void version;
+    return new Set(PresenceService.onlineIds());
+  }, [version]);
   return {ids, version};
 }
 
@@ -48,7 +52,10 @@ export function useIsUserOnline(userId: string | null | undefined): boolean | nu
     PresenceService.getSnapshot,
     PresenceService.getSnapshot,
   );
-  return useMemo(() => PresenceService.presenceOf(userId), [version, userId]);
+  return useMemo(() => {
+    void version; // trigger: re-evaluate when the roster changes
+    return PresenceService.presenceOf(userId);
+  }, [version, userId]);
 }
 
 /**
@@ -70,8 +77,9 @@ export function useLivePresence() {
   );
 
   return useMemo(() => {
+    // `version` is the identity of the roster snapshot — recompute per change.
+    void version;
     return (userId: string | null | undefined): boolean | null =>
       PresenceService.presenceOf(userId);
-    // `version` is the identity of the roster snapshot — recompute per change.
   }, [version]);
 }

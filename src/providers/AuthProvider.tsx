@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState, useRef, useMemo } from 'react';
+import React, { createContext, useContext, useEffect, useState, useRef, useMemo, useCallback } from 'react';
 import { User, RealtimeChannel } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 import { UserProfile } from '../types';
@@ -62,7 +62,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [user]);
 
-  const fetchProfileData = async (currentUserId: string, email: string, meta: any) => {
+  // Stable: only uses state setters and services, so it is safe in effect deps.
+  const fetchProfileData = useCallback(async (currentUserId: string, email: string, meta: any) => {
     const { profileData, following } = await userProfileService.fetchFullProfileData(currentUserId, email, meta);
     if (profileData) {
       setUserData(profileData);
@@ -77,13 +78,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         profileData.photoURL || ''
       ).catch(console.error);
     }
-  };
+  }, []);
 
-  const refreshUserData = async () => {
+  const refreshUserData = useCallback(async () => {
     if (user?.id) {
       await fetchProfileData(user.id, user.email || '', user.user_metadata);
     }
-  };
+  }, [user?.id, user?.email, user?.user_metadata, fetchProfileData]);
 
   // 1. Auth Listener and Session Bootstrap
   useEffect(() => {
@@ -176,13 +177,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     initAuth();
     return () => subscription.unsubscribe();
-  }, []);
+  }, [fetchProfileData]);
 
   // 2. Profile and Realtime Presence Subscriptions
   useEffect(() => {
-    if (!user || !supabase) return;
+    const currentUserId = user?.id;
+    if (!currentUserId || !supabase) return;
 
-    const currentUserId = user.id;
+    // Read through the ref, captured once per subscription: email and metadata
+    // only feed the profile fallback, and depending on the user object would
+    // re-subscribe every realtime channel on each token refresh.
+    const snapshot = userRef.current;
+    const subscriptionEmail = snapshot?.email || '';
+    const subscriptionMeta = snapshot?.user_metadata;
     let isSubscribed = true;
 
     const setupProfileAndPresence = async () => {
@@ -190,20 +197,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (profileChannelRef.current) supabase.removeChannel(profileChannelRef.current);
 
         // Fetch primary profile data updates
-        fetchProfileData(currentUserId, user.email || '', user.user_metadata);
+        fetchProfileData(currentUserId, subscriptionEmail, subscriptionMeta);
 
         // Setup realtime profile change listener
         const profileUniqueId = `profile-${currentUserId}-${Math.random().toString(36).substring(2, 7)}`;
         const profileChannel = supabase
           .channel(profileUniqueId)
           .on('postgres_changes', { event: '*', schema: 'public', table: 'users', filter: `id=eq.${currentUserId}` }, () => {
-            if (isSubscribed) fetchProfileData(currentUserId, user.email || '', user.user_metadata);
+            if (isSubscribed) fetchProfileData(currentUserId, subscriptionEmail, subscriptionMeta);
           })
           .on('postgres_changes', { event: '*', schema: 'public', table: 'follows', filter: `follower_id=eq.${currentUserId}` }, () => {
-            if (isSubscribed) fetchProfileData(currentUserId, user.email || '', user.user_metadata);
+            if (isSubscribed) fetchProfileData(currentUserId, subscriptionEmail, subscriptionMeta);
           })
           .on('postgres_changes', { event: '*', schema: 'public', table: 'follows', filter: `following_id=eq.${currentUserId}` }, () => {
-            if (isSubscribed) fetchProfileData(currentUserId, user.email || '', user.user_metadata);
+            if (isSubscribed) fetchProfileData(currentUserId, subscriptionEmail, subscriptionMeta);
           });
         
         profileChannel.subscribe();
@@ -226,15 +233,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       isSubscribed = false;
       if (profileChannelRef.current) supabase.removeChannel(profileChannelRef.current);
     };
-  }, [user?.id]);
+  }, [user?.id, fetchProfileData]);
 
   // 3. Heartbeat & Tab Visibility (Throttled write-prevention: Issue 2)
+  const presenceUserId = user?.id;
   useEffect(() => {
-    if (!user?.id) return;
+    if (!presenceUserId) return;
     let heartbeatInterval: any = null;
 
     const updateStatus = (online: boolean) => {
-      userProfileService.throttledSetStatus(user.id, online);
+      userProfileService.throttledSetStatus(presenceUserId, online);
     };
 
     // A background tab is still an open session: switching tabs must not flip
@@ -254,7 +262,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       window.removeEventListener('pagehide', handleUnload);
       window.removeEventListener('beforeunload', handleUnload);
     };
-  }, [user?.id]);
+  }, [presenceUserId]);
 
   // Sync cache records
   useEffect(() => {
@@ -265,20 +273,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [user]);
 
-  // Sync Device Login Session Metadata
+  // Sync Device Login Session Metadata. Registers once per signed-in user, not
+  // on every profile update (the old `[userData?.id]` dependency hid that intent).
+  const registeredSessionUserRef = useRef<string | null>(null);
   useEffect(() => {
     if (!user || !userData || !isAuthReady) return;
+    if (registeredSessionUserRef.current === user.id) return;
+    registeredSessionUserRef.current = user.id;
     sessionService.registerActiveSession(user.id, userData.settings).catch(() => {});
-  }, [userData?.id]);
+  }, [user, userData, isAuthReady]);
 
   // Secure instant remote logouts
+  const remoteActiveSessions = (userData?.settings as any)?.active_sessions;
   useEffect(() => {
     if (!user || !userData || !isAuthReady || !supabase) return;
 
     const sessId = safeSessionStorage.getItem('grix_current_session_id');
     if (!sessId) return;
 
-    const activeSessions = (userData.settings as any)?.active_sessions;
+    const activeSessions = remoteActiveSessions;
     if (Array.isArray(activeSessions)) {
       const stillRegistered = activeSessions.some((s: any) => s.id === sessId);
       if (stillRegistered) {
@@ -292,7 +305,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         });
       }
     }
-  }, [(userData?.settings as any)?.active_sessions]);
+  }, [remoteActiveSessions, user, userData, isAuthReady]);
 
   // Bootstrap failsafe timeout
   useEffect(() => {
@@ -307,7 +320,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const authContextValue = useMemo(() => ({ 
     user, userData, loading, isAuthReady, refreshUserData, followingIds 
-  }), [user, userData, loading, isAuthReady, followingIds]);
+  }), [user, userData, loading, isAuthReady, refreshUserData, followingIds]);
 
   return <AuthContext.Provider value={authContextValue}>{children}</AuthContext.Provider>;
 };

@@ -16,7 +16,8 @@ export default function TabBottom() {
   const [triggerFetch, _setTriggerFetch] = useState(0);
 
   useEffect(() => {
-    if (!authUser || !supabase) return;
+    const uid = authUser?.id;
+    if (!uid || !supabase) return;
 
     const fetchUnread = async () => {
       try {
@@ -32,7 +33,7 @@ export default function TabBottom() {
               )
             )
           `)
-          .eq('user_id', authUser.id);
+          .eq('user_id', uid);
 
         if (pError || !participants) return;
 
@@ -40,16 +41,16 @@ export default function TabBottom() {
         const { data: followRows } = await supabase
           .from('follows')
           .select('follower_id, following_id')
-          .or(`follower_id.eq.${authUser.id},following_id.eq.${authUser.id}`);
+          .or(`follower_id.eq.${uid},following_id.eq.${uid}`);
 
         const IFollow = new Set<string>();
         const FollowsMe = new Set<string>();
 
         followRows?.forEach((row: any) => {
-          if (row.follower_id === authUser.id) {
+          if (row.follower_id === uid) {
             IFollow.add(row.following_id);
           }
-          if (row.following_id === authUser.id) {
+          if (row.following_id === uid) {
             FollowsMe.add(row.follower_id);
           }
         });
@@ -71,7 +72,7 @@ export default function TabBottom() {
               convTypeMap[p.conversation_id] = 'group';
             } else {
               // Find other participant user id
-              const otherId = conv.participants?.find((part: any) => part.user_id !== authUser.id)?.user_id;
+              const otherId = conv.participants?.find((part: any) => part.user_id !== uid)?.user_id;
               if (otherId && mutualFriendsSet.has(otherId)) {
                 convTypeMap[p.conversation_id] = 'direct';
               }
@@ -98,7 +99,7 @@ export default function TabBottom() {
           .from('messages')
           .select('conversation_id')
           .eq('is_read', false)
-          .neq('sender_id', authUser.id)
+          .neq('sender_id', uid)
           .in('conversation_id', myConvIds)
           .limit(500);
         
@@ -130,14 +131,14 @@ export default function TabBottom() {
 
     fetchUnread();
 
-    const unreadChannelId = `tab-bottom-unread:${authUser.id}-${Math.random().toString(36).substring(2, 9)}`;
+    const unreadChannelId = `tab-bottom-unread:${uid}-${Math.random().toString(36).substring(2, 9)}`;
     const channel = supabase
       .channel(unreadChannelId)
       .on('postgres_changes', {
         event: '*',
         schema: 'public',
         table: 'conversation_participants',
-        filter: `user_id=eq.${authUser.id}`
+        filter: `user_id=eq.${uid}`
       }, () => {
         fetchUnread();
       })
@@ -145,7 +146,7 @@ export default function TabBottom() {
         event: '*',
         schema: 'public',
         table: 'follows',
-        filter: `follower_id=eq.${authUser.id}`
+        filter: `follower_id=eq.${uid}`
       }, () => {
         fetchUnread();
       })
@@ -153,7 +154,7 @@ export default function TabBottom() {
         event: '*',
         schema: 'public',
         table: 'follows',
-        filter: `following_id=eq.${authUser.id}`
+        filter: `following_id=eq.${uid}`
       }, () => {
         fetchUnread();
       })
@@ -165,7 +166,8 @@ export default function TabBottom() {
   }, [authUser?.id, triggerFetch]);
 
   useEffect(() => {
-    if (!authUser) return;
+    const uid = authUser?.id;
+    if (!uid) return;
 
     // Listen to local cache updates for instant, Zero-Egress count adjustments!
     const unsubscribeCache = LocalDataCache.subscribe('conversations', (updatedList) => {

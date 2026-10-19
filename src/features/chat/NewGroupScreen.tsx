@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { 
   Users, 
@@ -39,57 +39,58 @@ export default function NewGroupScreen() {
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
 
-  useEffect(() => {
-    fetchFriends();
+  const fetchFriends = useCallback(async () => {
+    const uid = authUser?.id;
+    if (!uid || !supabase) return;
+    try {
+      setLoading(true);
+      // Get following and follower IDs to compute mutual friends
+      const { data: followRows, error: followError } = await supabase
+        .from('follows')
+        .select('follower_id, following_id')
+        .or(`follower_id.eq.${uid},following_id.eq.${uid}`);
+      
+      if (followError) throw followError;
+
+      const IFollow = new Set<string>();
+      const FollowsMe = new Set<string>();
+
+      followRows?.forEach((row: any) => {
+        if (row.follower_id === uid) {
+          IFollow.add(row.following_id);
+        }
+        if (row.following_id === uid) {
+          FollowsMe.add(row.follower_id);
+        }
+      });
+
+      const mutualIds = Array.from(IFollow).filter(id => FollowsMe.has(id));
+      
+      if (mutualIds.length > 0) {
+        const { data: friendsData, error: friendsError } = await supabase
+          .from('users')
+          .select('*')
+          .in('id', mutualIds);
+        
+        if (friendsError) throw friendsError;
+
+        setFriends(friendsData.map(f => ({
+          id: f.id,
+          username: f.username,
+          fullName: f.full_name,
+          photoURL: f.photo_url
+        })));
+      }
+    } catch (error) {
+    console.error('Error fetching friends:', error);
+    } finally {
+    setLoading(false);
+    }
   }, [authUser?.id]);
 
-    const fetchFriends = async () => {
-      if (!authUser?.id || !supabase) return;
-      try {
-        setLoading(true);
-        // Get following and follower IDs to compute mutual friends
-        const { data: followRows, error: followError } = await supabase
-          .from('follows')
-          .select('follower_id, following_id')
-          .or(`follower_id.eq.${authUser.id},following_id.eq.${authUser.id}`);
-        
-        if (followError) throw followError;
-
-        const IFollow = new Set<string>();
-        const FollowsMe = new Set<string>();
-
-        followRows?.forEach((row: any) => {
-          if (row.follower_id === authUser.id) {
-            IFollow.add(row.following_id);
-          }
-          if (row.following_id === authUser.id) {
-            FollowsMe.add(row.follower_id);
-          }
-        });
-
-        const mutualIds = Array.from(IFollow).filter(id => FollowsMe.has(id));
-        
-        if (mutualIds.length > 0) {
-          const { data: friendsData, error: friendsError } = await supabase
-            .from('users')
-            .select('*')
-            .in('id', mutualIds);
-          
-          if (friendsError) throw friendsError;
-
-          setFriends(friendsData.map(f => ({
-            id: f.id,
-            username: f.username,
-            fullName: f.full_name,
-            photoURL: f.photo_url
-          })));
-        }
-      } catch (error) {
-      console.error('Error fetching friends:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  useEffect(() => {
+    fetchFriends();
+  }, [fetchFriends]);
 
   const handleIconChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
