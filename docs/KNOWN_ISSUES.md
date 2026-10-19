@@ -313,9 +313,9 @@ what the dashboard showed.
 
 ## 🟢 P3 — Quality
 
-### 15. 470 `any` usages — ❌ STILL OPEN
+### 15. `any` usages — ❌ STILL OPEN (644 warnings, 2026-10-19)
 
-Now 478: this pass added exactly one in app code (`apiClient.ts`'s
+Phase 2 re-count: `@typescript-eslint/no-explicit-any` reports 644 warnings (warn, not error). Earlier note, kept for history — was 478: this pass added exactly one in app code (`apiClient.ts`'s
 `{ auth?: any }` cast, because the exported client is already `any`) and the
 rest are in the new test file, which follows the existing `(row: any)`
 convention. Everything else added by this pass is typed. The remaining burn-down
@@ -333,12 +333,13 @@ Then prefer those row types over hand-written shapes.
 
 ### 17. Giant files — ❌ STILL OPEN
 
-Unchanged:
+Re-measured 2026-10-19:
 
 ```
-1244  features/github/GithubScreen.tsx
- 987  providers/CallProvider.tsx
- 844  features/chat/components/MessageBubble.tsx
+1242  features/github/GithubScreen.tsx
+1286  providers/CallProvider.tsx
+ 843  features/chat/components/MessageBubble.tsx
+1420  server/api.ts
 ```
 
 Pure extraction work with real regression risk — worth doing deliberately, per
@@ -439,6 +440,21 @@ so they were walked through as a feature rather than as a screen:
 
 An index (`idx_stories_created`) backs the 24 h query. No third-party service is
 involved: tracks are static URLs in `src/features/stories/utils/musicData.ts`.
+
+## 🔧 Rock-solid pass — Phase 2 (2026-10-19)
+
+Tracked item by item in [ROCK_SOLID.md](./ROCK_SOLID.md) (76 items). New issues found
+while fixing them, and their status:
+
+| Found | Status |
+|---|---|
+| 48 `react-hooks/exhaustive-deps` warnings | ✅ fixed; rule is now an **error** in `eslint.config.js` |
+| Camera modal cleanup stopped a stale `null` stream, so the camera could keep running | ✅ fixed (`streamRef`) |
+| Story views effect depended on the array it writes to (loop risk); music restarted on every view-count change | ✅ fixed |
+| Direct `localStorage` calls outside `StorageService` (5) | ✅ routed through `StorageService` |
+| `transactionQueueService` listeners and timers could stack on HMR and had no teardown | ✅ `dispose()` + regression test |
+| API responses had no request id to match a user report to a log line | ✅ `X-Request-Id` on every response, also in error logs |
+| Remaining: `any` (644), a11y warnings (145), 19 empty `catch` blocks that carry an "intentionally ignored" comment but are not individually reviewed, giant files | ⏳ open, see items 3, 4, 6, 10–16 in ROCK_SOLID.md |
 
 ## ✅ Fixed
 
