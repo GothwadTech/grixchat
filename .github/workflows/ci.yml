@@ -60,6 +60,9 @@ jobs:
       - name: Dependency audit
         run: npm audit --audit-level=high
 
+      - name: Colour contrast (WCAG AA, theme pairs)
+        run: node scripts/check-contrast.mjs
+
       - name: Test
         run: npm test
 

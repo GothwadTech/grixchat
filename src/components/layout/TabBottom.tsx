@@ -246,7 +246,7 @@ export default function TabBottom() {
                 <motion.div 
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}
-                  className="absolute -top-1 -right-1 min-w-[17px] h-[17px] px-1 bg-[#0494f4] text-white text-[9px] font-black rounded-full flex items-center justify-center border-2 border-[var(--header-bg)] shadow-sm z-10"
+                  className="absolute -top-1 -right-1 min-w-[17px] h-[17px] px-1 bg-[#0479c2] text-white text-[9px] font-black rounded-full flex items-center justify-center border-2 border-[var(--header-bg)] shadow-sm z-10"
                 >
                   {item.badge > 9 ? '9+' : item.badge}
                 </motion.div>

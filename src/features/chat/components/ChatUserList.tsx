@@ -147,7 +147,7 @@ const ChatItemRow: React.FC<{
   };
 
   return (
-    <div
+    <div role="button" tabIndex={0} onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.currentTarget.click(); } }}
       onTouchStart={startPress}
       onTouchMove={handleMove}
       onTouchEnd={cancelPress}
@@ -272,11 +272,11 @@ const GrixAIRow: React.FC = () => {
   }
 
   return (
-    <div 
+    <div role="button" tabIndex={0} onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.currentTarget.click(); } }} 
       onClick={() => navigate('/chat/grix-ai')}
       className="flex items-center gap-3 px-3 py-2.5 hover:bg-[var(--border-color)]/5 active:bg-[var(--border-color)]/10 transition-all duration-205 border-b border-[var(--border-color)]/5 group cursor-pointer border-l-[4px] border-l-transparent select-none"
     >
-      <div 
+      <div role="button" tabIndex={0} onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.currentTarget.click(); } }} 
         className="relative shrink-0"
         onClick={(e) => {
           e.stopPropagation();
@@ -514,7 +514,7 @@ export const ChatUserList: React.FC<ChatUserListProps> = ({
     <div className="flex flex-col bg-[var(--bg-card)]">
       {/* Secret Code Header */}
       {showSecretHeader && (
-        <div 
+        <div role="button" tabIndex={0} onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.currentTarget.click(); } }} 
           onClick={onSecretHeaderClick}
           className="flex items-center gap-3 px-3 py-2.5 hover:bg-[var(--border-color)]/5 active:bg-[var(--border-color)]/10 transition-all duration-205 border-b border-[var(--border-color)]/5 group cursor-pointer border-l-[4px] border-l-transparent select-none"
         >
@@ -546,12 +546,12 @@ export const ChatUserList: React.FC<ChatUserListProps> = ({
 
       {/* Archived Chats Pinned Shortcut */}
       {showGrixAI && (
-        <div 
+        <div role="button" tabIndex={0} onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.currentTarget.click(); } }} 
           onClick={() => navigate('/chats/archived')}
           className="flex items-center gap-3 px-3 py-2.5 hover:bg-[var(--border-color)]/5 active:bg-[var(--border-color)]/10 transition-all duration-205 border-b border-[var(--border-color)]/5 group cursor-pointer border-l-[4px] border-l-transparent select-none"
         >
           <div className="relative shrink-0 z-10">
-            <div className="w-12 h-12 rounded-full bg-[#0494f4]/10 dark:bg-zinc-800 flex items-center justify-center text-[var(--primary)] group-hover:scale-[1.02] transition-transform border border-[var(--border-color)]/15">
+            <div className="w-12 h-12 rounded-full bg-[#0479c2]/10 dark:bg-zinc-800 flex items-center justify-center text-[var(--primary)] group-hover:scale-[1.02] transition-transform border border-[var(--border-color)]/15">
               <Archive size={19} className="text-[var(--primary)]" />
             </div>
           </div>
@@ -560,7 +560,7 @@ export const ChatUserList: React.FC<ChatUserListProps> = ({
               <h3 className="text-[14.5px] truncate font-semibold text-[var(--text-primary)] group-hover:text-[var(--primary)] transition-colors">
                 Archived Chats
               </h3>
-              <span className="text-[10px] whitespace-nowrap text-[#0494f4] font-semibold tracking-tight bg-[#0494f4]/10 px-2 py-0.5 rounded-full">
+              <span className="text-[10px] whitespace-nowrap text-[#0494f4] font-semibold tracking-tight bg-[#0479c2]/10 px-2 py-0.5 rounded-full">
                 {archivedCount > 0 ? archivedCount : 'View'}
               </span>
             </div>
@@ -575,7 +575,7 @@ export const ChatUserList: React.FC<ChatUserListProps> = ({
 
       {/* Hidden Chats Pinned Shortcut */}
       {showGrixAI && showHiddenChatsEntry && !showSecretHeader && (
-        <div 
+        <div role="button" tabIndex={0} onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.currentTarget.click(); } }} 
           onClick={() => navigate('/chats/hidden')}
           className="flex items-center gap-3 px-3 py-2.5 hover:bg-[var(--border-color)]/5 active:bg-[var(--border-color)]/10 transition-all duration-205 border-b border-[var(--border-color)]/5 group cursor-pointer border-l-[4px] border-l-transparent select-none"
         >

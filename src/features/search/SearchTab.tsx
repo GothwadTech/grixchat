@@ -227,7 +227,7 @@ export default function SearchTab() {
 
   const renderUserProfileRow = (profile: UserProfile, _isFriend: boolean = false) => {
     return (
-      <div 
+      <div role="button" tabIndex={0} onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.currentTarget.click(); } }} 
         key={profile.uid}
         onClick={() => navigate(`/user/${profile.uid}`)}
         className="flex items-center gap-3 px-3 py-2.5 hover:bg-[var(--border-color)]/5 active:bg-[var(--border-color)]/10 transition-all duration-205 group cursor-pointer select-none border-b border-[var(--border-color)]/5 last:border-b-0 border-l-[4px] border-l-transparent"
@@ -259,11 +259,11 @@ export default function SearchTab() {
     return (
       <div className="px-4 py-2 bg-[var(--bg-main)]/30 border-b border-t border-[var(--border-color)]/5 select-none flex items-center justify-between first:border-t-0 font-sans">
         <span className="text-[9.5px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest flex items-center gap-1.5">
-          <span className="w-1.5 h-1.5 rounded-full bg-[#0494f4]"></span>
+          <span className="w-1.5 h-1.5 rounded-full bg-[#0479c2]"></span>
           {title}
         </span>
         {count !== undefined && count > 0 && (
-          <span className="text-[9px] font-black text-[#0494f4] bg-[#0494f4]/15 px-1.5 h-4.5 rounded-full flex items-center justify-center font-mono">
+          <span className="text-[9px] font-black text-[#0494f4] bg-[#0479c2]/15 px-1.5 h-4.5 rounded-full flex items-center justify-center font-mono">
             {count}
           </span>
         )}
@@ -313,12 +313,12 @@ export default function SearchTab() {
             <div className="flex flex-col bg-[var(--bg-card)]">
               
               {/* Only show requests folder if not browsing search keyword results */}
-              <div 
+              <div role="button" tabIndex={0} onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.currentTarget.click(); } }} 
                 onClick={() => navigate('/chats/requests')}
                 className="flex items-center gap-3 px-3 py-2.5 hover:bg-[var(--border-color)]/5 active:bg-[var(--border-color)]/10 transition-all duration-205 border-b border-[var(--border-color)]/5 group cursor-pointer select-none border-l-[4px] border-l-transparent"
               >
                 <div className="relative shrink-0">
-                  <div className="w-12 h-12 rounded-full bg-[#0494f4]/10 dark:bg-zinc-800/60 flex items-center justify-center text-[#0494f4] group-hover:scale-[1.02] transition-transform border border-[var(--border-color)]/15">
+                  <div className="w-12 h-12 rounded-full bg-[#0479c2]/10 dark:bg-zinc-800/60 flex items-center justify-center text-[#0494f4] group-hover:scale-[1.02] transition-transform border border-[var(--border-color)]/15">
                     <Users size={19} className="text-[#0494f4]" />
                   </div>
                 </div>

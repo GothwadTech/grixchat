@@ -208,6 +208,7 @@ export default function CallScreen() {
 
       {/* Invisible HTMLMediaElement to handle stream sink for pure voice calls */}
       {type === 'voice' && (
+        // eslint-disable-next-line jsx-a11y/media-has-caption -- live call video: captions need a live transcription service
         <video
           ref={remoteVideoRef as any}
           autoPlay

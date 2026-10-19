@@ -78,7 +78,7 @@ User Agent Info: ${navigator.userAgent}
 
         <button
           onClick={handleCopyDiagnosticsDump}
-          className="py-1 px-3 bg-[#0494f4]/15 text-[#0494f4] hover:bg-[#0494f4] hover:text-white transition-all text-xs font-mono font-bold rounded-xl flex items-center gap-1 cursor-pointer border border-[#0494f4]/25 shadow-sm h-9 shrink-0"
+          className="py-1 px-3 bg-[#0479c2]/15 text-[#0494f4] hover:bg-[#0479c2] hover:text-white transition-all text-xs font-mono font-bold rounded-xl flex items-center gap-1 cursor-pointer border border-[#0494f4]/25 shadow-sm h-9 shrink-0"
         >
           <CopyCheck size={13} />
           <span className="hidden xs:inline">Dump Report</span>
@@ -158,7 +158,7 @@ User Agent Info: ${navigator.userAgent}
             </div>
             <div className="flex flex-col gap-0.5">
               <span className="font-sans font-bold text-[8px] text-[var(--text-secondary)] uppercase tracking-wider select-none font-semibold">Cached Decoded UserData Profile Info payload:</span>
-              <pre className="p-1 px-2 border border-[var(--border-color)] rounded-lg bg-[var(--box-bg)] overflow-x-auto select-text selection:bg-[#0494f4]/25 max-h-36 custom-scrollbar break-all">
+              <pre className="p-1 px-2 border border-[var(--border-color)] rounded-lg bg-[var(--box-bg)] overflow-x-auto select-text selection:bg-[#0479c2]/25 max-h-36 custom-scrollbar break-all">
                 {cachedUserData !== 'None' ? cachedUserData : '// Session profile unauthenticated.'}
               </pre>
             </div>
@@ -174,11 +174,11 @@ User Agent Info: ${navigator.userAgent}
           <div className="space-y-2 font-mono text-[10px] text-[var(--text-secondary)] pt-1">
             <div className="flex justify-between items-center select-none">
               <span>Secondary logins count:</span>
-              <strong className="text-[#0494f4] bg-[#0494f4]/10 border border-[#0494f4]/25 px-2 py-0.5 rounded-full text-[9px] font-bold">
+              <strong className="text-[#0494f4] bg-[#0479c2]/10 border border-[#0494f4]/25 px-2 py-0.5 rounded-full text-[9px] font-bold">
                 {totalAccounts} Logins Cached
               </strong>
             </div>
-            <pre className="p-2 border border-[var(--border-color)] rounded-lg bg-[var(--box-bg)] overflow-x-auto max-h-36 custom-scrollbar select-text selection:bg-[#0494f4]/25 text-[9px] leading-tight break-all">
+            <pre className="p-2 border border-[var(--border-color)] rounded-lg bg-[var(--box-bg)] overflow-x-auto max-h-36 custom-scrollbar select-text selection:bg-[#0479c2]/25 text-[9px] leading-tight break-all">
               {multiAccountsStr !== 'None' && multiAccountsStr !== 'Access Denied' ? multiAccountsStr : '// Register secondary profiles in multilogin page to view list metadata.'}
             </pre>
           </div>
@@ -192,7 +192,7 @@ User Agent Info: ${navigator.userAgent}
           <span className="text-[8px] text-[var(--text-secondary)] uppercase tracking-widest font-black block leading-none mb-1">User Agent Specification String</span>
           <p className="text-[10px] font-mono leading-tight text-[var(--text-secondary)]/80 break-all">{navigator.userAgent}</p>
         </div>
-        <div className="p-2 bg-[#0494f4]/15 rounded-xl border border-[#0494f4]/20 shrink-0">
+        <div className="p-2 bg-[#0479c2]/15 rounded-xl border border-[#0494f4]/20 shrink-0">
           <Smartphone size={16} className="text-[#0494f4]" />
         </div>
       </div>

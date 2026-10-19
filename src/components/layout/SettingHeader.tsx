@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { ChevronLeft, Search, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { focusOnMount } from '../../utils/focusOnMount';
 
 interface SettingHeaderProps {
   title: string;
@@ -30,7 +31,7 @@ export default function SettingHeader({
         <div className="flex-1 flex items-center bg-[var(--bg-main)] rounded-xl px-4 h-[44px] border border-[var(--border-color)]">
           <Search size={18} className="text-[var(--text-secondary)] mr-3 opacity-50" />
           <input 
-            autoFocus
+            ref={focusOnMount}
             type="text" 
             placeholder="Search settings..." 
             value={searchTerm}

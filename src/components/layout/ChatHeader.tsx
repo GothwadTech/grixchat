@@ -293,7 +293,7 @@ export default function ChatHeader({
               <ArrowLeft size={22} className="text-[var(--header-text)]" />
             </button>
             
-            <div 
+            <div role="button" tabIndex={0} onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.currentTarget.click(); } }} 
               className="flex items-center gap-2 cursor-pointer min-w-0" 
               onClick={handleHeaderClick}
             >

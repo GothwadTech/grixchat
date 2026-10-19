@@ -210,7 +210,7 @@ export default function MessageRequestsScreen() {
           onClick={() => setSubTab('incoming')}
           className={`flex-1 py-2.5 text-xs font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer flex items-center justify-center gap-2 ${
             subTab === 'incoming'
-              ? 'bg-[#0494f4] text-white shadow-md shadow-[#0494f4]/15'
+              ? 'bg-[#0479c2] text-white shadow-md shadow-[#0494f4]/15'
               : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-main)]/50'
           }`}
         >
@@ -221,7 +221,7 @@ export default function MessageRequestsScreen() {
           onClick={() => setSubTab('outgoing')}
           className={`flex-1 py-2.5 text-xs font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer flex items-center justify-center gap-2 ${
             subTab === 'outgoing'
-              ? 'bg-[#0494f4] text-white shadow-md shadow-[#0494f4]/15'
+              ? 'bg-[#0479c2] text-white shadow-md shadow-[#0494f4]/15'
               : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-main)]/50'
           }`}
         >
@@ -243,7 +243,7 @@ export default function MessageRequestsScreen() {
               // INCOMING TAB
               incoming.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-20 px-6 text-center select-none">
-                  <div className="w-16 h-16 bg-[#0494f4]/10 rounded-2xl flex items-center justify-center mb-4 text-[#0494f4]">
+                  <div className="w-16 h-16 bg-[#0479c2]/10 rounded-2xl flex items-center justify-center mb-4 text-[#0494f4]">
                     <Users size={26} />
                   </div>
                   <h4 className="text-sm font-extrabold text-[var(--text-primary)] mb-1">No incoming requests</h4>
@@ -258,7 +258,7 @@ export default function MessageRequestsScreen() {
                     className="flex items-center justify-between gap-3 px-4 py-3.5 hover:bg-[var(--bg-main)]/30 transition-all border-b border-[var(--border-color)]/10"
                   >
                     {/* User profile details */}
-                    <div className="flex items-center gap-3.5 min-w-0 flex-1 cursor-pointer" onClick={() => navigate(`/user/${item.otherUser.id}`)}>
+                    <div role="button" tabIndex={0} onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.currentTarget.click(); } }} className="flex items-center gap-3.5 min-w-0 flex-1 cursor-pointer" onClick={() => navigate(`/user/${item.otherUser.id}`)}>
                       <Avatar url={item.otherUser.photoURL} type="direct" size="md" name={item.otherUser.fullName || item.otherUser.username} isOnline={liveOf(item.otherUser.id) ?? item.otherUser.isOnline} />
                       <div className="min-w-0 flex-1">
                         <span className="text-[13px] font-extrabold text-[var(--text-primary)] truncate block">
@@ -273,7 +273,7 @@ export default function MessageRequestsScreen() {
                       <button 
                         onClick={() => handleAccept(item.id)}
                         disabled={actionId !== null}
-                        className="px-3.5 py-1.5 bg-[#0494f4] hover:bg-[#0381d6] disabled:opacity-50 text-white rounded-xl text-[10px] font-black uppercase tracking-wider transition-all active:scale-95 shadow-md flex items-center justify-center gap-1 cursor-pointer"
+                        className="px-3.5 py-1.5 bg-[#0479c2] hover:bg-[#0381d6] disabled:opacity-50 text-white rounded-xl text-[10px] font-black uppercase tracking-wider transition-all active:scale-95 shadow-md flex items-center justify-center gap-1 cursor-pointer"
                       >
                         {actionId === item.id ? <Loader2 size={11} className="animate-spin" /> : <Check size={11} strokeWidth={3} />}
                         <span>Accept</span>
@@ -295,7 +295,7 @@ export default function MessageRequestsScreen() {
               // OUTGOING TAB
               outgoing.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-20 px-6 text-center select-none">
-                  <div className="w-16 h-16 bg-[#0494f4]/10 rounded-2xl flex items-center justify-center mb-4 text-[#0494f4]">
+                  <div className="w-16 h-16 bg-[#0479c2]/10 rounded-2xl flex items-center justify-center mb-4 text-[#0494f4]">
                     <Send size={24} />
                   </div>
                   <h4 className="text-sm font-extrabold text-[var(--text-primary)] mb-1">No outgoing requests</h4>
@@ -310,7 +310,7 @@ export default function MessageRequestsScreen() {
                     className="flex items-center justify-between gap-3 px-4 py-3.5 hover:bg-[var(--bg-main)]/30 transition-all border-b border-[var(--border-color)]/10"
                   >
                     {/* User profile details */}
-                    <div className="flex items-center gap-3.5 min-w-0 flex-1 cursor-pointer" onClick={() => navigate(`/user/${item.otherUser.id}`)}>
+                    <div role="button" tabIndex={0} onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.currentTarget.click(); } }} className="flex items-center gap-3.5 min-w-0 flex-1 cursor-pointer" onClick={() => navigate(`/user/${item.otherUser.id}`)}>
                       <Avatar url={item.otherUser.photoURL} type="direct" size="md" name={item.otherUser.fullName || item.otherUser.username} isOnline={liveOf(item.otherUser.id) ?? item.otherUser.isOnline} />
                       <div className="min-w-0 flex-1">
                         <span className="text-[13px] font-extrabold text-[var(--text-primary)] truncate block">
@@ -318,7 +318,7 @@ export default function MessageRequestsScreen() {
                         </span>
                         <span className="text-[11px] text-[var(--text-secondary)] font-bold block">@{item.otherUser.username}</span>
                         <div className="text-[9px] text-[#0494f4] uppercase font-black tracking-widest mt-0.5 flex items-center gap-1.5 leading-none">
-                          <span className="w-1.5 h-1.5 rounded-full bg-[#0494f4] animate-pulse shrink-0" />
+                          <span className="w-1.5 h-1.5 rounded-full bg-[#0479c2] animate-pulse shrink-0" />
                           <span>Awaiting</span>
                         </div>
                       </div>

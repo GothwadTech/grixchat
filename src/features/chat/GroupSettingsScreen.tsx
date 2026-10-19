@@ -18,6 +18,7 @@ import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../providers/AuthProvider.tsx';
 import { ImageService } from '../../services/ImageService.ts';
 import Avatar from '../../components/common/Avatar';
+import { focusOnMount } from '../../utils/focusOnMount';
 
 export default function GroupSettingsScreen() {
   const { id: chatId } = useParams();
@@ -256,7 +257,7 @@ export default function GroupSettingsScreen() {
                     value={newName} 
                     onChange={e => setNewName(e.target.value)}
                     className="bg-[var(--bg-main)] border border-[var(--border-color)] rounded-lg px-3 py-1 text-lg font-black outline-none focus:border-blue-500"
-                    autoFocus
+                    ref={focusOnMount}
                   />
                   <button aria-label="Confirm" onClick={handleUpdateName} className="p-2 bg-emerald-500 text-white rounded-lg"><Check size={16} /></button>
                   <button aria-label="Close" onClick={() => { setShowEditName(false); setNewName(group.name); }} className="p-2 bg-rose-500 text-white rounded-lg"><X size={16} /></button>

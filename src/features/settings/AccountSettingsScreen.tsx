@@ -124,7 +124,7 @@ export default function AccountSettingsScreen() {
         </div>
 
         <div className="p-6 mt-4">
-          <div className="bg-[#0494f4]/5 border border-[#0494f4]/15 rounded-2xl p-4">
+          <div className="bg-[#0479c2]/5 border border-[#0494f4]/15 rounded-2xl p-4">
             <p className="text-[11.5px] text-[var(--text-secondary)] leading-relaxed text-center opacity-85">
               Your account security is our priority. GrixChat operates exclusively with end-to-end encrypted databases and real-time network signatures to guarantee identity protection across sessions.
             </p>

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, Lock, Eye, EyeOff, CheckCircle2, ShieldCheck } from 'lucide-react';
 import { supabase } from '../../../lib/supabase';
+import { focusOnMount } from '../../../utils/focusOnMount';
 
 interface ChangePasswordSheetProps {
   isOpen: boolean;
@@ -120,7 +121,7 @@ export default function ChangePasswordSheet({ isOpen, onClose, onSuccess }: Chan
                         onChange={(e) => setNewPassword(e.target.value)}
                         className="w-full pl-12 pr-12 py-4 bg-[var(--bg-main)] border border-[var(--border-color)] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/10 focus:border-[var(--primary)]/40 transition-all text-[var(--text-primary)]"
                         required
-                        autoFocus
+                        ref={focusOnMount}
                       />
                     </div>
 

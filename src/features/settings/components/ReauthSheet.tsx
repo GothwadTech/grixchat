@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { X, Lock, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../../../providers/AuthProvider';
 import { supabase } from '../../../lib/supabase';
+import { focusOnMount } from '../../../utils/focusOnMount';
 
 interface ReauthSheetProps {
   isOpen: boolean;
@@ -97,7 +98,7 @@ export default function ReauthSheet({ isOpen, onClose, onSuccess, title = "Confi
                     onChange={(e) => setPassword(e.target.value)}
                     className="w-full pl-12 pr-12 py-4 bg-[var(--bg-main)] border border-[var(--border-color)] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/10 focus:border-[var(--primary)]/40 transition-all text-[var(--text-primary)]"
                     required
-                    autoFocus
+                    ref={focusOnMount}
                   />
                   <button 
                     type="button"

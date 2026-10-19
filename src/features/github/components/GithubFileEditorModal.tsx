@@ -89,10 +89,10 @@ export default function GithubFileEditorModal({ file, onClose, onSave }: GithubF
 
           {/* Form input: Path */}
           <div className="space-y-1">
-            <label className="text-[10px] font-black text-[var(--text-secondary)] uppercase tracking-wider ml-1">
+            <label htmlFor="fld-i72ah5" className="text-[10px] font-black text-[var(--text-secondary)] uppercase tracking-wider ml-1">
               Commit File Path
             </label>
-            <input
+            <input id="fld-i72ah5"
               type="text"
               value={filePath}
               onChange={(e) => setFilePath(e.target.value)}
@@ -104,9 +104,9 @@ export default function GithubFileEditorModal({ file, onClose, onSave }: GithubF
           {/* Code Textarea editor */}
           <div className="space-y-1 flex-1 flex flex-col">
             <div className="flex justify-between items-center px-1">
-              <label className="text-[10px] font-black text-[var(--text-secondary)] uppercase tracking-wider">
+              <span id="github-file-content-label" className="text-[10px] font-black text-[var(--text-secondary)] uppercase tracking-wider">
                 File Content
-              </label>
+              </span>
               <span className="text-[9px] text-[var(--text-secondary)] font-mono font-bold">
                 {isBinary ? 'BINARY DETECTED' : `${textContent.split('\n').length} lines`} • {(file.size / 1024).toFixed(1)} KB
               </span>
@@ -122,7 +122,7 @@ export default function GithubFileEditorModal({ file, onClose, onSave }: GithubF
               </div>
             ) : (
               <div className="relative border border-[var(--border-color)]/60 rounded-xl overflow-hidden flex flex-col h-72">
-                <textarea
+                <textarea aria-labelledby="github-file-content-label"
                   value={textContent}
                   onChange={(e) => setTextContent(e.target.value)}
                   className="w-full h-full p-3 font-mono text-[10px] bg-[var(--bg-main)] text-[var(--text-primary)] focus:outline-none resize-none leading-relaxed overflow-y-auto select-text"

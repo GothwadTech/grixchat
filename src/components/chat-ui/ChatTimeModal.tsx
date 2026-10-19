@@ -102,7 +102,7 @@ export default function ChatTimeModal({
           {/* Header */}
           <div className="flex items-center justify-between mb-5">
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-full bg-[#0494f4]/20 text-[#0494f4] flex items-center justify-center">
+              <div className="w-8 h-8 rounded-full bg-[#0479c2]/20 text-[#0494f4] flex items-center justify-center">
                 <Clock size={18} />
               </div>
               <h3 className="text-lg font-black tracking-wide text-zinc-100">{title || 'Chat Time Scheduler'}</h3>
@@ -122,14 +122,15 @@ export default function ChatTimeModal({
                 <p className="text-sm font-black text-zinc-200">Enable Limits</p>
                 <p className="text-[11px] font-medium text-zinc-500">Restricts when users can send messages</p>
               </div>
-              <label className="relative inline-flex items-center cursor-pointer select-none">
-                <input 
+              <label htmlFor="fld-kaicr1" className="relative inline-flex items-center cursor-pointer select-none">
+                <span className="sr-only">Enable limits</span>
+                <input id="fld-kaicr1" 
                   type="checkbox" 
                   checked={enabled} 
                   onChange={(e) => setEnabled(e.target.checked)} 
                   className="sr-only peer"
                 />
-                <div className="w-10 h-6 bg-zinc-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-zinc-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#0494f4]" />
+                <div className="w-10 h-6 bg-zinc-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-zinc-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#0479c2]" />
               </label>
             </div>
 
@@ -149,8 +150,9 @@ export default function ChatTimeModal({
                       <p className="text-[10px] font-medium text-zinc-500 font-hindi">चैट को पूर्णतः बंद करें</p>
                     </div>
                   </div>
-                  <label className="relative inline-flex items-center cursor-pointer select-none">
-                    <input 
+                  <label htmlFor="fld-xwi99p" className="relative inline-flex items-center cursor-pointer select-none">
+                    <span className="sr-only">Never allowed (Kabhi Nahi)</span>
+                    <input id="fld-xwi99p" 
                       type="checkbox" 
                       checked={neverAllowed} 
                       onChange={(e) => setNeverAllowed(e.target.checked)} 
@@ -166,9 +168,9 @@ export default function ChatTimeModal({
                     <div>
                       <div className="flex items-center gap-1.5 mb-2.5 pl-1">
                         <CalendarDays size={13} className="text-[#0494f4]" />
-                        <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">
+                        <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">
                           Allowed Days
-                        </label>
+                        </span>
                       </div>
                       <div className="flex justify-between gap-1">
                         {DAYS_OF_WEEK.map((day) => {
@@ -180,7 +182,7 @@ export default function ChatTimeModal({
                               onClick={() => toggleDay(day.value)}
                               className={`flex-1 py-2 text-center text-xs font-bold rounded-xl transition-all cursor-pointer border-none ${
                                 isSelected 
-                                  ? 'bg-[#0494f4] text-white shadow-md active:scale-95' 
+                                  ? 'bg-[#0479c2] text-white shadow-md active:scale-95' 
                                   : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-750'
                               }`}
                             >
@@ -194,10 +196,10 @@ export default function ChatTimeModal({
                     {/* Time Window Row */}
                     <div className="grid grid-cols-2 gap-3 pt-1">
                       <div>
-                        <label className="block text-[10px] font-black text-zinc-400 uppercase tracking-widest pl-1 mb-1.5">
+                        <label htmlFor="fld-b2w5me" className="block text-[10px] font-black text-zinc-400 uppercase tracking-widest pl-1 mb-1.5">
                           Start Time
                         </label>
-                        <input
+                        <input id="fld-b2w5me"
                           type="time"
                           value={startTime}
                           onChange={(e) => setStartTime(e.target.value)}
@@ -206,10 +208,10 @@ export default function ChatTimeModal({
                       </div>
 
                       <div>
-                        <label className="block text-[10px] font-black text-zinc-400 uppercase tracking-widest pl-1 mb-1.5">
+                        <label htmlFor="fld-g7yb5b" className="block text-[10px] font-black text-zinc-400 uppercase tracking-widest pl-1 mb-1.5">
                           End Time
                         </label>
-                        <input
+                        <input id="fld-g7yb5b"
                           type="time"
                           value={endTime}
                           onChange={(e) => setEndTime(e.target.value)}
@@ -234,7 +236,7 @@ export default function ChatTimeModal({
               <button
                 type="button"
                 onClick={handleSave}
-                className="flex-1 py-3 bg-[#0494f4] hover:bg-[#0382d6] text-sm font-black text-white rounded-2xl transition-all cursor-pointer border-none shadow-lg"
+                className="flex-1 py-3 bg-[#0479c2] hover:bg-[#0382d6] text-sm font-black text-white rounded-2xl transition-all cursor-pointer border-none shadow-lg"
               >
                 Save Schedule
               </button>

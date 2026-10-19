@@ -581,7 +581,7 @@ export default function ChatScreen() {
 
                 {/* Read */}
                 <div className="relative pl-6">
-                  <div className="absolute -left-[7px] top-1.5 w-3.5 h-3.5 rounded-full bg-[#0494f4] border-2 border-[var(--bg-card)] shadow-[0_0_10px_rgba(4,148,244,0.3)]" />
+                  <div className="absolute -left-[7px] top-1.5 w-3.5 h-3.5 rounded-full bg-[#0479c2] border-2 border-[var(--bg-card)] shadow-[0_0_10px_rgba(4,148,244,0.3)]" />
                   <p className="text-[10px] font-extrabold text-[#0494f4] tracking-widest uppercase leading-none mb-1 font-mono animate-pulse">Read</p>
                   <p className="text-[13.5px] font-black text-[var(--text-primary)] leading-tight">
                     {formatDetailedDate(new Date(new Date(infoModalMessage.created_at || Date.now()).getTime() + 2400).toISOString())}
@@ -592,7 +592,7 @@ export default function ChatScreen() {
               <button
                 type="button"
                 onClick={() => setInfoModalMessage(null)}
-                className="w-full text-center py-3.5 text-[14px] font-black text-white bg-[#0494f4] hover:bg-[#0382d6] active:scale-[0.98] transition-all rounded-2xl cursor-pointer border-none shadow-[0_4px_15px_rgba(4,148,244,0.25)] select-none"
+                className="w-full text-center py-3.5 text-[14px] font-black text-white bg-[#0479c2] hover:bg-[#0382d6] active:scale-[0.98] transition-all rounded-2xl cursor-pointer border-none shadow-[0_4px_15px_rgba(4,148,244,0.25)] select-none"
               >
                 Close Description
               </button>

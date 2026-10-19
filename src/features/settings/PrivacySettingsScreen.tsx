@@ -61,13 +61,13 @@ export default function PrivacySettingsScreen() {
           <h3 className="mb-2 text-[10.5px] font-black text-[#0494f4] uppercase tracking-wider select-none">
             Account Privacy
           </h3>
-          <div className="bg-[#0494f4]/5 border border-[#0494f4]/15 rounded-2xl p-4 flex flex-col gap-3.5">
+          <div className="bg-[#0479c2]/5 border border-[#0494f4]/15 rounded-2xl p-4 flex flex-col gap-3.5">
             <div className="flex p-1 bg-[var(--bg-card)] border border-[var(--border-color)]/20 rounded-xl gap-1">
               <button 
                 onClick={() => updatePrivacySetting('profileType', 'public')}
                 className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all duration-200 ${
                   !isPrivate 
-                  ? 'bg-[#0494f4] text-white shadow-sm' 
+                  ? 'bg-[#0479c2] text-white shadow-sm' 
                   : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
                 }`}
               >

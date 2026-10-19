@@ -137,7 +137,7 @@ export default function ActiveSessionsScreen() {
 
       <div className="flex-1 overflow-y-auto no-scrollbar py-6 pb-24">
         {/* Helper info banner */}
-        <div className="mx-6 mb-6 p-4 bg-[#0494f4]/5 border border-[#0494f4]/10 rounded-2xl flex gap-3.5 items-start">
+        <div className="mx-6 mb-6 p-4 bg-[#0479c2]/5 border border-[#0494f4]/10 rounded-2xl flex gap-3.5 items-start">
           <Globe className="text-[#0494f4] shrink-0 mt-0.5" size={18} />
           <div>
             <h4 className="text-xs font-bold text-[#0494f4]">Active Session Tracker</h4>

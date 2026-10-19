@@ -2,6 +2,7 @@ import React from 'react';
 import { useSearch } from '../../contexts/SearchContext.tsx';
 import { Search, X } from 'lucide-react';
 import TabHeader from './TabHeader.tsx';
+import { focusOnMount } from '../../utils/focusOnMount';
 
 export default function TopNav() {
   const { searchTerm, setSearchTerm, isSearchOpen, setIsSearchOpen } = useSearch();
@@ -15,7 +16,7 @@ export default function TopNav() {
           <div className="flex-1 flex items-center bg-[var(--bg-main)] rounded-xl px-4 h-[44px] border border-[var(--border-color)]">
             <Search size={18} className="text-[var(--text-secondary)] mr-3 opacity-50" />
             <input 
-              autoFocus
+              ref={focusOnMount}
               type="text" 
               placeholder="Search chats, groups..." 
               value={searchTerm}

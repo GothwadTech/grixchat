@@ -303,7 +303,7 @@ export default function ImagePreviewScreen() {
   const isMe = senderName === 'You' || !senderName;
 
   return (
-    <div
+    <div role="button" tabIndex={0} onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.currentTarget.click(); } }}
       ref={containerRef}
       className={`h-[100dvh] w-full transition-colors duration-300 ${getBgClass()} flex flex-col relative overflow-hidden select-none font-sans`}
       onMouseMove={handleMouseMove}
@@ -483,16 +483,17 @@ export default function ImagePreviewScreen() {
       </motion.div>
 
       {/* Main Presentation Stage */}
-      <div
+      <div role="button" tabIndex={0} onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.currentTarget.click(); } }}
         className="flex-1 flex items-center justify-center relative overflow-hidden"
         onClick={toggleControls}
         onMouseDown={handleMouseDown}
       >
         {videoUrl ? (
-          <div
+          <div role="button" tabIndex={0} onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.currentTarget.click(); } }}
             className="relative w-full max-w-4xl aspect-video bg-black flex items-center justify-center rounded-2xl overflow-hidden shadow-2xl border border-white/5"
             onClick={(e) => e.stopPropagation()}
           >
+            {/* eslint-disable-next-line jsx-a11y/media-has-caption -- user-recorded video with no caption source in the app */}
             <video
               ref={videoRef}
               src={videoUrl}
@@ -509,12 +510,12 @@ export default function ImagePreviewScreen() {
             />
 
             {/* Tap areas for dual speed rewinding/seeking */}
-            <div
+            <div role="button" tabIndex={0} onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.currentTarget.click(); } }}
               className="absolute top-0 left-0 w-[33%] h-full z-20 cursor-pointer"
               onClick={(e) => e.stopPropagation()}
               onDoubleClick={handleLeftDoubleClick}
             />
-            <div
+            <div role="button" tabIndex={0} onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.currentTarget.click(); } }}
               className="absolute top-0 right-0 w-[33%] h-full z-20 cursor-pointer"
               onClick={(e) => e.stopPropagation()}
               onDoubleClick={handleRightDoubleClick}
@@ -617,7 +618,7 @@ role="presentation"             className="fixed inset-0 z-[100] bg-black/75 bac
 
               <button
                 onClick={() => setShowDetailsPanel(false)}
-                className="w-full bg-[#0494f4] hover:bg-[#037ed1] text-white text-[11px] font-black uppercase tracking-wider py-3 rounded-xl transition-all"
+                className="w-full bg-[#0479c2] hover:bg-[#037ed1] text-white text-[11px] font-black uppercase tracking-wider py-3 rounded-xl transition-all"
               >
                 Done
               </button>
@@ -704,7 +705,7 @@ role="presentation"             className="fixed inset-0 z-[100] bg-black/75 bac
                     setShowSpeedMenu(!showSpeedMenu);
                   }}
                   className={`px-3 py-1.5 hover:bg-white/10 rounded-full text-white transition-all flex items-center justify-center gap-1.5 border border-white/10 ${
-                    playbackSpeed !== 1 ? 'border-[#0494f4] bg-[#0494f4]/15 text-sky-400' : ''
+                    playbackSpeed !== 1 ? 'border-[#0494f4] bg-[#0479c2]/15 text-sky-400' : ''
                   }`}
                 >
                   <Gauge size={13} />
@@ -728,7 +729,7 @@ role="presentation"             className="fixed inset-0 z-[100] bg-black/75 bac
                           }}
                           className={`w-full flex items-center justify-between px-3.5 py-2 text-[10px] font-black rounded-lg transition-all ${
                             playbackSpeed === speed
-                              ? 'bg-[#0494f4] text-white'
+                              ? 'bg-[#0479c2] text-white'
                               : 'text-white/80 hover:bg-white/10 hover:text-white'
                           }`}
                         >

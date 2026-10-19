@@ -246,7 +246,7 @@ export const ChatForwardOverlay: React.FC<ChatForwardOverlayProps> = ({
               type="button"
               disabled={loading}
               onClick={handleSend}
-              className="shrink-0 w-[48px] h-[48px] flex items-center justify-center rounded-full bg-[#0494f4] hover:bg-[#0382d6] text-white shadow-md active:scale-95 transition-all duration-100 cursor-pointer border-none disabled:opacity-40"
+              className="shrink-0 w-[48px] h-[48px] flex items-center justify-center rounded-full bg-[#0479c2] hover:bg-[#0382d6] text-white shadow-md active:scale-95 transition-all duration-100 cursor-pointer border-none disabled:opacity-40"
               title="Send Forwarded Message"
             >
               {loading ? (

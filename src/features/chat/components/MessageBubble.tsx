@@ -411,7 +411,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
       const totalVotes = options.reduce((sum: number, opt: any) => sum + (Array.isArray(opt.voters) ? opt.voters.length : 0), 0);
 
       renderedContent = (
-        <div 
+        <div role="button" tabIndex={0} onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.currentTarget.click(); } }} 
           className="flex flex-col gap-2 min-w-[230px] max-w-[280px] p-2 bg-black/15 dark:bg-black/25 rounded-2xl border border-white/5 text-zinc-200 select-none cursor-default"
           onClick={(e) => e.stopPropagation()}
         >
@@ -497,7 +497,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
       const isCompleted = task.status === 'completed';
 
       renderedContent = (
-        <div 
+        <div role="button" tabIndex={0} onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.currentTarget.click(); } }} 
           className="flex flex-col gap-2 min-w-[230px] max-w-[280px] p-3 bg-black/15 dark:bg-black/25 rounded-2xl border border-white/5 text-zinc-200 select-none cursor-default"
           onClick={(e) => {
             e.stopPropagation();
@@ -588,7 +588,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
   }
 
   return (
-    <div 
+    <div role="button" tabIndex={0} onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.currentTarget.click(); } }} 
       id={`msg-${msg.id}`} 
       onClick={(e) => {
         if (selectedMsgIds && selectedMsgIds.length > 0) {

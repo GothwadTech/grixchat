@@ -89,7 +89,7 @@ export const MessageList: React.FC<MessageListProps> = ({
   }, [scrollContainerRef]);
 
   return (
-    <div 
+    <div role="button" tabIndex={0} onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.currentTarget.click(); } }} 
       ref={scrollContainerRef}
       onScroll={handleScroll}
       className={`flex-1 overflow-y-auto overflow-x-hidden px-0 py-4 relative no-scrollbar touch-pan-y w-full max-w-full ${chatBackground || 'bg-[var(--bg-main)]'}`} 

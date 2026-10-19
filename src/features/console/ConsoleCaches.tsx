@@ -121,7 +121,7 @@ export default function ConsoleCaches({ showToastNotification }: ConsoleCachesPr
                 }}
                 className={`w-full p-2.5 text-left rounded-xl transition-all border outline-none font-mono text-xs flex flex-col gap-1 cursor-pointer select-none ${
                   selectedItem?.key === item.key
-                    ? 'bg-[#0494f4]/10 border-[#0494f4]/35 text-[var(--text-primary)] shadow-md'
+                    ? 'bg-[#0479c2]/10 border-[#0494f4]/35 text-[var(--text-primary)] shadow-md'
                     : 'bg-[var(--bg-card)] border-[var(--border-color)]/30 hover:border-[#0494f4]/20 text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
                 }`}
               >
@@ -193,7 +193,7 @@ export default function ConsoleCaches({ showToastNotification }: ConsoleCachesPr
             </div>
 
             {/* Decoded structured view area */}
-            <div className="flex-1 bg-[var(--bg-card)] border border-[var(--border-color)] p-3 mt-3 overflow-y-auto font-mono text-[10px] text-[var(--text-primary)] selection:bg-[#0494f4]/25 rounded-2xl custom-scrollbar select-text leading-relaxed">
+            <div className="flex-1 bg-[var(--bg-card)] border border-[var(--border-color)] p-3 mt-3 overflow-y-auto font-mono text-[10px] text-[var(--text-primary)] selection:bg-[#0479c2]/25 rounded-2xl custom-scrollbar select-text leading-relaxed">
               <div className="flex items-center justify-between mb-2 select-none">
                 <span className="text-[var(--text-secondary)] uppercase text-[8px] tracking-wider block font-sans font-black flex items-center gap-1">
                   <Sparkles size={11} className="text-[#0494f4]" />
@@ -214,7 +214,7 @@ export default function ConsoleCaches({ showToastNotification }: ConsoleCachesPr
                 </button>
               </div>
 
-              <pre className="whitespace-pre-wrap break-all select-text font-mono selection:bg-[#0494f4]/20">
+              <pre className="whitespace-pre-wrap break-all select-text font-mono selection:bg-[#0479c2]/20">
                 {(() => {
                   try {
                     const val = LocalDataCache.get<any>(selectedItem.key);

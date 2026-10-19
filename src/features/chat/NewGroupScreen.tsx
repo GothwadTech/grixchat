@@ -14,6 +14,7 @@ import { useAuth } from '../../providers/AuthProvider.tsx';
 import { motion, AnimatePresence } from 'motion/react';
 import { ImageService } from '../../services/ImageService.ts';
 import Avatar from '../../components/common/Avatar';
+import { focusOnMount } from '../../utils/focusOnMount';
 
 interface UserProfile {
   id: string;
@@ -223,7 +224,7 @@ export default function NewGroupScreen() {
         {step === 1 && selectedUsers.length > 0 && (
           <button aria-label="Confirm" 
             onClick={() => setStep(2)}
-            className="p-2 bg-[#0494f4] text-white rounded-full shadow-lg shadow-[#0494f4]/20 active:scale-90 transition-transform"
+            className="p-2 bg-[#0479c2] text-white rounded-full shadow-lg shadow-[#0494f4]/20 active:scale-90 transition-transform"
           >
             <Check size={20} />
           </button>
@@ -244,7 +245,7 @@ export default function NewGroupScreen() {
               {selectedUsers.length > 0 && (
                 <div className="flex gap-2 overflow-x-auto no-scrollbar py-2">
                   {selectedUsers.map(user => (
-                    <div key={user.id} className="flex items-center gap-1.5 px-2 py-1 bg-[#0494f4]/10 border border-[#0494f4]/20 rounded-full shrink-0">
+                    <div key={user.id} className="flex items-center gap-1.5 px-2 py-1 bg-[#0479c2]/10 border border-[#0494f4]/20 rounded-full shrink-0">
                       <Avatar url={user.photoURL} type="direct" size="custom" customSizeClass="w-5 h-5" name={user.fullName} />
                       <span className="text-[9px] font-bold text-[#0494f4] truncate max-w-[60px]">{user.fullName}</span>
                       <button aria-label="Close" onClick={() => toggleUserSelection(user)} className="text-[#0494f4] hover:text-[#0494f4]/80">
@@ -278,15 +279,15 @@ export default function NewGroupScreen() {
                   filteredFriends.map(user => {
                     const isSelected = selectedUsers.some(u => u.id === user.id);
                     return (
-                      <div 
+                      <div role="button" tabIndex={0} onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.currentTarget.click(); } }} 
                         key={user.id}
                         onClick={() => toggleUserSelection(user)}
-                        className={`flex items-center gap-3 p-3 rounded-2xl transition-all cursor-pointer ${isSelected ? 'bg-[#0494f4]/5 ring-1 ring-[#0494f4]/20' : 'hover:bg-black/5'}`}
+                        className={`flex items-center gap-3 p-3 rounded-2xl transition-all cursor-pointer ${isSelected ? 'bg-[#0479c2]/5 ring-1 ring-[#0494f4]/20' : 'hover:bg-black/5'}`}
                       >
                         <div className="relative">
                           <Avatar url={user.photoURL} type="direct" size="custom" customSizeClass="w-11 h-11" name={user.fullName} />
                           {isSelected && (
-                            <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-[#0494f4] rounded-full flex items-center justify-center border-2 border-[var(--bg-main)]">
+                            <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-[#0479c2] rounded-full flex items-center justify-center border-2 border-[var(--bg-main)]">
                               <Check size={10} className="text-white" />
                             </div>
                           )}
@@ -324,7 +325,7 @@ export default function NewGroupScreen() {
                     </div>
                   )}
                 </div>
-                <label className="absolute bottom-1 right-1 p-2 bg-[#0494f4] text-white rounded-full shadow-lg cursor-pointer hover:scale-110 active:scale-95 transition-all">
+                <label className="absolute bottom-1 right-1 p-2 bg-[#0479c2] text-white rounded-full shadow-lg cursor-pointer hover:scale-110 active:scale-95 transition-all">
                   <Camera size={18} />
                   <input type="file" className="hidden" accept="image/*" onChange={handleIconChange} />
                 </label>
@@ -338,7 +339,7 @@ export default function NewGroupScreen() {
                   <input 
                     type="text"
                     placeholder={groupType === 'channel' ? "Enter channel name..." : "Enter group name..."}
-                    autoFocus
+                    ref={focusOnMount}
                     value={groupName}
                     onChange={(e) => setGroupName(e.target.value)}
                     className="w-full bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl py-3 px-4 text-sm font-bold outline-none focus:border-[#0494f4] transition-colors shadow-sm"
@@ -369,7 +370,7 @@ export default function NewGroupScreen() {
               <button 
                 onClick={handleCreateGroup}
                 disabled={!groupName.trim() || creating}
-                className="w-full max-w-sm mt-8 bg-[#0494f4] text-white py-4 rounded-2xl font-black uppercase tracking-widest shadow-xl shadow-[#0494f4]/20 hover:opacity-90 active:scale-[0.98] transition-all disabled:opacity-50 disabled:scale-100 flex items-center justify-center gap-3"
+                className="w-full max-w-sm mt-8 bg-[#0479c2] text-white py-4 rounded-2xl font-black uppercase tracking-widest shadow-xl shadow-[#0494f4]/20 hover:opacity-90 active:scale-[0.98] transition-all disabled:opacity-50 disabled:scale-100 flex items-center justify-center gap-3"
               >
                 {creating ? (
                   <>

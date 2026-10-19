@@ -35,7 +35,7 @@
 @layer base {
   /* Light Theme (Default) */
   :root {
-    --primary: #0494f4;
+    --primary: #0479c2;
     --primary-foreground: #ffffff;
     --primary-shadow: rgba(4, 148, 244, 0.1);
     --bg-main: #ffffff;
@@ -60,7 +60,7 @@
 
   /* Dark Theme */
   [data-theme='dark'] {
-    --primary: #0494f4;
+    --primary: #0479c2;
     --primary-foreground: #ffffff;
     --primary-shadow: rgba(4, 148, 244, 0.2);
     --bg-main: #202124;
@@ -160,4 +160,26 @@
 .no-scrollbar {
   -ms-overflow-style: none;
   scrollbar-width: none;
+}
+
+/* Accessibility baseline ------------------------------------------------------
+   Keyboard focus must be visible in both themes (WCAG 2.4.7). */
+@layer base {
+  :focus-visible {
+    outline: 2px solid #0479c2;
+    outline-offset: 2px;
+  }
+}
+
+/* Respect the OS "reduce motion" setting (WCAG 2.3.3). Motion components also read
+   it through <MotionConfig reducedMotion="user"> in main.tsx. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

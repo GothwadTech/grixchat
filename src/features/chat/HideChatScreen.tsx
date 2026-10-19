@@ -6,6 +6,7 @@ import { useConversations } from './hooks/useConversations';
 import { ChatUserList } from './components/ChatUserList';
 import { CommonSearchBar } from '../../components/common/CommonSearchBar';
 import { motion } from 'motion/react';
+import { focusOnMount } from '../../utils/focusOnMount';
 
 // Safe Session Storage Wrapper for sandboxed iframe environments
 const safeSessionStorage = {
@@ -142,7 +143,7 @@ export default function HideChatScreen() {
                     setErrorMsg('');
                     setInputCode(e.target.value);
                   }}
-                  autoFocus
+                  ref={focusOnMount}
                   className="w-full bg-[var(--bg-main)] border border-[var(--border-color)] rounded-xl px-4 py-3.5 text-center text-base font-black tracking-widest text-[var(--text-primary)] outline-none focus:border-[var(--primary)] transition-all shadow-sm"
                 />
               </div>

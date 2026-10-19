@@ -272,7 +272,7 @@ export default function GithubFileList({
                 key={file.path} 
                 className={`flex items-center justify-between p-3 transition-colors ${isChecked ? 'bg-primary/[0.02]' : ''}`}
               >
-                <div 
+                <div role="button" tabIndex={0} onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.currentTarget.click(); } }} 
                   onClick={() => onTogglePath(file.path)}
                   className="flex-1 min-w-0 flex items-center gap-2.5 cursor-pointer select-none"
                 >

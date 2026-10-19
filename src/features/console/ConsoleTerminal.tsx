@@ -190,7 +190,7 @@ export default function ConsoleTerminal({
         <div className="flex flex-wrap gap-1 shadow-sm">
           <button
             onClick={() => setFilter('all')}
-            className={`px-2 py-1.5 rounded-lg text-[10px] font-mono font-bold transition-all cursor-pointer border ${filter === 'all' ? 'bg-[#0494f4]/15 border-[#0494f4] text-[#0494f4]' : 'bg-[var(--box-bg)] border-[var(--border-color)]/20 text-[var(--text-secondary)] hover:bg-[var(--border-color)]/10'}`}
+            className={`px-2 py-1.5 rounded-lg text-[10px] font-mono font-bold transition-all cursor-pointer border ${filter === 'all' ? 'bg-[#0479c2]/15 border-[#0494f4] text-[#0494f4]' : 'bg-[var(--box-bg)] border-[var(--border-color)]/20 text-[var(--text-secondary)] hover:bg-[var(--border-color)]/10'}`}
             style={{ minHeight: '32px' }}
           >
             All ({logs.length})
@@ -283,7 +283,7 @@ export default function ConsoleTerminal({
             }
 
             return (
-              <div 
+              <div role="button" tabIndex={0} onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.currentTarget.click(); } }} 
                 key={log.id} 
                 onClick={() => toggleLogAccordion(log.id)}
                 className={`p-2.5 rounded-xl border ${cardBg} ${themeClass} hover:border-[#0494f4]/45 transition-all cursor-pointer`}
@@ -292,7 +292,7 @@ export default function ConsoleTerminal({
                   <div className="flex items-start gap-2 min-w-0">
                     <span className="text-[var(--text-secondary)]/40 text-[9px] pt-0.5 select-none shrink-0">{log.timestamp}</span>
                     <span className="shrink-0 text-center select-none pt-0.5 text-xs">{iconText}</span>
-                    <span className="break-all text-[11px] pr-1 select-text selection:bg-[#0494f4]/20">
+                    <span className="break-all text-[11px] pr-1 select-text selection:bg-[#0479c2]/20">
                       {log.message}
                     </span>
                   </div>
@@ -317,7 +317,7 @@ export default function ConsoleTerminal({
 
                 {/* Info accordion payload details */}
                 {isExpanded && log.details && (
-                  <div 
+                  <div role="button" tabIndex={0} onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.currentTarget.click(); } }} 
                     className="mt-2.5 p-2.5 bg-[var(--box-bg)] border border-[var(--border-color)] rounded-lg text-[10px] text-[var(--text-primary)] overflow-x-auto select-text font-mono"
                     onClick={(e) => e.stopPropagation()}
                   >
@@ -399,7 +399,7 @@ export default function ConsoleTerminal({
         />
         <button
           type="submit"
-          className="px-3.5 py-2 bg-[#0494f4] hover:bg-[#0383d8] active:scale-95 text-white font-mono text-[10px] uppercase font-bold tracking-wider rounded-xl flex items-center gap-1.5 transition-all shrink-0 cursor-pointer border-none"
+          className="px-3.5 py-2 bg-[#0479c2] hover:bg-[#0383d8] active:scale-95 text-white font-mono text-[10px] uppercase font-bold tracking-wider rounded-xl flex items-center gap-1.5 transition-all shrink-0 cursor-pointer border-none"
           style={{ minHeight: '36px' }}
         >
           <Send size={11} />

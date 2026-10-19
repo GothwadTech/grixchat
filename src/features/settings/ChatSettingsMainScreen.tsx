@@ -114,7 +114,7 @@ export default function ChatSettingsMainScreen() {
               </div>
               <div className="flex items-center gap-1.5 shrink-0">
                 {archivedCount > 0 && (
-                  <span className="text-[10px] bg-[#0494f4] text-white font-black px-2 py-0.5 rounded-full select-none">
+                  <span className="text-[10px] bg-[#0479c2] text-white font-black px-2 py-0.5 rounded-full select-none">
                     {archivedCount}
                   </span>
                 )}
@@ -179,7 +179,7 @@ export default function ChatSettingsMainScreen() {
               Chat Wallpaper & Background
             </h3>
           </div>
-          <div className="bg-[#0494f4]/5 border border-[#0494f4]/15 rounded-2xl p-4 space-y-4">
+          <div className="bg-[#0479c2]/5 border border-[#0494f4]/15 rounded-2xl p-4 space-y-4">
             <div className="grid grid-cols-3 gap-2.5">
               {backgrounds.map((bg) => (
                 <button

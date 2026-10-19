@@ -82,7 +82,7 @@ export const ProfileTabDropdown: React.FC<ProfileTabDropdownProps> = ({
           <div className="w-full px-4 py-2.5 text-left flex items-center gap-3 min-w-0 text-[13px] font-semibold text-[var(--text-primary)]">
             <User size={16} className="text-[var(--text-secondary)] shrink-0" />
             <span className="truncate flex-1 font-semibold">@{userData?.username || 'username'}</span>
-            <span className="w-1.5 h-1.5 rounded-full bg-[#0494f4] shrink-0" />
+            <span className="w-1.5 h-1.5 rounded-full bg-[#0479c2] shrink-0" />
           </div>
 
           {/* Other Switchable accounts listed immediately below current account */}

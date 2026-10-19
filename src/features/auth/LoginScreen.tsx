@@ -252,7 +252,7 @@ export default function LoginScreen() {
           <div className="w-full flex p-1 gap-2 select-none mb-5 max-w-md">
             <button
               type="button"
-              className="flex-1 py-2.5 text-xs font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer flex items-center justify-center gap-2 bg-[#0494f4] text-white shadow-md shadow-[#0494f4]/15"
+              className="flex-1 py-2.5 text-xs font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer flex items-center justify-center gap-2 bg-[#0479c2] text-white shadow-md shadow-[#0494f4]/15"
             >
               Sign In
             </button>
@@ -301,14 +301,14 @@ export default function LoginScreen() {
               </div>
 
               <div className="flex justify-between items-center px-1">
-                <div 
+                <div role="button" tabIndex={0} onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.currentTarget.click(); } }} 
                   onClick={() => setRememberMe(!rememberMe)}
                   className="flex items-center gap-2.5 cursor-pointer group select-none py-1"
                 >
                   <div 
                     className={`w-[18px] h-[18px] rounded-[5px] border flex items-center justify-center transition-all duration-200 ${
                       rememberMe 
-                        ? 'bg-[#0494f4] border-[#0494f4] shadow-sm shadow-[#0494f4]/20' 
+                        ? 'bg-[#0479c2] border-[#0494f4] shadow-sm shadow-[#0494f4]/20' 
                         : 'bg-[var(--bg-card)] border-[var(--border-color)] group-hover:border-[var(--primary)]'
                     }`}
                   >
@@ -443,7 +443,7 @@ export default function LoginScreen() {
 
           <div className="w-full bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl p-5 text-center flex flex-col items-center justify-center mt-6 shadow-sm select-none gap-3.5">
             <p className="text-[10px] text-[var(--text-secondary)]/65 leading-relaxed max-w-[280px] mx-auto">
-              By using <a href="https://grixchat.gothwadtech.com" target="_blank" rel="noopener noreferrer" className="font-bold text-[#0494f4] hover:underline cursor-pointer">GrixChat</a>, you agree to our <span onClick={() => navigate('/terms')} className="font-bold text-[var(--primary)] hover:underline cursor-pointer">Terms of Service</span> & <span onClick={() => navigate('/terms')} className="font-bold text-[var(--primary)] hover:underline cursor-pointer">Privacy Policy</span>.
+              By using <a href="https://grixchat.gothwadtech.com" target="_blank" rel="noopener noreferrer" className="font-bold text-[#0494f4] hover:underline cursor-pointer">GrixChat</a>, you agree to our <span role="button" tabIndex={0} onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.currentTarget.click(); } }} onClick={() => navigate('/terms')} className="font-bold text-[var(--primary)] hover:underline cursor-pointer">Terms of Service</span> & <span role="button" tabIndex={0} onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.currentTarget.click(); } }} onClick={() => navigate('/terms')} className="font-bold text-[var(--primary)] hover:underline cursor-pointer">Privacy Policy</span>.
             </p>
             <div className="w-full h-[1px] bg-[var(--border-color)]/50"></div>
             <div className="text-center max-w-[280px] mx-auto">

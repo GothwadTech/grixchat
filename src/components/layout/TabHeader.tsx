@@ -367,7 +367,7 @@ export default function TabHeader() {
           <Link to="/notifications/likes" className="p-2 hover:bg-black/5 rounded-full transition-colors cursor-pointer group relative">
             <Heart size={22} className="text-[var(--header-text)] group-active:scale-110 transition-transform stroke-[2.5]" fill={location.pathname === '/notifications/likes' ? "currentColor" : "none"} />
             {hasUnreadLikes && (
-              <span className="absolute top-2 right-2 w-2 h-2 bg-[#0494f4] rounded-full border-2 border-[var(--header-bg)]" />
+              <span className="absolute top-2 right-2 w-2 h-2 bg-[#0479c2] rounded-full border-2 border-[var(--header-bg)]" />
             )}
           </Link>
         )}
@@ -377,7 +377,7 @@ export default function TabHeader() {
           <Link to="/notifications" className="p-2 hover:bg-black/5 rounded-full transition-colors cursor-pointer group relative">
             <Bell size={22} className="text-[var(--header-text)] group-active:scale-110 transition-transform stroke-[2.5]" />
             {hasUnreadNotifs && (
-              <span className="absolute top-2 right-2 w-2 h-2 bg-[#0494f4] rounded-full border-2 border-[var(--header-bg)]" />
+              <span className="absolute top-2 right-2 w-2 h-2 bg-[#0479c2] rounded-full border-2 border-[var(--header-bg)]" />
             )}
           </Link>
         )}

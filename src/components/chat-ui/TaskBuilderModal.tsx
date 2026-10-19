@@ -56,7 +56,7 @@ export default function TaskBuilderModal({ isOpen, onClose, onCreate }: TaskBuil
           </button>
           
           <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded-full bg-[#0494f4]/20 text-[#0494f4] flex items-center justify-center">
+            <div className="w-6 h-6 rounded-full bg-[#0479c2]/20 text-[#0494f4] flex items-center justify-center">
               <ClipboardList size={14} />
             </div>
             <span className="text-[14px] font-black tracking-wider uppercase text-zinc-200">New Task Workspace</span>
@@ -71,10 +71,10 @@ export default function TaskBuilderModal({ isOpen, onClose, onCreate }: TaskBuil
           <form onSubmit={handleSubmit} className="max-w-md mx-auto w-full space-y-6">
             
             <div className="space-y-1.5">
-              <label className="block text-[10px] font-black text-zinc-450 uppercase tracking-widest pl-1">
+              <label htmlFor="fld-d5t3dy" className="block text-[10px] font-black text-zinc-450 uppercase tracking-widest pl-1">
                 Task Title
               </label>
-              <input
+              <input id="fld-d5t3dy"
                 type="text"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
@@ -86,10 +86,10 @@ export default function TaskBuilderModal({ isOpen, onClose, onCreate }: TaskBuil
             </div>
 
             <div className="space-y-1.5">
-              <label className="block text-[10px] font-black text-zinc-450 uppercase tracking-widest pl-1">
+              <label htmlFor="fld-r6a9t5" className="block text-[10px] font-black text-zinc-450 uppercase tracking-widest pl-1">
                 Task Info / Remarks (Optional)
               </label>
-              <textarea
+              <textarea id="fld-r6a9t5"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="Describe the task instructions/expectations..."
@@ -101,10 +101,10 @@ export default function TaskBuilderModal({ isOpen, onClose, onCreate }: TaskBuil
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <label className="block text-[10px] font-black text-zinc-450 uppercase tracking-widest pl-1">
+                <label htmlFor="fld-l8vavx" className="block text-[10px] font-black text-zinc-450 uppercase tracking-widest pl-1">
                   Assignee Name
                 </label>
-                <input
+                <input id="fld-l8vavx"
                   type="text"
                   value={assignee}
                   onChange={(e) => setAssignee(e.target.value)}
@@ -115,11 +115,11 @@ export default function TaskBuilderModal({ isOpen, onClose, onCreate }: TaskBuil
               </div>
 
               <div className="space-y-1.5">
-                <label className="block text-[10px] font-black text-zinc-450 uppercase tracking-widest pl-1">
+                <label htmlFor="fld-ah9tsm" className="block text-[10px] font-black text-zinc-450 uppercase tracking-widest pl-1">
                   Target Due Date
                 </label>
                 <div className="relative">
-                  <input
+                  <input id="fld-ah9tsm"
                     type="date"
                     value={dueDate}
                     onChange={(e) => setDueDate(e.target.value)}
@@ -134,7 +134,7 @@ export default function TaskBuilderModal({ isOpen, onClose, onCreate }: TaskBuil
               <button
                 type="submit"
                 disabled={!title.trim()}
-                className="w-full py-4 bg-[#0494f4] hover:bg-[#0382d6] disabled:opacity-30 disabled:cursor-not-allowed text-white font-black text-xs uppercase tracking-wider rounded-2xl transition-all shadow-lg active:scale-98 flex items-center justify-center cursor-pointer"
+                className="w-full py-4 bg-[#0479c2] hover:bg-[#0382d6] disabled:opacity-30 disabled:cursor-not-allowed text-white font-black text-xs uppercase tracking-wider rounded-2xl transition-all shadow-lg active:scale-98 flex items-center justify-center cursor-pointer"
               >
                 Launch Task onto Chat
               </button>

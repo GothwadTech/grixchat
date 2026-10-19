@@ -9,6 +9,7 @@ import { useAuth } from '../../providers/AuthProvider.tsx';
 import ChatSettingsHeader from './components/ChatSettingsHeader';
 import ChatSettingsDetails from './components/ChatSettingsDetails';
 import ChatSettingsSharedAssets from './components/ChatSettingsSharedAssets';
+import { focusOnMount } from '../../utils/focusOnMount';
 
 const DAYS_OF_WEEK = [
   { value: 0, label: 'Sun' },
@@ -453,7 +454,7 @@ export default function ChatSettingsScreen() {
         <div className="w-full bg-[#1e2022] dark:bg-[#17181a] border border-white/5 rounded-3xl p-5 text-left text-white shadow-md flex flex-col gap-4">
           <div className="flex items-center justify-between border-b border-white/5 pb-3">
             <div className="flex items-center gap-2.5">
-              <div className="w-7 h-7 rounded-lg bg-[#0494f4]/15 text-[#0494f4] flex items-center justify-center">
+              <div className="w-7 h-7 rounded-lg bg-[#0479c2]/15 text-[#0494f4] flex items-center justify-center">
                 <Clock size={16} />
               </div>
               <div className="flex flex-col">
@@ -462,14 +463,15 @@ export default function ChatSettingsScreen() {
               </div>
             </div>
 
-            <label className="relative inline-flex items-center cursor-pointer select-none">
-              <input 
+            <label htmlFor="fld-tfhjie" className="relative inline-flex items-center cursor-pointer select-none">
+              <span className="sr-only">Chat Time Scheduler</span>
+              <input id="fld-tfhjie" 
                 type="checkbox" 
                 checked={chatTimeEnabled} 
                 onChange={(e) => setChatTimeEnabled(e.target.checked)} 
                 className="sr-only peer"
               />
-              <div className="w-9 h-5 bg-zinc-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-zinc-400 after:border-zinc-500 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#0494f4]"></div>
+              <div className="w-9 h-5 bg-zinc-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-zinc-400 after:border-zinc-500 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#0479c2]"></div>
             </label>
           </div>
 
@@ -491,8 +493,9 @@ export default function ChatSettingsScreen() {
                       <span className="text-[9px] text-zinc-555 font-hindi font-semibold text-rose-350">चैट पूर्णतः प्रतिबंधित करें</span>
                     </div>
                   </div>
-                  <label className="relative inline-flex items-center cursor-pointer select-none">
-                    <input 
+                  <label htmlFor="fld-2dwjui" className="relative inline-flex items-center cursor-pointer select-none">
+                    <span className="sr-only">Never allowed (Kabhi Nahi)</span>
+                    <input id="fld-2dwjui" 
                       type="checkbox" 
                       checked={chatTimeNeverAllowed} 
                       onChange={(e) => setChatTimeNeverAllowed(e.target.checked)} 
@@ -521,7 +524,7 @@ export default function ChatSettingsScreen() {
                               onClick={() => toggleScheduleDay(day.value)}
                               className={`flex-1 py-1.5 text-center text-[10px] font-black rounded-xl transition-all cursor-pointer border-none select-none relative active:scale-95 ${
                                 isSelected 
-                                  ? 'bg-[#0494f4] text-white shadow-sm' 
+                                  ? 'bg-[#0479c2] text-white shadow-sm' 
                                   : 'bg-zinc-900 text-zinc-500 hover:bg-zinc-800'
                               }`}
                             >
@@ -564,7 +567,7 @@ export default function ChatSettingsScreen() {
             type="button"
             onClick={handleSaveChatTimeSchedule}
             disabled={savingSchedule}
-            className="w-full py-3.5 bg-[#0494f4] hover:bg-[#0382d6] active:scale-[0.98] disabled:opacity-40 rounded-2xl text-[11px] font-black uppercase tracking-wider text-white transition-all shadow-md cursor-pointer border-none flex items-center justify-center gap-2 mt-1"
+            className="w-full py-3.5 bg-[#0479c2] hover:bg-[#0382d6] active:scale-[0.98] disabled:opacity-40 rounded-2xl text-[11px] font-black uppercase tracking-wider text-white transition-all shadow-md cursor-pointer border-none flex items-center justify-center gap-2 mt-1"
           >
             {savingSchedule ? (
               <>
@@ -615,7 +618,7 @@ export default function ChatSettingsScreen() {
                 onChange={(e) => setNickname(e.target.value)}
                 placeholder="Enter nickname..."
                 className="w-full bg-[var(--bg-main)] border border-[var(--border-color)] rounded-xl px-4 py-3 mb-6 focus:outline-none focus:ring-1 focus:ring-[var(--primary)] font-semibold text-xs text-[var(--text-primary)]"
-                autoFocus
+                ref={focusOnMount}
               />
               <div className="flex gap-3">
                 <button 
@@ -665,7 +668,7 @@ export default function ChatSettingsScreen() {
                 onChange={(e) => setCustomPhotoUrl(e.target.value)}
                 placeholder="https://example.com/avatar.jpg"
                 className="w-full bg-[var(--bg-main)] border border-[var(--border-color)] rounded-xl px-4 py-3 mb-6 focus:outline-none focus:ring-1 focus:ring-[var(--primary)] font-medium text-xs text-[var(--text-primary)]"
-                autoFocus
+                ref={focusOnMount}
               />
               <div className="flex gap-3">
                 <button 

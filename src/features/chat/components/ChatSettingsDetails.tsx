@@ -144,7 +144,7 @@ export default function ChatSettingsDetails({
         
         {/* Phone detail */}
         {phone ? (
-          <div 
+          <div role="button" tabIndex={0} onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.currentTarget.click(); } }} 
             onClick={() => onCopyToClipboard(phone, "Phone number")}
             id="row_info_phone"
             className="flex items-start gap-4 py-2.5 hover:bg-[var(--bg-main)]/50 px-2 rounded-xl transition-all duration-150 cursor-pointer group"
@@ -173,7 +173,7 @@ export default function ChatSettingsDetails({
         {/* Email detail */}
         {email && (
           <>
-            <div 
+            <div role="button" tabIndex={0} onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.currentTarget.click(); } }} 
               onClick={() => onCopyToClipboard(email, "Email id")}
               id="row_info_email"
               className="flex items-start gap-4 py-2.5 hover:bg-[var(--bg-main)]/50 px-2 rounded-xl transition-all duration-150 cursor-pointer group"
@@ -190,7 +190,7 @@ export default function ChatSettingsDetails({
         )}
 
         {/* Username detail */}
-        <div 
+        <div role="button" tabIndex={0} onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.currentTarget.click(); } }} 
           onClick={() => onCopyToClipboard(`@${username}`, "Username")}
           id="row_info_username"
           className="flex items-start gap-4 py-2.5 hover:bg-[var(--bg-main)]/50 px-2 rounded-xl transition-all duration-150 cursor-pointer group"
@@ -205,7 +205,7 @@ export default function ChatSettingsDetails({
         <div className="h-px bg-[var(--border-color)]/40 my-1 ml-11" />
 
         {/* Bio detail */}
-        <div 
+        <div role="button" tabIndex={0} onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.currentTarget.click(); } }} 
           onClick={() => onCopyToClipboard(bio || "Hey there! I am using GrixChat.", "Bio")}
           id="row_info_bio"
           className="flex items-start gap-4 py-2.5 hover:bg-[var(--bg-main)]/50 px-2 rounded-xl transition-all duration-150 cursor-pointer group"

@@ -22,13 +22,14 @@ export default tseslint.config(
       '@typescript-eslint/no-explicit-any': 'warn',
       'no-empty': ['error', { allowEmptyCatch: false }],
       ...jsxA11y.flatConfigs.recommended.rules,
-      // Backlog (see docs/ROCK_SOLID.md §Accessibility): these need design or
-      // caption assets before they can become errors. Visible as warnings.
-      'jsx-a11y/media-has-caption': 'warn',
-      'jsx-a11y/no-autofocus': 'warn',
-      'jsx-a11y/click-events-have-key-events': 'warn',
-      'jsx-a11y/no-static-element-interactions': 'warn',
-      'jsx-a11y/label-has-associated-control': 'warn',
+      // Accessibility rules are errors: the backlog was cleared in the Phase 2 pass.
+      // The only exceptions are per-line disables with a written reason (media captions
+      // for live and user-recorded media).
+      'jsx-a11y/media-has-caption': 'error',
+      'jsx-a11y/no-autofocus': 'error',
+      'jsx-a11y/click-events-have-key-events': 'error',
+      'jsx-a11y/no-static-element-interactions': 'error',
+      'jsx-a11y/label-has-associated-control': 'error',
       'no-console': ['error', { allow: ['warn', 'error', 'info'] }],
     },
   },

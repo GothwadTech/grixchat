@@ -3,6 +3,7 @@ import { ShieldCheck, Delete, Lock, Info, X, ShieldAlert, LogOut, RefreshCw } fr
 import { LockService } from '../../services/LockService.ts';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAuth } from '../../providers/AuthProvider';
+import { focusOnMount } from '../../utils/focusOnMount';
 
 interface GlobalLockScreenProps {
   onUnlock: () => void;
@@ -137,7 +138,7 @@ export default function GlobalLockScreen({ onUnlock }: GlobalLockScreenProps) {
                     onKeyDown={handleKeyDown}
                     className="w-full bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl px-6 py-5 text-center text-xl font-black tracking-widest outline-none focus:border-primary shadow-sm text-[var(--text-primary)]"
                     placeholder="••••••••"
-                    autoFocus
+                    ref={focusOnMount}
                   />
                   <button aria-label="More information" 
                     onClick={() => setShowHelp(true)}

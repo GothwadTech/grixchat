@@ -73,7 +73,7 @@ export default function PWAInstallPrompt() {
           exit={{ y: 100, opacity: 0 }}
           className="fixed bottom-24 left-4 right-4 z-50 px-4 py-3 bg-[var(--primary)] text-white rounded-2xl shadow-2xl flex items-center justify-between"
         >
-          <div className="flex items-center gap-3" onClick={handleInstallClick}>
+          <div role="button" tabIndex={0} onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.currentTarget.click(); } }} className="flex items-center gap-3" onClick={handleInstallClick}>
             <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
               <Download className="w-6 h-6" />
             </div>

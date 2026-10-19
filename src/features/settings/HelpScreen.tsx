@@ -26,7 +26,7 @@ export default function HelpScreen() {
       icon: Mail,
       label: 'Contact Support Form',
       sub: 'Submit inquiry tickets directly',
-      color: 'bg-[#0494f4]/10 text-[#0494f4]',
+      color: 'bg-[#0479c2]/10 text-[#0494f4]',
       path: '/help/contact'
     },
     {

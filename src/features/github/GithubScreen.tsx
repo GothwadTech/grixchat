@@ -753,7 +753,7 @@ export default function GithubScreen() {
             {!githubToken ? (
               <div className="bg-[var(--bg-card)] rounded-2xl p-6 text-center border border-[var(--border-color)]/50 space-y-3.5">
                 <p className="text-xs text-[var(--text-secondary)] font-bold">Please authorized your GitHub account on Account tab first.</p>
-                <button onClick={() => setActiveTab('account')} className="bg-[#0494f4] text-white font-extrabold text-xs uppercase px-4 py-2.5 rounded-xl shadow-md">
+                <button onClick={() => setActiveTab('account')} className="bg-[#0479c2] text-white font-extrabold text-xs uppercase px-4 py-2.5 rounded-xl shadow-md">
                   Go to Account Tab
                 </button>
               </div>
@@ -773,8 +773,8 @@ export default function GithubScreen() {
                   </div>
                   
                   <div className="space-y-1">
-                    <label className="text-[9px] font-black text-[var(--text-secondary)] uppercase">Branch Target name</label>
-                    <input 
+                    <label htmlFor="fld-v3u1x0" className="text-[9px] font-black text-[var(--text-secondary)] uppercase">Branch Target name</label>
+                    <input id="fld-v3u1x0" 
                       type="text" 
                       value={branch}
                       onChange={(e) => setBranch(e.target.value)}
@@ -804,12 +804,12 @@ export default function GithubScreen() {
                       filteredRepos.map((repo) => {
                         const isSelected = selectedRepo?.id === repo.id;
                         return (
-                          <div
+                          <div role="button" tabIndex={0} onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.currentTarget.click(); } }}
                             key={repo.id}
                             onClick={() => setSelectedRepo(repo)}
                             className={`p-3 rounded-xl border transition-all cursor-pointer flex items-center justify-between ${
                               isSelected 
-                                ? 'border-[#0494f4] bg-[#0494f4]/5 border-l-[4px] text-[#0494f4]' 
+                                ? 'border-[#0494f4] bg-[#0479c2]/5 border-l-[4px] text-[#0494f4]' 
                                 : 'border-[var(--border-color)] hover:bg-[var(--box-bg)] text-[var(--text-primary)]'
                             }`}
                           >
@@ -844,12 +844,12 @@ export default function GithubScreen() {
             {!githubToken ? (
               <div className="bg-[var(--bg-card)] rounded-2xl p-6 text-center border border-[var(--border-color)]/50 space-y-3">
                 <p className="text-xs text-[var(--text-secondary)] font-bold">Please authorize your GitHub account first.</p>
-                <button onClick={() => setActiveTab('account')} className="bg-[#0494f4] text-white font-extrabold text-xs uppercase px-4 py-2.5 rounded-xl">Go to Account</button>
+                <button onClick={() => setActiveTab('account')} className="bg-[#0479c2] text-white font-extrabold text-xs uppercase px-4 py-2.5 rounded-xl">Go to Account</button>
               </div>
             ) : !selectedRepo ? (
               <div className="bg-[var(--bg-card)] rounded-2xl p-6 text-center border border-[var(--border-color)]/50 space-y-3">
                 <p className="text-xs text-[var(--text-secondary)] font-bold">Please select a target repository first.</p>
-                <button onClick={() => setActiveTab('repos')} className="bg-[#0494f4] text-white font-extrabold text-xs uppercase px-4 py-2.5 rounded-xl">Go to Repositories</button>
+                <button onClick={() => setActiveTab('repos')} className="bg-[#0479c2] text-white font-extrabold text-xs uppercase px-4 py-2.5 rounded-xl">Go to Repositories</button>
               </div>
             ) : (
               <div className="space-y-4">
@@ -923,7 +923,7 @@ export default function GithubScreen() {
                         Select Local Source Code
                       </span>
                       
-                      <span className="text-[9px] text-[#0494f4] bg-[#0494f4]/10 border border-[#0494f4]/20 font-mono font-bold px-2 py-0.5 rounded-full">
+                      <span className="text-[9px] text-[#0494f4] bg-[#0479c2]/10 border border-[#0494f4]/20 font-mono font-bold px-2 py-0.5 rounded-full">
                         {selectedAppFiles.length} / {appCodeFiles.length} Checked
                       </span>
                     </div>
@@ -949,7 +949,7 @@ export default function GithubScreen() {
                         {filteredAppFiles.map((path) => {
                           const isChecked = selectedAppFiles.includes(path);
                           return (
-                            <div 
+                            <div role="button" tabIndex={0} onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.currentTarget.click(); } }} 
                               key={path}
                               onClick={() => {
                                 if (isChecked) {
@@ -987,12 +987,12 @@ export default function GithubScreen() {
             {!githubToken ? (
               <div className="bg-[var(--bg-card)] rounded-2xl p-6 text-center border border-[var(--border-color)]/50 space-y-3">
                 <p className="text-xs text-[var(--text-secondary)] font-bold">Please authorize your GitHub account first.</p>
-                <button onClick={() => setActiveTab('account')} className="bg-[#0494f4] text-white font-extrabold text-xs uppercase px-4 py-2.5 rounded-xl">Go to Account</button>
+                <button onClick={() => setActiveTab('account')} className="bg-[#0479c2] text-white font-extrabold text-xs uppercase px-4 py-2.5 rounded-xl">Go to Account</button>
               </div>
             ) : !selectedRepo ? (
               <div className="bg-[var(--bg-card)] rounded-2xl p-6 text-center border border-[var(--border-color)]/50 space-y-3">
                 <p className="text-xs text-[var(--text-secondary)] font-bold">Please select a target repository first.</p>
-                <button onClick={() => setActiveTab('repos')} className="bg-[#0494f4] text-white font-extrabold text-xs uppercase px-4 py-2.5 rounded-xl">Go to Repositories</button>
+                <button onClick={() => setActiveTab('repos')} className="bg-[#0479c2] text-white font-extrabold text-xs uppercase px-4 py-2.5 rounded-xl">Go to Repositories</button>
               </div>
             ) : (
               <div className="space-y-4">
@@ -1005,8 +1005,8 @@ export default function GithubScreen() {
                   </div>
 
                   <div className="space-y-1">
-                    <label className="text-[9px] font-black text-[var(--text-secondary)] uppercase">Custom Commit message</label>
-                    <input 
+                    <label htmlFor="fld-m615i8" className="text-[9px] font-black text-[var(--text-secondary)] uppercase">Custom Commit message</label>
+                    <input id="fld-m615i8" 
                       type="text" 
                       value={commitMessage}
                       onChange={(e) => setCommitMessage(e.target.value)}
@@ -1015,7 +1015,7 @@ export default function GithubScreen() {
                     />
                   </div>
 
-                  <div 
+                  <div role="button" tabIndex={0} onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.currentTarget.click(); } }} 
                     onClick={() => setIsSequential(prev => !prev)}
                     className="flex items-center justify-between p-3 bg-[var(--bg-main)] border border-[var(--border-color)] rounded-xl cursor-pointer"
                   >
@@ -1115,7 +1115,7 @@ export default function GithubScreen() {
             {!githubToken ? (
               <div className="bg-[var(--bg-card)] rounded-2xl p-6 text-center border border-[var(--border-color)]/50 space-y-3">
                 <p className="text-xs text-[var(--text-secondary)] font-bold">Please authorize your GitHub account first.</p>
-                <button onClick={() => setActiveTab('account')} className="bg-[#0494f4] text-white font-extrabold text-xs uppercase px-4 py-2.5 rounded-xl">Go to Account</button>
+                <button onClick={() => setActiveTab('account')} className="bg-[#0479c2] text-white font-extrabold text-xs uppercase px-4 py-2.5 rounded-xl">Go to Account</button>
               </div>
             ) : (
               <div className="space-y-4">

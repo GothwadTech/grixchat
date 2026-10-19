@@ -258,7 +258,7 @@ export default function UserProfileScreen() {
           {/* Beautiful and Compact Profile Card (Centered Telegram Style) */}
           <div className="flex flex-col items-center text-center bg-[var(--bg-card)] py-5 px-4 rounded-2xl border border-[var(--border-color)]/60 shadow-sm mb-4 relative overflow-hidden">
             <div className="relative mb-3 shrink-0">
-              <div 
+              <div role="button" tabIndex={0} onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.currentTarget.click(); } }} 
                 onClick={() => hasActiveStories && navigate(`/stories/view/${userId}`)}
                 className={`w-20 h-20 rounded-full p-[2px] border-2 bg-[var(--bg-main)] flex items-center justify-center shrink-0 ${hasActiveStories ? 'border-[#0494f4] cursor-pointer active:scale-95 transition-all shadow-md' : 'border-zinc-300 dark:border-zinc-700'}`}
               >
@@ -277,7 +277,7 @@ export default function UserProfileScreen() {
                 <button 
                   onClick={() => navigate(`/chat/${userId}`)}
                   title="Send Message"
-                  className="absolute bottom-0 right-0 w-6.5 h-6.5 bg-[#0494f4] text-white rounded-full flex items-center justify-center shadow-lg border-2 border-[var(--bg-card)] hover:scale-110 active:scale-95 transition-all cursor-pointer"
+                  className="absolute bottom-0 right-0 w-6.5 h-6.5 bg-[#0479c2] text-white rounded-full flex items-center justify-center shadow-lg border-2 border-[var(--bg-card)] hover:scale-110 active:scale-95 transition-all cursor-pointer"
                 >
                   <MessageSquare size={11} strokeWidth={2.5} />
                 </button>
@@ -357,7 +357,7 @@ export default function UserProfileScreen() {
                   }}
                   disabled={requestProgress}
                   title="Send Friend Request"
-                  className="absolute bottom-0 right-0 w-6.5 h-6.5 bg-[#0494f4] text-white rounded-full flex items-center justify-center shadow-lg border-2 border-[var(--bg-card)] hover:scale-110 active:scale-95 transition-all cursor-pointer"
+                  className="absolute bottom-0 right-0 w-6.5 h-6.5 bg-[#0479c2] text-white rounded-full flex items-center justify-center shadow-lg border-2 border-[var(--bg-card)] hover:scale-110 active:scale-95 transition-all cursor-pointer"
                 >
                   {requestProgress ? (
                     <Loader2 size={11} className="animate-spin text-white" />
@@ -371,7 +371,7 @@ export default function UserProfileScreen() {
             <h2 className="text-base font-black tracking-tight text-[var(--text-primary)] leading-tight">
               {displayName}
             </h2>
-            <span className="text-[10px] text-[#0494f4] font-semibold font-mono tracking-wide mt-1.5 px-2.5 py-0.5 bg-[#0494f4]/10 rounded-full select-none">
+            <span className="text-[10px] text-[#0494f4] font-semibold font-mono tracking-wide mt-1.5 px-2.5 py-0.5 bg-[#0479c2]/10 rounded-full select-none">
               @{user.username || 'username'}
             </span>
 
@@ -390,7 +390,7 @@ export default function UserProfileScreen() {
           <div className="mb-4">
             <div className="bg-[var(--bg-card)] rounded-2xl border border-[var(--border-color)]/50 overflow-hidden shadow-sm py-3 px-4 flex justify-between items-center select-none">
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-[#0494f4]/10 rounded-xl text-[#0494f4]">
+                <div className="p-2 bg-[#0479c2]/10 rounded-xl text-[#0494f4]">
                   <CheckCircle2 size={18} />
                 </div>
                 <div>
@@ -399,7 +399,7 @@ export default function UserProfileScreen() {
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-base font-black text-[#0494f4] bg-[#0494f4]/10 px-3 py-1 rounded-xl">
+                <span className="text-base font-black text-[#0494f4] bg-[#0479c2]/10 px-3 py-1 rounded-xl">
                   {friendsCount} Friends
                 </span>
               </div>

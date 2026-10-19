@@ -79,7 +79,7 @@ export default function BubbleCustomizer({ onStyleChange, onSizeChange }: Bubble
         </h4>
       </div>
 
-      <div className="bg-[#0494f4]/5 border border-[#0494f4]/15 rounded-2xl p-4 space-y-5">
+      <div className="bg-[#0479c2]/5 border border-[#0494f4]/15 rounded-2xl p-4 space-y-5">
         {/* Bubble styles grid */}
         <div className="grid grid-cols-2 gap-2.5">
           {bubbleStyles.map((style) => (
@@ -88,14 +88,14 @@ export default function BubbleCustomizer({ onStyleChange, onSizeChange }: Bubble
               onClick={() => handleStyleSelect(style.id)}
               className={`flex flex-col items-start p-3 rounded-xl border text-left transition-all active:scale-[0.98] cursor-pointer outline-none ${
                 bubbleStyle === style.id
-                  ? 'border-[#0494f4] bg-[#0494f4]/10'
+                  ? 'border-[#0494f4] bg-[#0479c2]/10'
                   : 'border-[var(--border-color)]/20 bg-zinc-900/30 hover:bg-zinc-900/50'
               }`}
             >
               <div className="flex items-center justify-between w-full">
                 <span className="text-xs font-bold text-[var(--text-primary)]">{style.label}</span>
                 {bubbleStyle === style.id && (
-                  <div className="bg-[#0494f4] p-0.5 rounded-full select-none shrink-0">
+                  <div className="bg-[#0479c2] p-0.5 rounded-full select-none shrink-0">
                     <Check size={10} className="text-white shrink-0" />
                   </div>
                 )}
@@ -118,7 +118,7 @@ export default function BubbleCustomizer({ onStyleChange, onSizeChange }: Bubble
                 onClick={() => handleSizeSelect(size.id)}
                 className={`flex-grow py-2 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all cursor-pointer border-none outline-none ${
                   fontSize === size.id
-                    ? 'bg-[#0494f4] text-white shadow'
+                    ? 'bg-[#0479c2] text-white shadow'
                     : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] opacity-75 hover:opacity-100'
                 }`}
               >

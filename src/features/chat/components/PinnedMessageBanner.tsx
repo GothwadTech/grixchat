@@ -20,7 +20,7 @@ export const PinnedMessageBanner: React.FC<PinnedMessageBannerProps> = ({
   };
 
   return (
-    <div 
+    <div role="button" tabIndex={0} onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.currentTarget.click(); } }} 
       onClick={handleBannerClick}
       className="shrink-0 h-11 bg-[#17212b] border-b border-zinc-800 flex items-center px-4 justify-between gap-3 cursor-pointer hover:bg-zinc-850/60 transition-colors z-[45]"
     >

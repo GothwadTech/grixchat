@@ -75,7 +75,7 @@ export const CallControlPanel: React.FC<CallControlPanelProps> = ({
             initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -15 }}
-            className="absolute top-[-50px] left-1/2 -translate-x-1/2 bg-[#0494f4] text-white text-[11px] font-extrabold uppercase tracking-wider px-4 py-1.5 rounded-full shadow-lg border border-[#0494f4]/20 z-[60]"
+            className="absolute top-[-50px] left-1/2 -translate-x-1/2 bg-[#0479c2] text-white text-[11px] font-extrabold uppercase tracking-wider px-4 py-1.5 rounded-full shadow-lg border border-[#0494f4]/20 z-[60]"
           >
             {statusNotification}
           </motion.div>
@@ -97,7 +97,7 @@ export const CallControlPanel: React.FC<CallControlPanelProps> = ({
               ? 'border border-[#ff3b30]/40 bg-[var(--bg-card)] text-[#ff3b30] hover:bg-[#ff3b30]/5'
               : speakerState === 1
                 ? 'border border-[var(--border-color)]/30 bg-[var(--bg-card)] text-[var(--text-primary)] hover:border-[#0494f4] hover:text-[#0494f4]'
-                : 'bg-[#0494f4] text-white shadow-lg shadow-[#0494f4]/20 border-none'
+                : 'bg-[#0479c2] text-white shadow-lg shadow-[#0494f4]/20 border-none'
           }`}
           title={
             speakerState === 0
@@ -128,7 +128,7 @@ export const CallControlPanel: React.FC<CallControlPanelProps> = ({
             !videoToggleAvailable
               ? 'opacity-40 cursor-not-allowed border border-[var(--border-color)]/30 bg-[var(--bg-card)] text-[var(--text-secondary)]'
               : !isVideoOff
-                ? 'bg-[#0494f4] text-white shadow-lg shadow-[#0494f4]/20 border-none active:scale-95 cursor-pointer'
+                ? 'bg-[#0479c2] text-white shadow-lg shadow-[#0494f4]/20 border-none active:scale-95 cursor-pointer'
                 : 'border border-[#ff3b30]/40 bg-[var(--bg-card)] text-[#ff3b30] hover:bg-[#ff3b30]/5 active:scale-95 cursor-pointer'
           }`}
           title={!videoToggleAvailable ? "Video is available on video calls" : !isVideoOff ? "Turn Video Off" : "Turn Video On"}
@@ -146,7 +146,7 @@ export const CallControlPanel: React.FC<CallControlPanelProps> = ({
           }}
           className={`w-[52px] h-[52px] rounded-full flex items-center justify-center transition-all active:scale-95 cursor-pointer ${
             !isMuted 
-              ? 'bg-[#0494f4] text-white shadow-lg shadow-[#0494f4]/20 border-none' 
+              ? 'bg-[#0479c2] text-white shadow-lg shadow-[#0494f4]/20 border-none' 
               : 'border border-[#ff3b30]/40 bg-[var(--bg-card)] text-[#ff3b30] hover:bg-[#ff3b30]/5'
           }`}
           title={!isMuted ? "Mute Microphone" : "Unmute Microphone"}
@@ -178,7 +178,7 @@ export const CallControlPanel: React.FC<CallControlPanelProps> = ({
           }}
           className={`w-[52px] h-[52px] rounded-full flex items-center justify-center transition-all active:scale-95 cursor-pointer ${
             showMoreMenu 
-              ? 'bg-[#0494f4] text-white shadow-lg shadow-[#0494f4]/20 border-none' 
+              ? 'bg-[#0479c2] text-white shadow-lg shadow-[#0494f4]/20 border-none' 
               : 'border border-[var(--border-color)]/30 bg-[var(--bg-card)] text-[var(--text-secondary)] hover:text-[#0494f4] hover:border-[#0494f4]'
           }`}
           title="More Options / Add User"
@@ -209,14 +209,14 @@ export const CallControlPanel: React.FC<CallControlPanelProps> = ({
               className="fixed bottom-0 left-0 right-0 bg-[var(--bg-card)] border-t border-[var(--border-color)]/20 rounded-t-[2rem] px-6 py-6 pb-12 z-50 max-w-2xl mx-auto shadow-[0_-15px_40px_rgba(0,0,0,0.15)]"
             >
               {/* Header drag line indicator */}
-              <div className="w-12 h-1.5 bg-[var(--border-color)]/60 rounded-full mx-auto mb-6 cursor-pointer" onClick={() => setShowMoreMenu(false)} />
+              <div role="button" tabIndex={0} onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.currentTarget.click(); } }} className="w-12 h-1.5 bg-[var(--border-color)]/60 rounded-full mx-auto mb-6 cursor-pointer" onClick={() => setShowMoreMenu(false)} />
               
               <div className="flex items-center justify-between mb-5">
                 <h3 className="text-[17px] font-black text-[var(--text-primary)] uppercase tracking-wider flex items-center gap-2">
                   <Sliders size={18} className="text-[#0494f4]" />
                   <span>Call Operations</span>
                 </h3>
-                <span className="text-[10px] bg-[#0494f4]/15 text-[#0494f4] border border-[#0494f4]/25 px-2.5 py-0.5 rounded-full font-black tracking-widest uppercase">
+                <span className="text-[10px] bg-[#0479c2]/15 text-[#0494f4] border border-[#0494f4]/25 px-2.5 py-0.5 rounded-full font-black tracking-widest uppercase">
                   ACTIVE TUNNEL
                 </span>
               </div>
@@ -224,7 +224,7 @@ export const CallControlPanel: React.FC<CallControlPanelProps> = ({
               {/* Grid of Interactive Actions */}
               <div className="grid grid-cols-2 gap-3.5">
                 {/* Switch Camera (only meaningful for video calls with >1 camera) */}
-                <div
+                <div role="button" tabIndex={0} onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.currentTarget.click(); } }}
                   onClick={() => {
                     if (type !== 'video') {
                       displayNotification("Camera switching needs a video call");
@@ -248,7 +248,7 @@ export const CallControlPanel: React.FC<CallControlPanelProps> = ({
                 </div>
 
                 {/* Share Screen */}
-                <div 
+                <div role="button" tabIndex={0} onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.currentTarget.click(); } }} 
                   onClick={() => {
                     if (type !== 'video') {
                       displayNotification("Screen sharing needs a video call");

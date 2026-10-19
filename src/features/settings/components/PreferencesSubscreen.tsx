@@ -143,7 +143,7 @@ export default function PreferencesSubscreen() {
               aria-label="Sound effects"
               onClick={handleToggleSound}
               className={`w-11 h-6 rounded-full transition-all duration-200 relative cursor-pointer outline-none border-none shrink-0 ${
-                soundHaptic === 'enabled' ? 'bg-[#0494f4]' : 'bg-zinc-700/60'
+                soundHaptic === 'enabled' ? 'bg-[#0479c2]' : 'bg-zinc-700/60'
               }`}
             >
               <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all duration-200 shadow-sm ${
@@ -184,7 +184,7 @@ export default function PreferencesSubscreen() {
                 </p>
               </div>
               {autoDownload === item.id && (
-                <div className="bg-[#0494f4] p-1 rounded-full shadow-sm mr-2 shrink-0">
+                <div className="bg-[#0479c2] p-1 rounded-full shadow-sm mr-2 shrink-0">
                   <Check size={11} className="text-white" />
                 </div>
               )}
@@ -224,7 +224,7 @@ export default function PreferencesSubscreen() {
                 </p>
               </div>
               {lockTimeout === item.id && (
-                <div className="bg-[#0494f4] p-1 rounded-full shadow-sm mr-2 shrink-0">
+                <div className="bg-[#0479c2] p-1 rounded-full shadow-sm mr-2 shrink-0">
                   <Check size={11} className="text-white" />
                 </div>
               )}
@@ -241,9 +241,9 @@ export default function PreferencesSubscreen() {
             Local Ledger Archive
           </h3>
         </div>
-        <div className="bg-[#0494f4]/5 border border-[#0494f4]/15 rounded-2xl p-4 flex flex-col gap-4">
+        <div className="bg-[#0479c2]/5 border border-[#0494f4]/15 rounded-2xl p-4 flex flex-col gap-4">
           <div className="flex gap-3 items-start">
-            <div className="w-10 h-10 rounded-full flex items-center justify-center bg-[#0494f4]/10 text-[#0494f4] shrink-0 border border-[#0494f4]/10">
+            <div className="w-10 h-10 rounded-full flex items-center justify-center bg-[#0479c2]/10 text-[#0494f4] shrink-0 border border-[#0494f4]/10">
               <Smartphone size={18} className="stroke-[2.2]" />
             </div>
             <p className="text-[12px] text-[var(--text-secondary)] leading-relaxed font-normal opacity-90 text-left">
@@ -253,7 +253,7 @@ export default function PreferencesSubscreen() {
           <button 
             disabled={backingUp}
             onClick={handleExportData}
-            className="w-full flex items-center justify-center gap-2 py-3 bg-[#0494f4] text-white hover:bg-[#0494f4]/90 rounded-xl text-xs font-bold leading-none shadow-md transition-all active:scale-[0.98] disabled:opacity-50 cursor-pointer border-none outline-none select-none"
+            className="w-full flex items-center justify-center gap-2 py-3 bg-[#0479c2] text-white hover:bg-[#0479c2]/90 rounded-xl text-xs font-bold leading-none shadow-md transition-all active:scale-[0.98] disabled:opacity-50 cursor-pointer border-none outline-none select-none"
           >
             <Download size={14} className={backingUp ? "animate-pulse" : ""} />
             <span>{backingUp ? 'Compiling Local Ledger...' : 'Backup Chat Logs & Settings'}</span>

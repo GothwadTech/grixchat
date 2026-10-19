@@ -457,7 +457,7 @@ export default function ChatBottom({
           className={`shrink-0 w-[48px] h-[48px] flex items-center justify-center rounded-full transition-all active:scale-95 text-white shadow-md ${
             isRecording 
               ? 'bg-red-500 hover:bg-red-600' 
-              : 'bg-[#0494f4] hover:bg-[#0382d6] disabled:opacity-40'
+              : 'bg-[#0479c2] hover:bg-[#0382d6] disabled:opacity-40'
           }`}
         >
           {isSending ? (

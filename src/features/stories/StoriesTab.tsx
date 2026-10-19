@@ -243,7 +243,7 @@ export default function StoriesTab() {
         <div className="flex flex-col mt-1 bg-[var(--bg-card)]">
           
           {/* MY STATUS TILE */}
-          <div 
+          <div role="button" tabIndex={0} onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.currentTarget.click(); } }} 
             onClick={() => {
               if (myStoriesGroup) {
                 navigate(`/stories/view/${authUser?.id}`);
@@ -270,7 +270,7 @@ export default function StoriesTab() {
                     type="direct" 
                     name={myStoryName} 
                   />
-                  <div className="absolute -bottom-0.5 -right-0.5 w-[18px] h-[18px] bg-[#0494f4] text-white rounded-full flex items-center justify-center border-2 border-[var(--bg-card)] shadow-md">
+                  <div className="absolute -bottom-0.5 -right-0.5 w-[18px] h-[18px] bg-[#0479c2] text-white rounded-full flex items-center justify-center border-2 border-[var(--bg-card)] shadow-md">
                     <Plus size={11} strokeWidth={3.5} />
                   </div>
                 </div>
@@ -306,7 +306,7 @@ export default function StoriesTab() {
             </div>
           ) : (
             otherStoriesGroups.map(group => (
-              <div 
+              <div role="button" tabIndex={0} onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.currentTarget.click(); } }} 
                 key={group.userId}
                 onClick={() => navigate(`/stories/view/${group.userId}`)}
                 className="flex items-center gap-3 px-3 py-2.5 hover:bg-[var(--border-color)]/5 active:bg-[var(--border-color)]/10 transition-all duration-205 group cursor-pointer select-none border-b border-[var(--border-color)]/5 last:border-b-0 border-l-[4px] border-l-transparent"

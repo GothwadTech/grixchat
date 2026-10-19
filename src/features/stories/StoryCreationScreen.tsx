@@ -121,7 +121,7 @@ export default function StoryCreationScreen() {
             onClick={() => setStoryType('image')}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
               storyType === 'image' 
-                ? 'bg-[#0494f4] text-white shadow' 
+                ? 'bg-[#0479c2] text-white shadow' 
                 : 'text-zinc-400 hover:text-white'
             }`}
           >
@@ -132,7 +132,7 @@ export default function StoryCreationScreen() {
             onClick={() => setStoryType('text')}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
               storyType === 'text' 
-                ? 'bg-[#0494f4] text-white shadow' 
+                ? 'bg-[#0479c2] text-white shadow' 
                 : 'text-zinc-400 hover:text-white'
             }`}
           >
@@ -185,7 +185,7 @@ export default function StoryCreationScreen() {
                   </p>
                   <button
                     onClick={() => fileInputRef.current?.click()}
-                    className="mt-2 bg-[#0494f4] hover:bg-[#037cc9] text-white font-black text-[11px] uppercase tracking-widest px-5 h-9 rounded-xl active:scale-95 transition-all cursor-pointer shadow-md shadow-[#0494f4]/10"
+                    className="mt-2 bg-[#0479c2] hover:bg-[#037cc9] text-white font-black text-[11px] uppercase tracking-widest px-5 h-9 rounded-xl active:scale-95 transition-all cursor-pointer shadow-md shadow-[#0494f4]/10"
                   >
                     Choose Photo
                   </button>
@@ -317,7 +317,7 @@ export default function StoryCreationScreen() {
             onClick={() => setShowMusicSheet(true)}
             className={`flex items-center gap-1.5 px-4 h-9 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
               selectedTrack 
-                ? 'bg-[#0494f4] text-white' 
+                ? 'bg-[#0479c2] text-white' 
                 : 'bg-white/5 hover:bg-white/10 text-zinc-200 border border-white/10'
             }`}
           >

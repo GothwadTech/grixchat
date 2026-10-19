@@ -106,7 +106,7 @@ export const ChatCustomizerModal: React.FC<ChatCustomizerModalProps> = ({
                       type="button"
                       onClick={() => handleBgSelect(bgItem.id)}
                       className={`p-1.5 rounded-xl text-left border cursor-pointer select-none transition-all flex flex-col gap-1 w-full bg-transparent ${
-                        isSelected ? 'border-[#0494f4] bg-[#0494f4]/5' : 'border-[var(--border-color)]/20 hover:bg-white/5'
+                        isSelected ? 'border-[#0494f4] bg-[#0479c2]/5' : 'border-[var(--border-color)]/20 hover:bg-white/5'
                       }`}
                     >
                       <div className={`h-5 w-full rounded-md border border-white/5 ${bgItem.preview || 'bg-[var(--bg-main)]'}`} />
@@ -131,7 +131,7 @@ export const ChatCustomizerModal: React.FC<ChatCustomizerModalProps> = ({
                       type="button"
                       onClick={() => handleBubbleSelect(bubItem.id)}
                       className={`p-1.5 rounded-xl text-left border cursor-pointer select-none transition-all flex flex-col gap-1 w-full bg-transparent ${
-                        isSelected ? 'border-[#0494f4] bg-[#0494f4]/5' : 'border-[var(--border-color)]/20 hover:bg-white/5'
+                        isSelected ? 'border-[#0494f4] bg-[#0479c2]/5' : 'border-[var(--border-color)]/20 hover:bg-white/5'
                       }`}
                     >
                       <div className={`h-5 w-full rounded-md border border-white/5 ${bubItem.preview}`} />
@@ -147,7 +147,7 @@ export const ChatCustomizerModal: React.FC<ChatCustomizerModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="w-full text-center py-2.5 text-[13px] font-black text-white bg-[#0494f4] hover:bg-[#0382d6] active:scale-[0.98] transition-all rounded-xl cursor-pointer border-none shadow-sm mt-1"
+              className="w-full text-center py-2.5 text-[13px] font-black text-white bg-[#0479c2] hover:bg-[#0382d6] active:scale-[0.98] transition-all rounded-xl cursor-pointer border-none shadow-sm mt-1"
             >
               Apply Customs
             </button>

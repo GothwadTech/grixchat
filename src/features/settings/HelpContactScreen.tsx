@@ -155,8 +155,8 @@ export default function HelpContactScreen() {
 
               {/* Email Address */}
               <div className="space-y-1.5">
-                <label className="text-[10px] font-black tracking-wider uppercase text-zinc-400 font-mono">My Reply Email</label>
-                <input
+                <label htmlFor="fld-j36bhd" className="text-[10px] font-black tracking-wider uppercase text-zinc-400 font-mono">My Reply Email</label>
+                <input id="fld-j36bhd"
                   type="email"
                   required
                   placeholder="name@example.com"
@@ -168,8 +168,8 @@ export default function HelpContactScreen() {
 
               {/* Category selector */}
               <div className="space-y-1.5">
-                <label className="text-[10px] font-black tracking-wider uppercase text-zinc-400 font-mono">Inquiry Type</label>
-                <select
+                <label htmlFor="fld-6x8j9a" className="text-[10px] font-black tracking-wider uppercase text-zinc-400 font-mono">Inquiry Type</label>
+                <select id="fld-6x8j9a"
                   className="w-full bg-[var(--bg-card)] border border-[var(--border-color)]/50 rounded-2xl px-4 py-3.5 text-xs text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/10 transition-all cursor-pointer"
                   value={category}
                   onChange={(e) => setCategory(e.target.value)}
@@ -184,8 +184,8 @@ export default function HelpContactScreen() {
 
               {/* Subject Text input */}
               <div className="space-y-1.5">
-                <label className="text-[10px] font-black tracking-wider uppercase text-zinc-400 font-mono">Inquiry Subject</label>
-                <input
+                <label htmlFor="fld-okvl95" className="text-[10px] font-black tracking-wider uppercase text-zinc-400 font-mono">Inquiry Subject</label>
+                <input id="fld-okvl95"
                   type="text"
                   required
                   placeholder="E.g. Problem viewing active stories"
@@ -197,8 +197,8 @@ export default function HelpContactScreen() {
 
               {/* Description message text box */}
               <div className="space-y-1.5">
-                <label className="text-[10px] font-black tracking-wider uppercase text-zinc-400 font-mono">Detailed explanation</label>
-                <textarea
+                <label htmlFor="fld-624vy5" className="text-[10px] font-black tracking-wider uppercase text-zinc-400 font-mono">Detailed explanation</label>
+                <textarea id="fld-624vy5"
                   required
                   rows={5}
                   placeholder="Explain your situation in details..."
@@ -212,7 +212,7 @@ export default function HelpContactScreen() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full py-4 bg-[#0494f4] hover:bg-[#0381d6] disabled:opacity-50 text-white rounded-2xl text-xs font-black uppercase tracking-wider transition-all active:scale-[0.98] shadow-md shadow-[#0494f4]/15 flex items-center justify-center gap-2 cursor-pointer"
+                className="w-full py-4 bg-[#0479c2] hover:bg-[#0381d6] disabled:opacity-50 text-white rounded-2xl text-xs font-black uppercase tracking-wider transition-all active:scale-[0.98] shadow-md shadow-[#0494f4]/15 flex items-center justify-center gap-2 cursor-pointer"
               >
                 <Send size={13} />
                 <span>Submit support ticket</span>

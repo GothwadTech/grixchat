@@ -58,7 +58,7 @@ export default function AppPreferencesScreen() {
                   </p>
                 </div>
                 {theme === t.id && (
-                  <div className="bg-[#0494f4] p-1 rounded-full shadow-sm mr-2 select-none shrink-0">
+                  <div className="bg-[#0479c2] p-1 rounded-full shadow-sm mr-2 select-none shrink-0">
                     <Check size={11} className="text-white" />
                   </div>
                 )}

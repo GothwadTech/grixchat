@@ -106,7 +106,7 @@ export default function LikeNotificationsScreen() {
                 onClick={() => notif.postId && navigate(`/posts/${notif.postId}`)}
                 className="flex items-center gap-4 p-4 bg-[var(--bg-card)] rounded-2xl border border-[var(--border-color)] shadow-sm cursor-pointer active:scale-[0.99] transition-all"
               >
-                <div className="relative shrink-0" onClick={(e) => { e.stopPropagation(); navigate(`/user/${notif.fromUserId}`); }}>
+                <div role="button" tabIndex={0} onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.currentTarget.click(); } }} className="relative shrink-0" onClick={(e) => { e.stopPropagation(); navigate(`/user/${notif.fromUserId}`); }}>
                   <img 
                     src={notif.fromUserAvatar || DEFAULT_LOGO} 
 alt={`${notif.fromUserName || 'User'}'s avatar`}

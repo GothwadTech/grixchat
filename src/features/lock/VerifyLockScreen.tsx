@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { LockService } from '../../services/LockService.ts';
 import { useAuth } from '../../providers/AuthProvider';
 import { safeSessionStorage } from '../../services/StorageService';
+import { focusOnMount } from '../../utils/focusOnMount';
 
 export default function VerifyLockScreen() {
   const navigate = useNavigate();
@@ -72,7 +73,7 @@ export default function VerifyLockScreen() {
             }}
             className={`w-16 h-16 rounded-full flex items-center justify-center text-2xl font-semibold transition-all active:scale-90 shadow-sm cursor-pointer ${
               key === 'check' 
-              ? 'bg-[#0494f4] text-white shadow-md' 
+              ? 'bg-[#0479c2] text-white shadow-md' 
               : 'bg-[var(--bg-card)] text-[var(--text-primary)] border border-[var(--border-color)]/10 hover:bg-zinc-100 dark:hover:bg-zinc-850'
             }`}
           >
@@ -130,7 +131,7 @@ export default function VerifyLockScreen() {
                 onKeyDown={handleKeyDown}
                 className="w-full bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl px-6 py-4 text-center text-lg font-black tracking-widest outline-none focus:border-[var(--primary)] shadow-sm text-[var(--text-primary)]"
                 placeholder="••••••••"
-                autoFocus
+                ref={focusOnMount}
               />
             </div>
           )}

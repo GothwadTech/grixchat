@@ -89,7 +89,7 @@ export default function MusicSearchSheet({ onSelectTrack, selectedTrack, onClose
             onClick={() => setActiveCategory(category)}
             className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer whitespace-nowrap ${
               activeCategory === category 
-                ? 'bg-[#0494f4] text-white shadow-md' 
+                ? 'bg-[#0479c2] text-white shadow-md' 
                 : 'bg-white/5 hover:bg-white/10 text-zinc-400'
             }`}
           >
@@ -106,7 +106,7 @@ export default function MusicSearchSheet({ onSelectTrack, selectedTrack, onClose
             const isPlaying = playingTrackId === track.id;
 
             return (
-              <div
+              <div role="button" tabIndex={0} onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.currentTarget.click(); } }}
                 key={track.id}
                 onClick={() => {
                   onSelectTrack(track);
@@ -114,7 +114,7 @@ export default function MusicSearchSheet({ onSelectTrack, selectedTrack, onClose
                 }}
                 className={`flex items-center gap-3 p-3 rounded-2xl border cursor-pointer transition-all ${
                   isSelected 
-                    ? 'bg-[#0494f4]/15 border-[#0494f4] shadow-md shadow-[#0494f4]/5' 
+                    ? 'bg-[#0479c2]/15 border-[#0494f4] shadow-md shadow-[#0494f4]/5' 
                     : 'bg-white/[0.02] border-white/5 hover:bg-white/[0.05]'
                 }`}
               >
@@ -145,7 +145,7 @@ export default function MusicSearchSheet({ onSelectTrack, selectedTrack, onClose
                     {track.duration}
                   </span>
                   <div className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${
-                    isSelected ? 'bg-[#0494f4] text-white' : 'bg-white/5 text-zinc-400'
+                    isSelected ? 'bg-[#0479c2] text-white' : 'bg-white/5 text-zinc-400'
                   }`}>
                     {isSelected && <Check size={16} strokeWidth={3} />}
                   </div>

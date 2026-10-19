@@ -149,7 +149,7 @@ export const ChatHeaderDropdown: React.FC<ChatHeaderDropdownProps> = ({
                   <button
                     type="button"
                     onClick={() => handleCall('voice')}
-                    className="w-full px-4 py-2.5 text-left text-[13px] font-semibold text-[#0494f4] hover:bg-[#0494f4]/10 active:bg-[#0494f4]/25 transition-colors flex items-center gap-3 rounded-xl cursor-pointer border-none bg-transparent"
+                    className="w-full px-4 py-2.5 text-left text-[13px] font-semibold text-[#0494f4] hover:bg-[#0479c2]/10 active:bg-[#0479c2]/25 transition-colors flex items-center gap-3 rounded-xl cursor-pointer border-none bg-transparent"
                   >
                     <Phone size={16} className="text-[#0494f4]" />
                     <span>Voice Call</span>
@@ -158,7 +158,7 @@ export const ChatHeaderDropdown: React.FC<ChatHeaderDropdownProps> = ({
                   <button
                     type="button"
                     onClick={() => handleCall('video')}
-                    className="w-full px-4 py-2.5 text-left text-[13px] font-semibold text-[#0494f4] hover:bg-[#0494f4]/10 active:bg-[#0494f4]/25 transition-colors flex items-center gap-3 rounded-xl cursor-pointer border-none bg-transparent"
+                    className="w-full px-4 py-2.5 text-left text-[13px] font-semibold text-[#0494f4] hover:bg-[#0479c2]/10 active:bg-[#0479c2]/25 transition-colors flex items-center gap-3 rounded-xl cursor-pointer border-none bg-transparent"
                   >
                     <Video size={16} className="text-[#0494f4]" />
                     <span>Video Call</span>
@@ -174,7 +174,7 @@ export const ChatHeaderDropdown: React.FC<ChatHeaderDropdownProps> = ({
                     onClose();
                     if (onSelectChatTime) onSelectChatTime();
                   }}
-                  className="w-full px-4 py-2.5 text-left text-[13px] font-semibold text-[#0494f4] hover:bg-[#0494f4]/10 active:bg-[#0494f4]/25 transition-colors flex items-center gap-3 rounded-xl cursor-pointer border-none bg-transparent animate-fade-in"
+                  className="w-full px-4 py-2.5 text-left text-[13px] font-semibold text-[#0494f4] hover:bg-[#0479c2]/10 active:bg-[#0479c2]/25 transition-colors flex items-center gap-3 rounded-xl cursor-pointer border-none bg-transparent animate-fade-in"
                 >
                   <Clock size={16} className="text-[#0494f4]" />
                   <span>Chat Time</span>

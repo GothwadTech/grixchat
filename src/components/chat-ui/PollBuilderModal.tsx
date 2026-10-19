@@ -84,10 +84,10 @@ export default function PollBuilderModal({ isOpen, onClose, onCreate }: PollBuil
           <form onSubmit={handleSubmit} className="max-w-md mx-auto w-full space-y-6">
             
             <div className="space-y-2">
-              <label className="block text-[10px] font-black text-zinc-400 uppercase tracking-widest pl-1">
+              <label htmlFor="fld-lssqai" className="block text-[10px] font-black text-zinc-400 uppercase tracking-widest pl-1">
                 Poll Question
               </label>
-              <input
+              <input id="fld-lssqai"
                 type="text"
                 value={question}
                 onChange={(e) => setQuestion(e.target.value)}
@@ -151,14 +151,15 @@ export default function PollBuilderModal({ isOpen, onClose, onCreate }: PollBuil
                 <span className="text-xs font-black text-zinc-200 tracking-wide">Multiple Choice</span>
                 <span className="text-[10px] text-zinc-500 font-medium">Allows voters to choose multiple options</span>
               </div>
-              <label className="relative inline-flex items-center cursor-pointer select-none">
-                <input 
+              <label htmlFor="fld-wa1ri4" className="relative inline-flex items-center cursor-pointer select-none">
+                <span className="sr-only">Multiple choice</span>
+                <input id="fld-wa1ri4" 
                   type="checkbox" 
                   checked={multiple} 
                   onChange={(e) => setMultiple(e.target.checked)} 
                   className="sr-only peer"
                 />
-                <div className="w-10 h-6 bg-zinc-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-zinc-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#0494f4]"></div>
+                <div className="w-10 h-6 bg-zinc-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-zinc-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#0479c2]"></div>
               </label>
             </div>
 
@@ -166,7 +167,7 @@ export default function PollBuilderModal({ isOpen, onClose, onCreate }: PollBuil
               <button
                 type="submit"
                 disabled={!question.trim() || options.filter(o => o.trim()).length < 2}
-                className="w-full py-4 bg-[#0494f4] hover:bg-[#0382d6] disabled:opacity-30 disabled:cursor-not-allowed text-white font-black text-xs uppercase tracking-wider rounded-2xl transition-all shadow-lg active:scale-98 flex items-center justify-center cursor-pointer"
+                className="w-full py-4 bg-[#0479c2] hover:bg-[#0382d6] disabled:opacity-30 disabled:cursor-not-allowed text-white font-black text-xs uppercase tracking-wider rounded-2xl transition-all shadow-lg active:scale-98 flex items-center justify-center cursor-pointer"
               >
                 Launch Poll onto Chat
               </button>

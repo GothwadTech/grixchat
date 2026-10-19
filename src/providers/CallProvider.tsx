@@ -1229,14 +1229,14 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
                     className="w-12 h-12 rounded-full object-cover border border-white/10"
                     referrerPolicy="no-referrer"
                   />
-                  <div className="absolute -bottom-1 -right-1 bg-[#0494f4] p-1.5 rounded-full border-2 border-zinc-900 text-white animate-pulse">
+                  <div className="absolute -bottom-1 -right-1 bg-[#0479c2] p-1.5 rounded-full border-2 border-zinc-900 text-white animate-pulse">
                     {incomingCall.type === 'video' ? <Video size={10} /> : <Phone size={10} />}
                   </div>
                 </div>
 
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-1.5">
-                    <span className="text-[9px] font-black tracking-widest text-[#0494f4] uppercase bg-[#0494f4]/10 px-2 py-0.5 rounded-full">
+                    <span className="text-[9px] font-black tracking-widest text-[#0494f4] uppercase bg-[#0479c2]/10 px-2 py-0.5 rounded-full">
                       INCOMING CALL
                     </span>
                   </div>

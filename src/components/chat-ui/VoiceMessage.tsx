@@ -69,6 +69,7 @@ export const VoiceMessage: React.FC<{
 
   return (
     <div className={`flex items-center gap-2 py-1.5 px-2 min-w-[240px] w-full ${isMe ? 'text-white' : 'text-zinc-800'}`}>
+      {/* eslint-disable-next-line jsx-a11y/media-has-caption -- user-recorded voice note: audio only, no transcript exists */}
       <audio 
         ref={audioRef}
         src={fileUrl}

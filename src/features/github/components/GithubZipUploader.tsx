@@ -107,7 +107,7 @@ export default function GithubZipUploader({ onFilesExtracted }: GithubZipUploade
         </div>
       )}
 
-      <div
+      <div role="button" tabIndex={0} onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.currentTarget.click(); } }}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}

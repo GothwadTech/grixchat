@@ -124,7 +124,7 @@ export default function ChatsTab() {
           {searchTerm && (
             <div className="px-4 py-2 bg-[var(--bg-main)]/30 border-b border-[var(--border-color)]/5 select-none text-[10px] font-black text-[#0494f4] uppercase tracking-wider flex items-center justify-between select-none font-mono">
               <span>Matching results for "{searchTerm}"</span>
-              <span className="bg-[#0494f4]/20 text-[#0494f4] px-1.5 py-0.5 rounded text-[9px] font-bold">Client-Side Search</span>
+              <span className="bg-[#0479c2]/20 text-[#0494f4] px-1.5 py-0.5 rounded text-[9px] font-bold">Client-Side Search</span>
             </div>
           )}
 

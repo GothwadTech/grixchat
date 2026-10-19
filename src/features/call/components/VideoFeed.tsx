@@ -32,6 +32,7 @@ export const VideoFeed: React.FC<VideoFeedProps> = ({
   return (
     <div className="absolute inset-0 z-0 bg-zinc-950 overflow-hidden">
       {/* 1. Full-screen Remote Video */}
+      {/* eslint-disable-next-line jsx-a11y/media-has-caption -- live call video: captions need a live transcription service */}
       <video 
         ref={remoteVideoRef as any} 
         autoPlay 

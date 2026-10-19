@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { X, RefreshCw, Trash2, Send, CameraOff, Image as ImageIcon } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useTheme } from '../../contexts/ThemeContext';
+import { focusOnMount } from '../../utils/focusOnMount';
 
 interface CameraCaptureModalProps {
   isOpen: boolean;
@@ -214,6 +215,7 @@ export default function CameraCaptureModal({
               </div>
             ) : (
               <div className="relative w-full h-full flex items-center justify-center">
+                {/* eslint-disable-next-line jsx-a11y/media-has-caption -- live camera preview: there is no caption source for a live feed */}
                 <video
                   ref={videoRef}
                   autoPlay
@@ -255,7 +257,7 @@ export default function CameraCaptureModal({
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') handleSend();
                   }}
-                  autoFocus
+                  ref={focusOnMount}
                 />
               </div>
 

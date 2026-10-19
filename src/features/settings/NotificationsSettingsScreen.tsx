@@ -193,7 +193,7 @@ export default function NotificationsSettingsScreen() {
                 aria-label="Allow notification alerts"
                 onClick={handleMasterToggle}
                 className={`w-11 h-6 rounded-full transition-all duration-200 relative cursor-pointer outline-none border-none shrink-0 ${
-                  permission === 'granted' ? 'bg-[#0494f4]' : 'bg-zinc-700/60'
+                  permission === 'granted' ? 'bg-[#0479c2]' : 'bg-zinc-700/60'
                 }`}
               >
                 <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all duration-200 shadow-sm ${
@@ -220,9 +220,9 @@ export default function NotificationsSettingsScreen() {
 
         {/* Conversation Tones */}
         <div className="px-4">
-          <div className="bg-[#0494f4]/5 border border-[#0494f4]/15 rounded-2xl p-4 flex flex-col gap-3.5">
+          <div className="bg-[#0479c2]/5 border border-[#0494f4]/15 rounded-2xl p-4 flex flex-col gap-3.5">
             <div className="flex gap-3">
-              <div className="w-10 h-10 rounded-full flex items-center justify-center bg-[#0494f4]/15 text-[#0494f4] shrink-0 border border-[#0494f4]/10">
+              <div className="w-10 h-10 rounded-full flex items-center justify-center bg-[#0479c2]/15 text-[#0494f4] shrink-0 border border-[#0494f4]/10">
                 <Volume2 size={18} className="stroke-[2.2]" />
               </div>
               <div className="flex-1">
@@ -242,7 +242,7 @@ export default function NotificationsSettingsScreen() {
                 aria-label="Conversation tones"
                 onClick={() => toggleSetting('conversationTones')}
                 className={`w-11 h-6 rounded-full transition-all duration-200 relative cursor-pointer outline-none border-none shrink-0 ${
-                  settings.conversationTones ? 'bg-[#0494f4]' : 'bg-zinc-700/60'
+                  settings.conversationTones ? 'bg-[#0479c2]' : 'bg-zinc-700/60'
                 }`}
               >
                 <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all duration-200 shadow-sm ${
@@ -277,7 +277,7 @@ export default function NotificationsSettingsScreen() {
                 aria-label="Vibrate"
                 onClick={() => toggleSetting('vibrate')}
                 className={`w-11 h-6 rounded-full transition-all duration-200 relative cursor-pointer outline-none border-none shrink-0 ${
-                  settings.vibrate ? 'bg-[#0494f4]' : 'bg-zinc-700/60'
+                  settings.vibrate ? 'bg-[#0479c2]' : 'bg-zinc-700/60'
                 }`}
               >
                 <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all duration-200 shadow-sm ${
@@ -302,7 +302,7 @@ export default function NotificationsSettingsScreen() {
                 aria-label="High priority headers"
                 onClick={() => toggleSetting('highPriority')}
                 className={`w-11 h-6 rounded-full transition-all duration-200 relative cursor-pointer outline-none border-none shrink-0 ${
-                  settings.highPriority ? 'bg-[#0494f4]' : 'bg-zinc-700/60'
+                  settings.highPriority ? 'bg-[#0479c2]' : 'bg-zinc-700/60'
                 }`}
               >
                 <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all duration-200 shadow-sm ${
@@ -350,7 +350,7 @@ export default function NotificationsSettingsScreen() {
                 aria-label="Group high priority"
                 onClick={() => toggleSetting('groupHighPriority')}
                 className={`w-11 h-6 rounded-full transition-all duration-200 relative cursor-pointer outline-none border-none shrink-0 ${
-                  settings.groupHighPriority ? 'bg-[#0494f4]' : 'bg-zinc-700/60'
+                  settings.groupHighPriority ? 'bg-[#0479c2]' : 'bg-zinc-700/60'
                 }`}
               >
                 <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all duration-200 shadow-sm ${

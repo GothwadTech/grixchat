@@ -47,7 +47,7 @@ export const CallsHistoryList: React.FC<CallsHistoryListProps> = ({
     return (
       <div className="px-4 py-6">
         <div className="bg-[var(--bg-card)] border border-[var(--border-color)]/50 rounded-2xl p-8 flex flex-col items-center justify-center text-center gap-4 shadow-sm">
-          <div className="w-16 h-16 rounded-2xl bg-[#0494f4]/10 text-[#0494f4] flex items-center justify-center">
+          <div className="w-16 h-16 rounded-2xl bg-[#0479c2]/10 text-[#0494f4] flex items-center justify-center">
             <PhoneCall size={30} />
           </div>
           <div className="max-w-[240px]">
@@ -58,7 +58,7 @@ export const CallsHistoryList: React.FC<CallsHistoryListProps> = ({
           </div>
           <button 
             onClick={onReset}
-            className="mt-2 text-xs font-black uppercase tracking-wider bg-[#0494f4] hover:bg-[#0494f4]/90 text-white px-5 py-2.5 rounded-xl shadow-md transition-all active:scale-95 cursor-pointer"
+            className="mt-2 text-xs font-black uppercase tracking-wider bg-[#0479c2] hover:bg-[#0479c2]/90 text-white px-5 py-2.5 rounded-xl shadow-md transition-all active:scale-95 cursor-pointer"
           >
             Refresh Logs
           </button>

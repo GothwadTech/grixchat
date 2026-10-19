@@ -7,7 +7,7 @@ export const ChatMessageReactions: React.FC<{
 }> = ({ onReact, onClose, position }) => {
   const emojis = ['❤️', '😂', '😮', '😢', '🔥', '👍'];
   return (
-    <div 
+    <div role="button" tabIndex={0} onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.currentTarget.click(); } }} 
       className={`absolute bottom-full mb-2 flex items-center gap-1 bg-[var(--bg-card)] rounded-full shadow-xl border border-[var(--border-color)] p-1 z-[9999] animate-in zoom-in-95 duration-150 ${position === 'right' ? 'right-0' : 'left-0'}`}
       onClick={(e) => e.stopPropagation()}
     >

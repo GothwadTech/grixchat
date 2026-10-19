@@ -30,7 +30,7 @@ export const GrixAIThinking: React.FC<GrixAIThinkingProps> = ({ onTap }) => {
   const step = steps[currentStep];
 
   return (
-    <div 
+    <div role="button" tabIndex={0} onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.currentTarget.click(); } }} 
       onClick={(e) => {
         e.stopPropagation();
         onTap?.();

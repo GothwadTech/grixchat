@@ -132,7 +132,7 @@ export const ChatTabDropdown: React.FC<ChatTabDropdownProps> = ({
                     onClick={() => handleFilterClick(opt.filter)}
                     className={`w-full px-4 py-2.5 text-left text-[13px] font-semibold transition-colors flex items-center justify-between rounded-xl cursor-pointer border-none bg-transparent ${
                       isSelected 
-                        ? 'bg-[#0494f4]/10 text-[#0494f4] font-bold' 
+                        ? 'bg-[#0479c2]/10 text-[#0494f4] font-bold' 
                         : 'text-[var(--text-primary)] hover:bg-[var(--bg-main)]'
                     }`}
                   >

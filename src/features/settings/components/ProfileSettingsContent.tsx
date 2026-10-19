@@ -69,7 +69,7 @@ export default function ProfileSettingsContent() {
           {searchQuery === '' && (
             <>
               {/* Profile card click element */}
-              <div 
+              <div role="button" tabIndex={0} onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.currentTarget.click(); } }} 
                 onClick={() => navigate('/edit-profile')}
                 className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-[var(--border-color)]/5 active:bg-[var(--border-color)]/10 transition-all duration-205 group cursor-pointer select-none border-b border-[var(--border-color)]/5 border-l-[4px] border-l-transparent"
               >
@@ -92,7 +92,7 @@ export default function ProfileSettingsContent() {
 
               {/* Bio block display */}
               {userData?.bio && (
-                <div 
+                <div role="button" tabIndex={0} onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.currentTarget.click(); } }} 
                   onClick={() => navigate('/edit-profile')}
                   className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-[var(--border-color)]/5 active:bg-[var(--border-color)]/10 transition-all duration-205 group cursor-pointer select-none border-b border-[var(--border-color)]/5 border-l-[4px] border-l-transparent"
                 >

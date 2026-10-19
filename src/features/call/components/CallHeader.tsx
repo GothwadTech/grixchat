@@ -97,7 +97,7 @@ export const CallHeader: React.FC<CallHeaderProps> = ({
             {/* Ringing/Calling dynamic active pulses */}
             {(callStatus === 'ringing' || callStatus === 'connecting') && (
               <>
-                <div className="absolute w-[180px] h-[180px] rounded-full bg-[#0494f4]/10 animate-ping opacity-50"></div>
+                <div className="absolute w-[180px] h-[180px] rounded-full bg-[#0479c2]/10 animate-ping opacity-50"></div>
                 <div className="absolute w-[245px] h-[245px] rounded-full border border-white/5 animate-pulse scale-[1.2] opacity-30"></div>
               </>
             )}
@@ -122,7 +122,7 @@ export const CallHeader: React.FC<CallHeaderProps> = ({
           <div className="bg-[var(--bg-card)]/80 backdrop-blur-md px-4 py-1.5 md:px-5 md:py-2 rounded-2xl border border-[var(--border-color)]/20 flex items-center gap-2 shadow-md">
             <span className={`w-2 h-2 rounded-full ${
               callStatus === 'connected' 
-                ? 'bg-[#0494f4]' 
+                ? 'bg-[#0479c2]' 
                 : callStatus === 'ringing' 
                   ? 'bg-yellow-400 animate-pulse'
                   : 'bg-zinc-500 animate-pulse'

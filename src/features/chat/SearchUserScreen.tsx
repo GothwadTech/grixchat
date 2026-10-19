@@ -8,6 +8,7 @@ import Avatar from '../../components/common/Avatar';
 import { useLivePresence } from '../../providers/PresenceProvider';
 
 import { sanitizeSearchTerm } from '../../utils/searchTerm';
+import { focusOnMount } from '../../utils/focusOnMount';
 interface UserProfile {
   uid: string;
   username: string;
@@ -25,7 +26,7 @@ const UserItem = ({
 }) => {
   const liveOf = useLivePresence();
   return (
-  <div 
+  <div role="button" tabIndex={0} onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.currentTarget.click(); } }} 
     onClick={() => navigate(`/user/${user.uid}`)}
     className="flex items-center gap-3 p-4 hover:bg-[var(--bg-main)] transition-colors cursor-pointer group"
   >
@@ -39,7 +40,7 @@ const UserItem = ({
         e.stopPropagation();
         navigate(`/chat/${user.uid}`);
       }}
-      className="px-3.5 py-1.5 bg-[#0494f4] hover:bg-[#0494f4]/90 text-white rounded-lg text-xs font-bold transition-all active:scale-95 flex items-center justify-center gap-1 min-w-[85px] shadow-sm shrink-0"
+      className="px-3.5 py-1.5 bg-[#0479c2] hover:bg-[#0479c2]/90 text-white rounded-lg text-xs font-bold transition-all active:scale-95 flex items-center justify-center gap-1 min-w-[85px] shadow-sm shrink-0"
     >
       <MessageSquare size={12} strokeWidth={2.5} />
       <span>Message</span>
@@ -158,7 +159,7 @@ export default function SearchUserScreen() {
         <div className="flex items-center bg-[var(--bg-card)] rounded-xl px-4 h-[50px] border border-[var(--border-color)] shadow-sm">
           <Search size={20} className="text-[var(--text-secondary)] mr-3 opacity-50" />
           <input 
-            autoFocus
+            ref={focusOnMount}
             type="text" 
             placeholder="Search by username or name..." 
             value={searchTerm}
