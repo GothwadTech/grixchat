@@ -55,6 +55,11 @@ jobs:
       - name: Lint (ESLint, errors only)
         run: npm run lint:eslint -- --quiet
 
+      # Dependency gate: fails on any high or critical advisory in the full tree
+      # (runtime and dev). Lower-severity advisories are reported, not failing.
+      - name: Dependency audit
+        run: npm audit --audit-level=high
+
       - name: Test
         run: npm test
 

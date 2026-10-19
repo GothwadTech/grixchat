@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react';
 import { useAuth } from '../providers/AuthProvider';
 import { supabase } from '../lib/supabase';
 import { getFirebaseMessaging } from '../lib/firebase';
-import { getToken } from 'firebase/messaging';
+import { getToken } from '@firebase/messaging';
 
 import { logger } from '../utils/logger';
 export default function NotificationHandler() {

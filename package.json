@@ -29,6 +29,8 @@
     "prepare": "husky"
   },
   "dependencies": {
+    "@firebase/app": "^0.16.2",
+    "@firebase/messaging": "^0.13.3",
     "@livekit/components-react": "^2.9.21",
     "@supabase/supabase-js": "^2.105.4",
     "@tailwindcss/vite": "^4.1.14",
@@ -43,7 +45,6 @@
     "emoji-picker-react": "^4.19.1",
     "esbuild": "^0.28.0",
     "express": "^4.21.2",
-    "firebase": "^12.14.0",
     "jose": "^6.2.12",
     "jszip": "^3.10.1",
     "livekit-client": "^2.19.2",
@@ -63,7 +64,7 @@
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.3.0",
     "@testing-library/user-event": "^14.6.1",
-    "@vitest/coverage-v8": "^3.2.7",
+    "@vitest/coverage-v8": "^5.0.5",
     "eslint": "^9.39.5",
     "eslint-plugin-jsx-a11y": "^6.10.2",
     "eslint-plugin-react-hooks": "^5.2.0",
@@ -71,7 +72,7 @@
     "husky": "^9.1.7",
     "jsdom": "^25.0.1",
     "typescript-eslint": "^8.71.2",
-    "vitest": "^3.2.4",
+    "vitest": "^5.0.5",
     "wrangler": "^4.149.0"
   }
 }

@@ -1,5 +1,5 @@
-import { initializeApp, getApp, getApps } from 'firebase/app';
-import { getMessaging, isSupported } from 'firebase/messaging';
+import { initializeApp, getApp, getApps } from '@firebase/app';
+import { getMessaging, isSupported } from '@firebase/messaging';
 
 // Firebase Web Config from Environment Variables
 const firebaseConfig = {
