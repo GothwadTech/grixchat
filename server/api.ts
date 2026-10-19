@@ -575,9 +575,13 @@ function rateLimited(ctx: Ctx, bucket: keyof typeof LIMITS): Response | null {
 export async function handleApiRequest(request: Request, env: ApiEnv): Promise<Response> {
   const url = new URL(request.url);
   const ctx: Ctx = { request, env, url, path: url.pathname, cors: corsHeaders(request, env) };
+  // One id per request: it goes on the response (X-Request-Id) and in server logs,
+  // so a user's report can be matched to the exact log line.
+  const requestId = crypto.randomUUID();
 
   const finish = (response: Response): Response => {
     const headers = new Headers(response.headers);
+    headers.set('X-Request-Id', requestId);
     for (const [key, value] of Object.entries(ctx.cors)) headers.set(key, value);
     for (const [key, value] of Object.entries(SECURITY_HEADERS)) {
       if (!headers.has(key)) headers.set(key, value);
@@ -599,14 +603,14 @@ export async function handleApiRequest(request: Request, env: ApiEnv): Promise<R
     const origin = request.headers.get('origin');
     const isWrite = !['GET', 'HEAD', 'OPTIONS'].includes(request.method);
     if (isWrite && origin && !isAllowedOrigin(request, env, origin)) {
-      console.warn(`Blocked cross-origin ${request.method} ${ctx.path} from ${origin}`);
+      console.warn(`[${requestId}] Blocked cross-origin ${request.method} ${ctx.path} from ${origin}`);
       return finish(json({ error: 'Origin not allowed' }, 403));
     }
 
     return finish(await route(ctx));
   } catch (err: any) {
-    console.error('Unhandled API error:', err);
-    return finish(json({ error: err?.message || 'Internal server error' }, 500));
+    console.error(`[${requestId}] Unhandled API error on ${ctx.path}:`, err);
+    return finish(json({ error: err?.message || 'Internal server error', requestId }, 500));
   }
 }
 
