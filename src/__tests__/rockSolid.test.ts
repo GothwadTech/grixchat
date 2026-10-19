@@ -100,3 +100,27 @@ describe('search input cannot change the PostgREST filter', () => {
     expect(sanitizeSearchTerm('   ')).toBe('');
   });
 });
+
+describe('offline queue: dispose removes its listener and timers', () => {
+  it('calling init again does not stack a second online listener', async () => {
+    const add = vi.spyOn(window, 'addEventListener');
+    const remove = vi.spyOn(window, 'removeEventListener');
+    const svc = transactionQueue as any;
+
+    await svc.init();
+    await svc.init();
+
+    const onlineAdds = add.mock.calls.filter(([type]) => type === 'online');
+    const onlineRemoves = remove.mock.calls.filter(([type]) => type === 'online');
+    expect(onlineAdds.length).toBeGreaterThanOrEqual(2);
+    // The second init must detach the first handler before attaching its own.
+    expect(onlineRemoves.length).toBeGreaterThanOrEqual(1);
+
+    transactionQueue.dispose();
+    expect(svc.periodicTimer).toBeNull();
+    expect(svc.startupTimer).toBeNull();
+    expect(svc.onlineHandler).toBeNull();
+    add.mockRestore();
+    remove.mockRestore();
+  });
+});

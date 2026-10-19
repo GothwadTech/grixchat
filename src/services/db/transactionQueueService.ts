@@ -27,9 +27,28 @@ class TransactionQueueService {
   private cachedQueue: PendingTransaction[] = [];
   private isProcessing = false;
   private isLoaded = false;
+  private onlineHandler: (() => void) | null = null;
+  private periodicTimer: ReturnType<typeof setInterval> | null = null;
+  private startupTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor() {
     this.init();
+  }
+
+  /**
+   * Removes the window listener and timers started by init(). The app keeps one
+   * instance for its whole life; this exists so HMR reloads and tests cannot stack
+   * duplicate listeners or intervals.
+   */
+  dispose(): void {
+    if (this.onlineHandler && typeof window !== 'undefined') {
+      window.removeEventListener('online', this.onlineHandler);
+    }
+    this.onlineHandler = null;
+    if (this.periodicTimer) clearInterval(this.periodicTimer);
+    if (this.startupTimer) clearTimeout(this.startupTimer);
+    this.periodicTimer = null;
+    this.startupTimer = null;
   }
 
   private async init() {
@@ -57,16 +76,20 @@ class TransactionQueueService {
     }
 
     if (typeof window !== 'undefined') {
-      window.addEventListener('online', () => {
+      // Re-attach cleanly if init runs again (HMR): never keep two listeners.
+      this.dispose();
+
+      this.onlineHandler = () => {
         logger.info('Device returned online. Triggering transactional queue process...');
         this.processQueue();
-      });
+      };
+      window.addEventListener('online', this.onlineHandler);
 
       // Run initial check on launch
-      setTimeout(() => this.processQueue(), 5000);
+      this.startupTimer = setTimeout(() => this.processQueue(), 5000);
 
       // Periodic check interval (every 35 seconds)
-      setInterval(() => {
+      this.periodicTimer = setInterval(() => {
         if (navigator.onLine) {
           this.processQueue();
         }
