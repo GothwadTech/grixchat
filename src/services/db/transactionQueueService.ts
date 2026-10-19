@@ -1,6 +1,7 @@
 import { supabase } from '../../lib/supabase';
 import { notificationService } from './notificationService';
 import { IndexedDBService } from '../IndexedDBService';
+import { storage } from '../StorageService';
 
 import { logger } from '../../utils/logger';
 export interface PendingTransaction {
@@ -40,11 +41,11 @@ class TransactionQueueService {
       } else {
         // Fallback and migrate from legacy localStorage if present
         try {
-          const legacy = localStorage.getItem(QUEUE_STORAGE_KEY);
+          const legacy = storage.getItem(QUEUE_STORAGE_KEY);
           if (legacy) {
             this.cachedQueue = JSON.parse(legacy);
             await IndexedDBService.set('kv_store', QUEUE_STORAGE_KEY, this.cachedQueue);
-            localStorage.removeItem(QUEUE_STORAGE_KEY);
+            storage.removeItem(QUEUE_STORAGE_KEY);
           }
         } catch (_) { /* intentionally ignored: best-effort, failure is non-fatal */ }
       }

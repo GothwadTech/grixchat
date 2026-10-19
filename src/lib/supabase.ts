@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { storage } from '../services/StorageService';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -7,16 +8,7 @@ const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 let supabaseClient: ReturnType<typeof createClient> | null = null;
 
 // Helper to check if localStorage is available
-const isLocalStorageAvailable = () => {
-  try {
-    const test = 'test';
-    window.localStorage.setItem(test, test);
-    window.localStorage.removeItem(test);
-    return true;
-  } catch (_e) {
-    return false;
-  }
-};
+const isLocalStorageAvailable = () => storage.canUse();
 
 /**
  * Gets the Supabase client instance.

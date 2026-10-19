@@ -1,4 +1,5 @@
 import React from 'react';
+import { storage } from '../../services/StorageService';
 import { 
   Sliders, 
   Smartphone, 
@@ -20,7 +21,7 @@ export default function ConsoleDiagnostics({ logs, showToastNotification }: Cons
   // Safe helper to grab keys from localStorage
   const safeGetLocalStorage = (key: string): string => {
     try {
-      return localStorage.getItem(key) || 'None';
+      return storage.readRawForDiagnostics(key) || 'None';
     } catch (_) {
       return 'Access Denied';
     }

@@ -122,6 +122,39 @@ class StorageService {
     }
   }
 
+  /** True when localStorage is readable and writable in this context. */
+  canUse(): boolean {
+    return this.isAvailable;
+  }
+
+  /**
+   * Diagnostics and backup export only. Reads a raw key without the allow-list, so
+   * it can see keys that `getItem` hides. Never use it for application state.
+   */
+  readRawForDiagnostics(key: string): string | null {
+    if (!this.isAvailable) return null;
+    try {
+      return window.localStorage.getItem(key);
+    } catch (_e) {
+      return null;
+    }
+  }
+
+  /** Diagnostics and backup export only: every raw localStorage key. */
+  rawKeys(): string[] {
+    if (!this.isAvailable) return [];
+    const keys: string[] = [];
+    try {
+      for (let i = 0; i < window.localStorage.length; i++) {
+        const key = window.localStorage.key(i);
+        if (key) keys.push(key);
+      }
+    } catch (_e) {
+      return [];
+    }
+    return keys;
+  }
+
   clear(): void {
     this.memoryStorage = {};
     if (!this.isAvailable) return;

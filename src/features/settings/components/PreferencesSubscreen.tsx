@@ -84,24 +84,12 @@ export default function PreferencesSubscreen() {
 
       try {
         const allData: Record<string, any> = {};
-        let isStorageAccessAllowed = false;
-        try {
-          if (typeof window !== 'undefined' && window.localStorage) {
-            // Do a dummy read/write to guarantee access doesn't throw a SecurityError
-            const testKey = '__test_export_backup_access__';
-            window.localStorage.setItem(testKey, '1');
-            window.localStorage.removeItem(testKey);
-            isStorageAccessAllowed = true;
-          }
-        } catch (_) {
-          isStorageAccessAllowed = false;
-        }
+        const isStorageAccessAllowed = storage.canUse();
 
         if (isStorageAccessAllowed) {
-          for (let i = 0; i < window.localStorage.length; i++) {
-            const key = window.localStorage.key(i);
-            if (key && (key.startsWith('messages:') || key.indexOf('cache') !== -1 || key.indexOf('recent') !== -1)) {
-              const val = window.localStorage.getItem(key);
+          for (const key of storage.rawKeys()) {
+            if (key.startsWith('messages:') || key.indexOf('cache') !== -1 || key.indexOf('recent') !== -1) {
+              const val = storage.readRawForDiagnostics(key);
               if (val) {
                 try {
                   allData[key] = JSON.parse(val);

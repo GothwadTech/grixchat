@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { storage } from '../../services/StorageService';
 import { 
   Terminal, 
   Search, 
@@ -45,7 +46,7 @@ export default function ConsoleTerminal({
   // Read multi accounts and cached tokens from localStorage
   const safeGetLocalStorage = (key: string): string => {
     try {
-      return localStorage.getItem(key) || 'Not found';
+      return storage.readRawForDiagnostics(key) || 'Not found';
     } catch (_) {
       return 'Access Denied';
     }
