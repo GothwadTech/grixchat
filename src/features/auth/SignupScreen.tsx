@@ -320,7 +320,7 @@ export default function SignupScreen() {
               referrerPolicy="no-referrer"
             />
           </div>
-          <h2 className="text-[26px] font-black text-[var(--text-primary)] tracking-tight mb-1">GrixChat</h2>
+          <h2 className="text-[26px] font-black text-[var(--text-primary)] tracking-tight mb-1">Bansify Chat</h2>
           <p className="text-[var(--text-secondary)] text-xs leading-relaxed max-w-[240px] mx-auto opacity-80 font-medium">
             Connecting you to your world, one message at a time.
           </p>
@@ -502,7 +502,7 @@ export default function SignupScreen() {
           {verifySuccess && (
             <div className="p-3 bg-green-500/10 border border-green-500/20 rounded-xl select-none text-center">
               <p className="text-[11px] text-green-500 font-extrabold leading-normal">
-                Email verified successfully! Welcome to GrixChat.
+                Email verified successfully! Welcome to Bansify Chat.
               </p>
             </div>
           )}
@@ -584,12 +584,12 @@ export default function SignupScreen() {
 
           <div className="w-full bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl p-5 text-center flex flex-col items-center justify-center mt-6 shadow-sm select-none gap-3.5">
             <p className="text-[10px] text-[var(--text-secondary)]/65 leading-relaxed max-w-[280px] mx-auto">
-              By using <a href="https://grixchat.gothwadtech.com" target="_blank" rel="noopener noreferrer" className="font-bold text-[#0494f4] hover:underline cursor-pointer">GrixChat</a>, you agree to our <span onClick={() => navigate('/terms')} className="font-bold text-[var(--primary)] hover:underline cursor-pointer">Terms of Service</span> & <span onClick={() => navigate('/terms')} className="font-bold text-[var(--primary)] hover:underline cursor-pointer">Privacy Policy</span>.
+              By using <a href="https://chat.bansify.com" target="_blank" rel="noopener noreferrer" className="font-bold text-[#0494f4] hover:underline cursor-pointer">Bansify Chat</a>, you agree to our <span onClick={() => navigate('/terms')} className="font-bold text-[var(--primary)] hover:underline cursor-pointer">Terms of Service</span> & <span onClick={() => navigate('/terms')} className="font-bold text-[var(--primary)] hover:underline cursor-pointer">Privacy Policy</span>.
             </p>
             <div className="w-full h-[1px] bg-[var(--border-color)]/50"></div>
             <div className="text-center max-w-[280px] mx-auto">
               <span className="text-[10px] font-semibold text-[var(--text-secondary)]/55 block leading-relaxed">
-                <a href="https://grixchat.gothwadtech.com" target="_blank" rel="noopener noreferrer" className="font-bold text-[#0494f4] hover:underline cursor-pointer decoration-[#0494f4] decoration-2">GrixChat</a> is proudly developed and managed by <a href="https://gothwadtechnologies.com" target="_blank" rel="noopener noreferrer" className="font-bold text-[#0494f4] hover:underline cursor-pointer decoration-[#0494f4] decoration-2">Gothwad</a> in support of India's Atmanirbhar Bharat initiative. If you have any concerns, please <a href="mailto:support@gothwadtechnologies.com" className="font-bold text-[#0494f4] hover:underline cursor-pointer decoration-[#0494f4] decoration-2">contact us</a>.
+                <a href="https://chat.bansify.com" target="_blank" rel="noopener noreferrer" className="font-bold text-[#0494f4] hover:underline cursor-pointer decoration-[#0494f4] decoration-2">Bansify Chat</a> is proudly developed and managed by <a href="https://bansify.com" target="_blank" rel="noopener noreferrer" className="font-bold text-[#0494f4] hover:underline cursor-pointer decoration-[#0494f4] decoration-2">Bansify</a> in support of India's Atmanirbhar Bharat initiative. If you have any concerns, please <a href="mailto:support@bansify.com" className="font-bold text-[#0494f4] hover:underline cursor-pointer decoration-[#0494f4] decoration-2">contact us</a>.
               </span>
             </div>
           </div>

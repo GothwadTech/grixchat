@@ -6,4 +6,4 @@ Disallow: /setup-lock
 Disallow: /verify-lock
 Disallow: /api/
 
-Sitemap: https://grixchat.gothwadtech.com/sitemap.xml
+Sitemap: https://chat.bansify.com/sitemap.xml
