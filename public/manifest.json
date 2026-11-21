@@ -1,8 +1,8 @@
 {
-  "id": "com.grixchat.app",
-  "name": "GrixChat",
-  "short_name": "GrixChat",
-  "description": "GrixChat - India's most secure and versatile social messaging platform. Connect, share reels, and chat with Grix AI.",
+  "id": "com.bansify.chat",
+  "name": "Bansify Chat",
+  "short_name": "Bansify Chat",
+  "description": "Bansify Chat - India's most secure and versatile social messaging platform. Connect, share reels, and chat with AI.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

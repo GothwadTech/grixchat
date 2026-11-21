@@ -3,27 +3,27 @@
      Cloudflare Pages serves this file straight from the edge. -->
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
-    <loc>https://grixchat.gothwadtech.com/</loc>
+    <loc>https://chat.bansify.com/</loc>
     <priority>1.0</priority>
     <changefreq>daily</changefreq>
   </url>
   <url>
-    <loc>https://grixchat.gothwadtech.com/login</loc>
+    <loc>https://chat.bansify.com/login</loc>
     <priority>0.5</priority>
     <changefreq>monthly</changefreq>
   </url>
   <url>
-    <loc>https://grixchat.gothwadtech.com/signup</loc>
+    <loc>https://chat.bansify.com/signup</loc>
     <priority>0.5</priority>
     <changefreq>monthly</changefreq>
   </url>
   <url>
-    <loc>https://grixchat.gothwadtech.com/privacy-policy</loc>
+    <loc>https://chat.bansify.com/privacy-policy</loc>
     <priority>0.3</priority>
     <changefreq>yearly</changefreq>
   </url>
   <url>
-    <loc>https://grixchat.gothwadtech.com/terms</loc>
+    <loc>https://chat.bansify.com/terms</loc>
     <priority>0.3</priority>
     <changefreq>yearly</changefreq>
   </url>

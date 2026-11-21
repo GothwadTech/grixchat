@@ -1,6 +1,6 @@
-# GrixChat — Secure Social & Real-Time Messaging Platform
+# Bansify Chat — Secure Social & Real-Time Messaging Platform
 
-GrixChat is a high-performance, low-cost messaging and private-calling app, built as a PWA and Google Play TWA. It is deliberately scoped to **five tabs** — Chats, Stories, Search, Calls and Profile — plus an in-app AI assistant (Grix AI), a GitHub repository browser, and an app lock.
+Bansify Chat is a high-performance, low-cost messaging and private-calling app, built as a PWA and Google Play TWA. It is deliberately scoped to **five tabs** — Chats, Stories, Search, Calls and Profile — plus an in-app AI assistant (Grix AI), a GitHub repository browser, and an app lock.
 
 The visual language blends **60% unique Dark Cosmic identity**, **20% Telegram performance micro-animations**, and **20% WhatsApp communication mechanics**.
 
@@ -103,4 +103,4 @@ CI (`.github/workflows/ci.yml`) typechecks, tests and bundle-checks every push;
 it does not deploy.
 
 ---
-Crafted under high-precision directives for the GrixChat Mobile Ecosystem. 🌌
+Crafted under high-precision directives for the Bansify Chat Mobile Ecosystem. 🌌
