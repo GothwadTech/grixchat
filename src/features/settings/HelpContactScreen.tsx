@@ -25,7 +25,7 @@ export default function HelpContactScreen() {
   const officialEmails = [
     'support@grixchat.com',
     'grixchat@gmail.com',
-    'pawangothwad@gmail.com'
+    'pawanbansify@gmail.com'
   ];
 
   const handleCopyEmail = (emailStr: string) => {
