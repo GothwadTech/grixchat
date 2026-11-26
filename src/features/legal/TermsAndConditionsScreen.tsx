@@ -6,7 +6,7 @@ export default function TermsAndConditionsScreen() {
   const officialContacts = [
     { label: 'Grix Team Support', email: 'support@grixchat.com' },
     { label: 'General Inbox', email: 'grixchat@gmail.com' },
-    { label: 'Grix Admin Pawandev', email: 'pawangothwad@gmail.com' }
+    { label: 'Grix Admin Pawandev', email: 'pawanbansify@gmail.com' }
   ];
 
   return (

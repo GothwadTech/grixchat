@@ -41,7 +41,7 @@ server.ts ─────────────────┘
 ```
 
 - **Cloudflare Pages Functions** run it in production
-  (<https://grixchat.gothwadtech.com>) — `dist/` is the static site, `functions/`
+  (<https://grixchat.bansify.com>) — `dist/` is the static site, `functions/`
   is the API, and both deploy from this repo on every push.
 - **Express** (`server.ts`) runs it for `npm run dev` / `npm run dev:mock` and
   for optional self-hosting. It converts the incoming Express request into a
@@ -258,7 +258,7 @@ lock/            AppLock, GlobalLock, SetupLock, VerifyLock
 
 | Target | Entry | Status |
 |---|---|---|
-| **Cloudflare Pages** (production) | `dist/` + `functions/` | ✅ <https://grixchat.gothwadtech.com> |
+| **Cloudflare Pages** (production) | `dist/` + `functions/` | ✅ <https://grixchat.bansify.com> |
 | `npm run dev` / `dev:mock` | `server.ts` → Vite middleware on :3000 | ✅ works |
 | `npm run build` | `vite build` → `dist/` (this is what Pages builds) | ✅ works |
 | `npm run build:server` | esbuild → `dist/server.cjs` for self-hosting | ✅ works |

@@ -89,7 +89,7 @@ npm run build             # vite build → dist/ (what Cloudflare Pages builds)
 ### 5. Deploy
 
 Cloudflare Pages builds this repository and serves
-<https://grixchat.gothwadtech.com> — `dist/` as the static site and `functions/`
+<https://grixchat.bansify.com> — `dist/` as the static site and `functions/`
 as the API. Build command `npm run build`, output directory `dist`, and the
 project's environment variables. Full checklist:
 [`docs/DEV_SETUP.md`](./docs/DEV_SETUP.md#deploy--cloudflare-pages).

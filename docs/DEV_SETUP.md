@@ -154,7 +154,7 @@ npm run dev
 | `GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET` | `/api/github/auth-url` |
 | `SUPABASE_SERVICE_ROLE_KEY` | privileged reads/writes (FCM token cleanup). Falls back to the anon key + the caller's JWT. |
 | `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY` | **required server-side too** — every `/api` route verifies the caller's JWT against the project |
-| `APP_URL` | OAuth redirect base and first CORS allowlist entry (`https://grixchat.gothwadtech.com`) |
+| `APP_URL` | OAuth redirect base and first CORS allowlist entry (`https://grixchat.bansify.com`) |
 | `ALLOWED_ORIGINS` | extra comma-separated browser origins allowed to call `/api/*` |
 | `MOCK_SUPABASE` | Node dev server only: `1` skips JWT verification for the credential-free loop. Ignored on Cloudflare, which always verifies. |
 | `NODE_ENV` | Node: `production` serves `dist/`. Also hides the `/api/github/debug` diagnostic route (already hidden on any Pages deployment). |
@@ -171,7 +171,7 @@ exception is authentication: without `VITE_SUPABASE_URL` +
 
 ## Deploy — Cloudflare Pages
 
-**Production lives on Cloudflare Pages: <https://grixchat.gothwadtech.com>**
+**Production lives on Cloudflare Pages: <https://grixchat.bansify.com>**
 (Cloudflare project name: **`gtwdchat`** — that is what the dashboard calls it,
 and what `wrangler.toml` declares.)
 
@@ -239,7 +239,7 @@ redeploy), the rest is read per request by the Functions.
 | `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET` | *(optional)* `/api/livekit-token` — calls work without them |
 | `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET` | The GitHub browser's OAuth popup |
 | `SUPABASE_SERVICE_ROLE_KEY` | Push fan-out + FCM token cleanup |
-| `APP_URL` | `https://grixchat.gothwadtech.com` — OAuth redirect base and the CORS allowlist |
+| `APP_URL` | `https://grixchat.bansify.com` — OAuth redirect base and the CORS allowlist |
 | `ALLOWED_ORIGINS` | Optional extra origins |
 | `NODE_VERSION` | `22` |
 | `NODE_ENV` | Optional; set `production` to hide the diagnostic route (already hidden on Pages) |
@@ -254,7 +254,7 @@ server side, `/api/*` answers `503` on purpose.
 
 ### Custom domain
 
-Pages (project `gtwdchat`) → **Custom domains** → `grixchat.gothwadtech.com` is
+Pages (project `gtwdchat`) → **Custom domains** → `grixchat.bansify.com` is
 already attached. Cloudflare issues the certificate automatically; keep `APP_URL`
 in sync with whatever you set there.
 

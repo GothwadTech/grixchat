@@ -36,7 +36,7 @@ code path your change exercised.
   are historical leftovers — ignore them.)
 - **Production is Cloudflare Pages.** The static site is `dist/`, the API is
   `functions/` (Pages Functions), and both deploy from this repo to
-  <https://grixchat.gothwadtech.com>. There is no other deploy target to keep in
+  <https://grixchat.bansify.com>. There is no other deploy target to keep in
   sync.
 - **The API holds no application data.** It exists only to keep secrets
   server-side: Gemini, FCM service account, LiveKit tokens, GitHub OAuth. All of
@@ -220,7 +220,7 @@ Rules:
 | SQL migrations | ✅ `01_schema.sql` + `02_functions_realtime_storage.sql`, both re-runnable (fresh install + re-run on live data verified), 600–1000 lines each, guarded by `src/__tests__/sqlMigrations.test.ts` |
 | Tables queried but missing from `sql/` | ✅ 0 |
 | RPCs called but missing from `sql/` | ✅ 0 |
-| Cloudflare Pages deploy | ✅ `dist/` + `functions/` → <https://grixchat.gothwadtech.com> |
+| Cloudflare Pages deploy | ✅ `dist/` + `functions/` → <https://grixchat.bansify.com> |
 | Node self-host path | ✅ `npm run build:all && npm run start` |
 | `/api/send-notification`, `/api/upload-file` | ✅ **authenticated** + rate limited + allowlisted (see `authenticate` in `server/api.ts`) |
 | Notifications inbox | ✅ written by `services/db/notificationService.ts`, read from `content` |

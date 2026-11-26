@@ -13,7 +13,7 @@ human step (SQL run, secret, or a product decision)
 
 ## 🧑 Read this first — what code cannot do
 
-The app is deployed on **Cloudflare Pages** (<https://grixchat.gothwadtech.com>):
+The app is deployed on **Cloudflare Pages** (<https://grixchat.bansify.com>):
 `dist/` is the static PWA, `functions/` is the API. Everything that could be
 fixed from the repository alone **has been**; these tasks need the Cloudflare
 dashboard, Supabase, or a decision.
@@ -21,8 +21,8 @@ dashboard, Supabase, or a decision.
 | # | Task | Where | Why it matters |
 |---|---|---|---|
 | A | Add the **build-time** variables: `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_FIREBASE_*`, `VITE_LIVEKIT_URL`, `NODE_VERSION=22` | Cloudflare → Workers & Pages → gtwdchat → Settings → Environment variables (Production **and** Preview) | They are inlined into the bundle. **Without `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY` the Supabase SDK is compiled out and the deployed app cannot sign in** — the build prints a loud warning. Changing one requires a redeploy. |
-| B | Add the **runtime secrets** for the API: `GEMINI_API_KEY`, `FIREBASE_SERVICE_ACCOUNT`, `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`, `SUPABASE_SERVICE_ROLE_KEY`, `APP_URL=https://grixchat.gothwadtech.com` — and *optionally* `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET` | same screen as above | The API verifies JWTs against `VITE_SUPABASE_URL` + `VITE_SUPABASE_ANON_KEY`, so those two must be present **server-side as well**. Without any of these the matching feature returns a clear "not configured" error instead of crashing. `LIVEKIT_*` is **no longer required for calling**: without it calls run peer-to-peer over WebRTC with Supabase Realtime as the signalling channel (issue 15). Step-by-step: [DEV_SETUP.md](./DEV_SETUP.md#deploy--cloudflare-pages). |
-| C | Confirm the Pages build settings: build command `npm run build`, output `dist`, root `/`; production branch = your main branch; custom domain `grixchat.gothwadtech.com` attached | Cloudflare → the project's Settings / Custom domains | `wrangler.toml` pins the output dir and compatibility date, but the dashboard values win. |
+| B | Add the **runtime secrets** for the API: `GEMINI_API_KEY`, `FIREBASE_SERVICE_ACCOUNT`, `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`, `SUPABASE_SERVICE_ROLE_KEY`, `APP_URL=https://grixchat.bansify.com` — and *optionally* `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET` | same screen as above | The API verifies JWTs against `VITE_SUPABASE_URL` + `VITE_SUPABASE_ANON_KEY`, so those two must be present **server-side as well**. Without any of these the matching feature returns a clear "not configured" error instead of crashing. `LIVEKIT_*` is **no longer required for calling**: without it calls run peer-to-peer over WebRTC with Supabase Realtime as the signalling channel (issue 15). Step-by-step: [DEV_SETUP.md](./DEV_SETUP.md#deploy--cloudflare-pages). |
+| C | Confirm the Pages build settings: build command `npm run build`, output `dist`, root `/`; production branch = your main branch; custom domain `grixchat.bansify.com` attached | Cloudflare → the project's Settings / Custom domains | `wrangler.toml` pins the output dir and compatibility date, but the dashboard values win. |
 | D | Decide the fate of `call_candidates` (issue 7) | Supabase SQL editor | It is defined but unused — and it stays unused: calling signals over a Broadcast topic (`call-rtc:<callId>`, see `src/features/call/services/WebRtcCallService.ts`), which costs nothing and needs no schema. Drop it with:<br>`DROP TABLE IF EXISTS public.call_candidates CASCADE;` |
 | E | Add a **Cloudflare Rate Limiting Rule** on `/api/*` (optional, but recommended before scaling) | Cloudflare → Security → WAF | The limiter in `server/api.ts` counts in memory, i.e. per isolate — a speed bump, not a hard global quota. |
 | F | Run **`sql/01_schema.sql`** then **`sql/02_functions_realtime_storage.sql`** (2 minutes, idempotent, `02` ends with a self-check) | Supabase → SQL Editor | Creates anything missing and updates every policy/function. For the egress work specifically: read receipts become one row instead of one per unread message, the chat-list preview is maintained by a trigger, `REPLICA IDENTITY` stops shipping whole rows + the passcode hash, and the missing RLS UPDATE policy on `conversation_participants` gets created. Runbook: [`../sql/00_master_instructions.md`](../sql/00_master_instructions.md). Full analysis: [EGRESS_AUDIT.md](./EGRESS_AUDIT.md). |
@@ -168,7 +168,7 @@ URL. Covered by a new case in `src/__tests__/app.smoke.test.tsx`.
 ### 9. Deploy target could not serve the app — ✅ FIXED (now Cloudflare Pages)
 
 The site is served by **Cloudflare Pages** at
-<https://grixchat.gothwadtech.com>: `dist/` is the static PWA and `functions/`
+<https://grixchat.bansify.com>: `dist/` is the static PWA and `functions/`
 is the API (Pages Functions). What that changed:
 
 - `vercel.json` is gone — it described a Node host nothing deploys to any more.

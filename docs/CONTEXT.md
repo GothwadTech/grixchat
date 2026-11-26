@@ -64,7 +64,7 @@ All three currently pass.
 | RPCs called but missing from `sql/` | ✅ **0** |
 | Unauthenticated API routes | ✅ **0** — every `/api` route verifies a Supabase JWT (credential-free local mock excepted) |
 | Notifications inbox | ✅ has a write path (`services/db/notificationService.ts`) |
-| Cloudflare Pages deploy | ✅ `dist/` + `functions/` → <https://grixchat.gothwadtech.com> |
+| Cloudflare Pages deploy | ✅ `dist/` + `functions/` → <https://grixchat.bansify.com> |
 | Edge compatibility | ✅ the API bundles for workerd with no Node built-ins |
 | CI | ✅ typecheck + test + Functions bundle check + build |
 

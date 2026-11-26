@@ -5,7 +5,7 @@
  * same code runs on both deployment targets:
  *
  *   - Cloudflare Pages Functions (`functions/api/[[path]].ts`) — production,
- *     served from grixchat.gothwadtech.com.
+ *     served from grixchat.bansify.com.
  *   - Express (`server.ts`) — `npm run dev` and self-hosting.
  *
  * Hard rule: nothing in this file may touch Node built-ins (`fs`, `path`,
@@ -34,7 +34,7 @@ export interface ApiEnv {
   LIVEKIT_API_SECRET?: string;
   GITHUB_CLIENT_ID?: string;
   GITHUB_CLIENT_SECRET?: string;
-  /** Canonical origin, e.g. `https://grixchat.gothwadtech.com`. */
+  /** Canonical origin, e.g. `https://grixchat.bansify.com`. */
   APP_URL?: string;
   /** Extra comma-separated origins allowed to call the API. */
   ALLOWED_ORIGINS?: string;

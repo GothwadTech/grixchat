@@ -6,7 +6,7 @@ export default function PrivacyPolicyScreen() {
   const officialContacts = [
     { label: 'Primary Support', email: 'support@grixchat.com' },
     { label: 'Grix Team', email: 'grixchat@gmail.com' },
-    { label: 'Technical Administrator', email: 'pawangothwad@gmail.com' }
+    { label: 'Technical Administrator', email: 'pawanbansify@gmail.com' }
   ];
 
   return (

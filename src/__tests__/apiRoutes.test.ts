@@ -95,7 +95,7 @@ describe('security headers and CORS', () => {
   it('grants no CORS headers to an unknown origin', async () => {
     const response = await call('/api/grix-ai', {
       method: 'OPTIONS',
-      headers: {'Origin': 'https://evil.example.com', 'Access-Control-Request-Method': 'POST', 'Host': 'grixchat.gothwadtech.com'},
+      headers: {'Origin': 'https://evil.example.com', 'Access-Control-Request-Method': 'POST', 'Host': 'grixchat.bansify.com'},
     });
     expect(response.headers.get('access-control-allow-origin')).toBeNull();
   });
@@ -106,7 +106,7 @@ describe('security headers and CORS', () => {
         method: 'POST',
         headers: {
           'Origin': 'https://evil.example.com',
-          'Host': 'grixchat.gothwadtech.com',
+          'Host': 'grixchat.bansify.com',
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({tokens: ['x']}),
